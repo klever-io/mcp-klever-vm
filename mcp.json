@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "klever-vm": {
+      "command": "node",
+      "args": [
+        "--experimental-vm-modules",
+        "dist/index.js"
+      ],
+      "env": {
+        "MODE": "mcp",
+        "STORAGE_TYPE": "memory"
+      }
+    }
+  }
+}
