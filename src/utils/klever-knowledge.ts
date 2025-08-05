@@ -1,6 +1,170 @@
 import { ContextPayload } from '../types/index.js';
 
 export const kleverKnowledgeBase: ContextPayload[] = [
+  // CRITICAL PAYMENT SYNTAX - MUST READ FIRST
+  {
+    type: 'error_pattern',
+    content: `# 🚨 CRITICAL: KLV Payment Syntax - NEVER USE --value
+
+## ⛔ --value DOES NOT EXIST IN KOPERATOR!
+
+### ✅ CORRECT: Always use --values (with 's') for ALL payments:
+\`\`\`bash
+# For KLV payments - ALWAYS use --values
+KLEVER_NODE=$KLEVER_NODE ~/klever-sdk/koperator \\
+    --key-file="walletKey.pem" \\
+    sc invoke CONTRACT_ADDRESS methodName \\
+    --values "KLV=1000000" \\           # ✅ CORRECT: --values
+    --await --sign --result-only
+
+# For KDA token payments
+--values "DVK-1234=500000"             # ✅ CORRECT
+
+# For multiple tokens
+--values "KLV=1000000,KFI=500000"      # ✅ CORRECT
+
+# For NFTs/SFTs
+--values "MYNFT-ABC1/42=1"             # ✅ CORRECT
+\`\`\`
+
+### ❌ THESE DO NOT EXIST - NEVER USE:
+- \`--value\` ❌ DOES NOT EXIST (common mistake!)
+- \`--amount\` ❌ DOES NOT EXIST
+- \`--klv\` ❌ DOES NOT EXIST
+- \`--token-transfers\` ❌ DOES NOT EXIST
+- \`--kdaFee\` ❌ DOES NOT EXIST
+
+### Why this matters:
+Using \`--value\` will result in an error. The ONLY correct parameter is \`--values\` (plural).
+
+### Format Rules:
+1. **ALWAYS --values** not --value
+2. **TOKEN=AMOUNT** format (equals sign, not colon)
+3. **KLV uses 6 decimals** (1 KLV = 1,000,000 units)
+4. **Multiple tokens**: comma-separated
+
+### Examples of Common Mistakes:
+\`\`\`bash
+# ❌ WRONG - Will fail
+koperator sc invoke CONTRACT deposit --value 1000000
+
+# ✅ CORRECT
+koperator sc invoke CONTRACT deposit --values "KLV=1000000"
+
+# ❌ WRONG - Will fail
+koperator sc invoke CONTRACT swap --amount 500000
+
+# ✅ CORRECT  
+koperator sc invoke CONTRACT swap --values "KLV=500000"
+\`\`\``,
+    metadata: {
+      title: 'CRITICAL: --values NOT --value - Most Common Error',
+      description: '--value does not exist! Always use --values for any token payment',
+      tags: ['critical', 'payment', 'KLV', 'koperator', 'error', 'must-read-first'],
+      author: 'system',
+      language: 'bash',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      relevanceScore: 1.0
+    },
+    relatedContextIds: []
+  },
+  // CRITICAL KLV/KFI DECIMALS - MUST READ
+  {
+    type: 'error_pattern',
+    content: `# 🚨 CRITICAL: KLV and KFI ALWAYS Use 6 Decimals
+
+## ⛔ NEVER USE 8, 9, 10 or 18 DECIMALS!
+
+### ✅ CORRECT: KLV and KFI ALWAYS have 6 decimals:
+\`\`\`bash
+# 1 KLV = 1,000,000 units (10^6)
+# NOT 10^8, NOT 10^9, NOT 10^10, NOT 10^18!
+
+# Correct Examples:
+1 KLV = 1000000        # 6 zeros
+10 KLV = 10000000      # 7 zeros
+0.1 KLV = 100000       # 5 zeros
+0.001 KLV = 1000       # 3 zeros
+
+# Same for KFI:
+1 KFI = 1000000        # 6 zeros
+100 KFI = 100000000    # 8 zeros
+\`\`\`
+
+### ❌ WRONG - These are INCORRECT:
+\`\`\`bash
+# WRONG - Using 8 decimals
+1 KLV = 100000000      # ❌ NO! This would be 100 KLV!
+
+# WRONG - Using 9 decimals  
+1 KLV = 1000000000     # ❌ NO! This would be 1000 KLV!
+
+# WRONG - Using 10 decimals
+1 KLV = 10000000000    # ❌ NO! This would be 10000 KLV!
+
+# WRONG - Using 18 decimals (Ethereum style)
+1 KLV = 1000000000000000000  # ❌ NO! This would be 1,000,000,000,000 KLV!
+\`\`\`
+
+### Why This Matters:
+Using wrong decimals will cause:
+- **Overpayment**: Using 10 decimals means sending 10,000x more than intended!
+- **Transaction failures**: Insufficient balance errors
+- **Contract bugs**: Wrong calculations in smart contracts
+
+### Quick Reference Table:
+| Amount | Units (6 decimals) | Common Mistakes |
+|--------|-------------------|------------------|
+| 1 KLV | 1,000,000 | NOT 100,000,000 (8 dec) |
+| 0.1 KLV | 100,000 | NOT 10,000,000 (8 dec) |
+| 0.01 KLV | 10,000 | NOT 1,000,000 (8 dec) |
+| 0.001 KLV | 1,000 | NOT 100,000 (8 dec) |
+| 10 KLV | 10,000,000 | NOT 1,000,000,000 (9 dec) |
+| 100 KLV | 100,000,000 | NOT 10,000,000,000 (10 dec) |
+
+### In Smart Contracts:
+\`\`\`rust
+// ALWAYS use this constant
+const KLV_DECIMALS: u64 = 1_000_000;  // 10^6, NOT 10^8 or 10^9!
+const KFI_DECIMALS: u64 = 1_000_000;  // Same 6 decimals
+
+// Convert KLV to units
+let one_klv = BigUint::from(1u32) * KLV_DECIMALS;  // 1,000,000
+let ten_klv = BigUint::from(10u32) * KLV_DECIMALS; // 10,000,000
+\`\`\`
+
+### In Koperator Commands:
+\`\`\`bash
+# Send 1 KLV
+koperator sc invoke CONTRACT method --values "KLV=1000000"  # 6 zeros
+
+# Send 10 KLV  
+koperator sc invoke CONTRACT method --values "KLV=10000000" # 7 zeros
+
+# Send 0.5 KLV
+koperator sc invoke CONTRACT method --values "KLV=500000"   # 5 zeros + 5
+\`\`\`
+
+### REMEMBER:
+- **KLV: ALWAYS 6 decimals** (1 KLV = 1,000,000)
+- **KFI: ALWAYS 6 decimals** (1 KFI = 1,000,000)
+- **NOT 8, NOT 9, NOT 10, NOT 18 decimals!**
+- **This is different from Ethereum** (which uses 18)
+- **This is different from Bitcoin** (which uses 8)
+- **When in doubt**: 1 KLV = 1 followed by 6 zeros`,
+    metadata: {
+      title: 'CRITICAL: KLV/KFI Always 6 Decimals - NOT 8, 9, 10 or 18',
+      description: 'KLV and KFI ALWAYS use 6 decimal places. Using 8, 9, 10 or 18 decimals is WRONG and will cause massive overpayments!',
+      tags: ['critical', 'decimals', 'KLV', 'KFI', 'error', 'must-read-first'],
+      author: 'system',
+      language: 'bash',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      relevanceScore: 1.0
+    },
+    relatedContextIds: []
+  },
   // CODE EXAMPLE DISCOVERY GUIDE
   {
     type: 'best_practice',
