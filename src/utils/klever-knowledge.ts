@@ -1,6 +1,87 @@
 import { ContextPayload } from '../types/index.js';
 
 export const kleverKnowledgeBase: ContextPayload[] = [
+  // CRITICAL: Use Standard Rust Imports, NOT Macros
+  {
+    type: 'best_practice',
+    content: `# CRITICAL: Use Standard Rust Imports, NOT Legacy Macros
+
+## ⚠️ IMPORTANT: Always Use Standard Rust \`use\` Statements
+
+Klever smart contracts should use standard Rust import patterns, NOT the legacy macro approach.
+
+### ✅ CORRECT - Standard Rust Imports
+\`\`\`rust
+use klever_sc::imports::*;
+use klever_sc::derive_imports::*;
+\`\`\`
+
+### ❌ WRONG - Legacy Macro Pattern
+\`\`\`rust
+// DO NOT USE THIS!
+klever_sc::imports!();
+klever_sc::derive_imports!();
+\`\`\`
+
+## Standard Import Patterns for Different Contexts:
+
+### In Smart Contracts
+\`\`\`rust
+#![no_std]
+
+use klever_sc::imports::*;
+use klever_sc::derive_imports::*;
+
+#[klever_sc::contract]
+pub trait MyContract {
+    #[init]
+    fn init(&self) {
+        // ...
+    }
+}
+\`\`\`
+
+### In Tests
+\`\`\`rust
+use klever_sc_scenario::*;
+\`\`\`
+
+### In Module Files
+\`\`\`rust
+use klever_sc::imports::*;
+use klever_sc::derive_imports::*;
+
+#[klever_sc::module]
+pub trait MyModule {
+    // ...
+}
+\`\`\`
+
+## Why Standard Imports?
+1. **Rust Best Practices**: Follows standard Rust conventions
+2. **Better IDE Support**: IDEs can better analyze and provide autocomplete
+3. **Clearer Dependencies**: Explicit about what's being imported
+4. **Future Compatibility**: Macros are legacy and may be deprecated
+
+## Migration from Macros
+If you see old code using macros, replace:
+- \`klever_sc::imports!();\` → \`use klever_sc::imports::*;\`
+- \`klever_sc::derive_imports!();\` → \`use klever_sc::derive_imports::*;\`
+- \`klever_sc_scenario::imports!();\` → \`use klever_sc_scenario::*;\``,
+    metadata: {
+      title: 'Use Standard Rust Imports Instead of Legacy Macros',
+      description: 'Critical best practice for Klever smart contract imports',
+      tags: ['critical', 'imports', 'best-practice', 'rust', 'macros'],
+      language: 'rust',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    relatedContextIds: []
+  },
+
   // CRITICAL: Klever vs MultiversX Differences
   {
     type: 'best_practice',
@@ -80,6 +161,8 @@ sc-meta all build
     content: `# Klever Smart Contract Import Patterns
 
 ## Clean Import Guidelines
+
+⚠️ **IMPORTANT**: Always use standard Rust \`use\` statements, NOT legacy macros!
 
 Always use single-line imports with the unused imports attribute:
 
@@ -636,7 +719,7 @@ Use VecMapper when:
 
 \`\`\`rust
 // DO NOT CREATE src/admin.rs like this:
-klever_sc::imports!();
+use klever_sc::imports::*;
 
 #[klever_sc::module]
 pub trait AdminModule {
