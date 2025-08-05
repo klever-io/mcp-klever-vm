@@ -5052,6 +5052,390 @@ This demonstrates how multiple patterns work together to create a complete dApp!
     relatedContextIds: [],
   },
 
+  // CRITICAL: BigUint Type Handling and Comparisons
+  {
+    type: 'best_practice',
+    content: `# 🔥 BigUint Type Handling - Avoiding Type Mismatch Errors
+
+## Common Error: Type Mismatch in Comparisons
+
+One of the most frequent errors in Klever smart contracts is type mismatch when comparing BigUint values:
+
+\`\`\`
+error[E0277]: can't compare \`BigUint<Self::Api>\` with \`&BigUint<Self::Api>\`
+\`\`\`
+
+## ⚠️ IMPORTANT: ManagedRef<BigUint> from call_value()
+
+The \`call_value().klv_value()\` and similar methods return \`ManagedRef<BigUint>\`, not \`BigUint\`!
+
+### Handling ManagedRef<BigUint>
+\`\`\`rust
+#[payable("KLV")]
+fn receive_payment(&self) {
+    // ⚠️ payment is ManagedRef<BigUint>, not BigUint!
+    let payment = self.call_value().klv_value();
+    let min_amount = self.min_amount().get();  // This is BigUint
+    
+    // ✅ CORRECT - Dereference ManagedRef with *
+    require!(*payment >= min_amount, "Below minimum");
+    
+    // ✅ CORRECT - Use &* for arithmetic and updates
+    self.balance().update(|b| *b += &*payment);
+    
+    // ❌ WRONG - Type mismatch
+    // require!(payment >= min_amount, "Below minimum");  // ERROR!
+}
+\`\`\`
+
+## ✅ Correct Comparison Patterns
+
+### Pattern 1: Both Owned Values
+\`\`\`rust
+fn compare_owned(&self, amount: BigUint, balance: BigUint) {
+    if amount <= balance {
+        // Both are owned values - works perfectly
+    }
+}
+\`\`\`
+
+### Pattern 2: Both Borrowed References
+\`\`\`rust
+fn compare_borrowed(&self, amount: &BigUint, balance: &BigUint) {
+    if amount <= balance {
+        // Both are references - works perfectly
+    }
+}
+\`\`\`
+
+### Pattern 3: Mixed Ownership - Use References
+\`\`\`rust
+fn compare_mixed(&self, amount: BigUint, balance: &BigUint) {
+    // Convert owned to reference using &
+    if &amount <= balance {
+        // Now both are references - works!
+    }
+    
+    // Or the other way
+    if amount <= balance.clone() {
+        // Clone the reference to owned - also works but less efficient
+    }
+}
+\`\`\`
+
+### Pattern 4: ManagedRef<BigUint> Comparisons
+\`\`\`rust
+fn compare_managed_ref(&self) {
+    let payment = self.call_value().klv_value();  // ManagedRef<BigUint>
+    let balance = self.balance().get();           // BigUint
+    
+    // ✅ Dereference ManagedRef
+    if *payment <= balance {
+        // Works!
+    }
+    
+    // ✅ Or use references
+    if &*payment <= &balance {
+        // Also works!
+    }
+}
+\`\`\`
+
+## 📋 Complete Reference Guide
+
+### Comparisons
+\`\`\`rust
+// ✅ CORRECT - All these work
+if amount <= balance { }           // Both owned
+if &amount <= &balance { }         // Both borrowed
+if &amount <= balance { }           // Left ref, right ref
+if amount <= balance.clone() { }   // Left owned, right cloned
+
+// ❌ WRONG - Type mismatch
+if amount <= &balance { }          // Owned vs borrowed - ERROR!
+\`\`\`
+
+### Arithmetic Operations
+\`\`\`rust
+// Addition
+let sum1 = &amount + &balance;     // Both refs ✅
+let sum2 = amount.clone() + balance.clone(); // Both owned ✅
+let sum3 = amount + &balance;      // ERROR ❌
+
+// Subtraction
+let diff1 = &balance - &amount;    // Both refs ✅
+let diff2 = balance.clone() - amount.clone(); // Both owned ✅
+let diff3 = balance - &amount;     // ERROR ❌
+
+// Multiplication/Division
+let product = &amount * &BigUint::from(2u32); // Refs ✅
+let quotient = &balance / &divisor; // Refs ✅
+\`\`\`
+
+### Storage Updates with BigUint
+\`\`\`rust
+// Update patterns
+self.balance(&user).update(|b| *b += &amount);  // Use reference ✅
+self.balance(&user).update(|b| *b -= &amount);  // Use reference ✅
+self.balance(&user).update(|b| *b += amount);   // ERROR ❌
+
+// Setting values
+self.balance(&user).set(amount);           // Owned value ✅
+self.balance(&user).set(&amount);          // ERROR ❌
+self.balance(&user).set(amount.clone());   // Clone if needed ✅
+\`\`\`
+
+## 🎯 Real-World Examples
+
+### Example 1: Transfer Function
+\`\`\`rust
+#[endpoint]
+fn transfer(&self, to: ManagedAddress, amount: BigUint) {
+    let caller = self.blockchain().get_caller();
+    let balance = self.balances(&caller).get();
+    
+    // ✅ CORRECT - Compare owned values
+    require!(balance >= amount, "Insufficient balance");
+    
+    // ✅ CORRECT - Use references in updates
+    self.balances(&caller).update(|b| *b -= &amount);
+    self.balances(&to).update(|b| *b += &amount);
+}
+\`\`\`
+
+### Example 2: Checking Multiple Conditions
+\`\`\`rust
+#[endpoint]
+fn complex_check(&self, amount: BigUint) {
+    let min_amount = BigUint::from(100u32);
+    let max_amount = BigUint::from(10000u32);
+    let user_balance = self.get_user_balance();
+    
+    // ✅ All comparisons use consistent types
+    require!(
+        &amount >= &min_amount && &amount <= &max_amount,
+        "Amount out of range"
+    );
+    
+    require!(
+        &user_balance >= &amount,
+        "Insufficient balance"
+    );
+    
+    // Process the amount...
+}
+\`\`\`
+
+### Example 3: Fee Calculation
+\`\`\`rust
+fn calculate_with_fee(&self, amount: &BigUint) -> BigUint {
+    let fee_percent = BigUint::from(3u32);  // 3%
+    let hundred = BigUint::from(100u32);
+    
+    // ✅ Calculate fee using references
+    let fee = amount * &fee_percent / &hundred;
+    
+    // ✅ Return total using references
+    amount + &fee
+}
+\`\`\`
+
+## 💡 Best Practices
+
+1. **Prefer References**: Use \`&\` for comparisons and arithmetic to avoid unnecessary clones
+2. **Be Consistent**: If one side is a reference, make the other a reference too
+3. **Clone Sparingly**: Only clone when you need ownership (e.g., storing in storage)
+4. **Update Pattern**: Always use \`|b| *b += &amount\` in storage updates
+
+## 🚨 Quick Fix Cheat Sheet
+
+| Error | Fix |
+|-------|-----|
+| Can't compare \`BigUint\` with \`&BigUint\` | Add \`&\` to the owned value: \`&amount <= balance\` |
+| Can't compare \`ManagedRef<BigUint>\` with \`BigUint\` | Dereference with \`*\`: \`*payment <= balance\` |
+| Can't add \`BigUint\` to \`&BigUint\` | Use references: \`&amount + &balance\` |
+| Can't add to \`ManagedRef<BigUint>\` | Dereference: \`*b += &*payment\` |
+| Expected \`BigUint\`, found \`&BigUint\` | Clone if needed: \`balance.clone()\` |
+| Expected \`BigUint\`, found \`ManagedRef<BigUint>\` | Dereference: \`*payment\` or clone: \`payment.clone_value()\` |
+| Can't subtract \`&BigUint\` from \`BigUint\` | Use references: \`&balance - &amount\` |`,
+    metadata: {
+      title: 'BigUint Type Handling and Comparison Patterns',
+      description: 'Complete guide to avoiding type mismatch errors with BigUint in Klever smart contracts',
+      tags: ['critical', 'biguint', 'types', 'comparison', 'arithmetic', 'common-error', 'ownership'],
+      language: 'rust',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+
+  // BigUint Advanced Patterns Example
+  {
+    type: 'code_example',
+    content: `# Complete BigUint Example - Staking Contract
+
+This example demonstrates all BigUint patterns in a real staking contract:
+
+\`\`\`rust
+#![no_std]
+
+use klever_sc::imports::*;
+
+#[klever_sc::contract]
+pub trait StakingContract {
+    #[init]
+    fn init(&self, min_stake: BigUint, reward_rate: BigUint) {
+        self.min_stake().set(min_stake);
+        self.reward_rate().set(reward_rate);  // Rate per 1000 staked per day
+    }
+    
+    #[payable("KLV")]
+    #[endpoint]
+    fn stake(&self) {
+        let payment = self.call_value().klv_value();
+        let min_stake = self.min_stake().get();
+        
+        // ✅ Comparison - both owned values
+        require!(*payment >= min_stake, "Below minimum stake");
+        
+        let caller = self.blockchain().get_caller();
+        let timestamp = self.blockchain().get_block_timestamp();
+        
+        // ✅ Storage update using reference
+        self.staked_amount(&caller).update(|amount| *amount += &*payment);
+        self.stake_timestamp(&caller).set(timestamp);
+        
+        // ✅ Update total using reference
+        self.total_staked().update(|total| *total += &*payment);
+    }
+    
+    #[endpoint]
+    fn calculate_rewards(&self, user: ManagedAddress) -> BigUint {
+        let staked = self.staked_amount(&user).get();
+        let stake_time = self.stake_timestamp(&user).get();
+        let current_time = self.blockchain().get_block_timestamp();
+        
+        // ✅ Comparison with zero
+        if staked == BigUint::zero() {
+            return BigUint::zero();
+        }
+        
+        // Calculate time staked (in seconds)
+        let time_staked = current_time - stake_time;
+        let days_staked = BigUint::from(time_staked / 86400u64);
+        
+        // ✅ Complex arithmetic with references
+        let reward_rate = self.reward_rate().get();
+        let thousand = BigUint::from(1000u32);
+        
+        // rewards = (staked * reward_rate * days) / 1000
+        &staked * &reward_rate * &days_staked / &thousand
+    }
+    
+    #[endpoint]
+    fn unstake(&self, amount: BigUint) {
+        let caller = self.blockchain().get_caller();
+        let staked = self.staked_amount(&caller).get();
+        
+        // ✅ Comparison - both owned
+        require!(amount > BigUint::zero(), "Invalid amount");
+        require!(staked >= amount, "Insufficient staked amount");
+        
+        // Calculate and add rewards first
+        let rewards = self.calculate_rewards(caller.clone());
+        
+        // ✅ Update staked amount using reference
+        self.staked_amount(&caller).update(|s| *s -= &amount);
+        
+        // ✅ Calculate total to send (stake + rewards)
+        let total_amount = &amount + &rewards;
+        
+        // ✅ Update total staked
+        self.total_staked().update(|t| *t -= &amount);
+        
+        // Send funds
+        self.send().direct_klv(&caller, &total_amount);
+        
+        // Emit event
+        self.unstake_event(&caller, &amount, &rewards);
+    }
+    
+    #[endpoint]
+    fn compound_rewards(&self) {
+        let caller = self.blockchain().get_caller();
+        let rewards = self.calculate_rewards(caller.clone());
+        
+        // ✅ Check rewards > 0
+        require!(&rewards > &BigUint::zero(), "No rewards to compound");
+        
+        // ✅ Add rewards to stake using reference
+        self.staked_amount(&caller).update(|s| *s += &rewards);
+        self.total_staked().update(|t| *t += &rewards);
+        
+        // Reset timestamp
+        let timestamp = self.blockchain().get_block_timestamp();
+        self.stake_timestamp(&caller).set(timestamp);
+    }
+    
+    // Advanced: Calculate percentage
+    fn calculate_percentage(&self, amount: &BigUint, percentage: u32) -> BigUint {
+        let hundred = BigUint::from(100u32);
+        let perc = BigUint::from(percentage);
+        
+        // ✅ All references in calculation
+        amount * &perc / &hundred
+    }
+    
+    // Storage
+    #[storage_mapper("min_stake")]
+    fn min_stake(&self) -> SingleValueMapper<BigUint>;
+    
+    #[storage_mapper("reward_rate")]
+    fn reward_rate(&self) -> SingleValueMapper<BigUint>;
+    
+    #[storage_mapper("staked_amount")]
+    fn staked_amount(&self, user: &ManagedAddress) -> SingleValueMapper<BigUint>;
+    
+    #[storage_mapper("stake_timestamp")]
+    fn stake_timestamp(&self, user: &ManagedAddress) -> SingleValueMapper<u64>;
+    
+    #[storage_mapper("total_staked")]
+    fn total_staked(&self) -> SingleValueMapper<BigUint>;
+    
+    // Events
+    #[event("unstake")]
+    fn unstake_event(
+        &self,
+        #[indexed] user: &ManagedAddress,
+        #[indexed] amount: &BigUint,
+        #[indexed] rewards: &BigUint,
+    );
+}
+\`\`\`
+
+## Key Patterns Demonstrated:
+1. **Comparisons**: \`payment >= min_stake\`, \`staked >= amount\`
+2. **Storage Updates**: \`*amount += &payment\`, \`*s -= &amount\`
+3. **Arithmetic**: \`&amount + &rewards\`, \`amount * &perc / &hundred\`
+4. **Zero Checks**: \`amount > BigUint::zero()\`
+5. **Complex Calculations**: Multi-step reward calculation with references`,
+    metadata: {
+      title: 'BigUint Complete Example - Staking Contract',
+      description: 'Full contract demonstrating all BigUint patterns and best practices',
+      tags: ['biguint', 'example', 'staking', 'arithmetic', 'comparison'],
+      language: 'rust',
+      relevanceScore: 0.95,
+      contractType: 'defi',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+
   // Practical Token Operations Examples
   {
     type: 'code_example',
@@ -5074,18 +5458,19 @@ pub trait FeeCollector {
     #[payable("KLV")]
     #[endpoint]
     fn pay_fee(&self) {
-        let payment = self.call_value().klv_value();
+        let payment = self.call_value().klv_value();  // ManagedRef<BigUint>
         let required_fee = self.fee_amount().get();
         
-        require!(payment >= required_fee, "Insufficient fee");
+        // ✅ Dereference ManagedRef for comparison
+        require!(*payment >= required_fee, "Insufficient fee");
         
         // Store user as paid
         let caller = self.blockchain().get_caller();
         self.has_paid(&caller).set(true);
         
         // Return excess if any
-        if payment > required_fee {
-            let excess = payment - required_fee;
+        if *payment > required_fee {
+            let excess = &*payment - &required_fee;
             self.send().direct_klv(&caller, &excess);
         }
     }
