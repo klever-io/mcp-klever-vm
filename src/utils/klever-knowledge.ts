@@ -315,6 +315,9 @@ pub trait MyContract {
   {
     type: 'best_practice',
     content: `// Event annotation best practices:
+
+// ⚠️ REMEMBER: Every event parameter needs #[indexed] attribute (except at most ONE can be non-indexed)
+// Best practice: Just add #[indexed] to ALL parameters to avoid errors!
 // 1. Always use double quotes in event names
 #[event("myEvent")]  // ✓ Correct
 #[event('myEvent')]  // ✗ Wrong
@@ -331,8 +334,9 @@ fn my_event(
     value: &BigUint                      // ✓ Correct - reference
 );
 
-// 4. CRITICAL: In Klever, ALL event parameters must be indexed except at most ONE
-// ❌ WRONG - Multiple non-indexed parameters will cause errors:
+// 4. CRITICAL: In Klever, EVERY event parameter MUST have #[indexed] attribute (except at most ONE can be non-indexed)
+// This means: You MUST add #[indexed] to ALL parameters, or leave at most ONE without it
+// ❌ WRONG - Multiple non-indexed parameters (missing #[indexed]) will cause errors:
 #[event("gamePlayed")]
 fn game_played_event(
     &self,
@@ -4424,6 +4428,208 @@ pub struct UserData {
     },
     relatedContextIds: [],
   },
+  // KLV Token Identifier Usage
+  {
+    type: 'code_example',
+    content: `# Correct KLV Token Identifier Usage
+
+## Common Error
+\`\`\`rust
+// ❌ WRONG - This will cause compilation error
+let balance = self.blockchain().get_sc_balance(&KlvTokenIdentifier::klv(), 0);
+\`\`\`
+Error: \`use of undeclared type 'KlvTokenIdentifier'\`
+
+## Correct Usage
+\`\`\`rust
+// ✅ CORRECT - Use TokenIdentifier
+let balance = self.blockchain().get_sc_balance(&TokenIdentifier::klv(), 0);
+
+// For sending KLV
+self.send().direct_klv(&recipient, &amount);
+
+// For checking KLV payment
+let klv_amount = self.call_value().klv_value();
+\`\`\`
+
+## Token Identifier Patterns
+\`\`\`rust
+// KLV token
+TokenIdentifier::klv()
+
+// KDA tokens
+TokenIdentifier::from(&b"DVK-1234"[..])
+TokenIdentifier::from(managed_buffer)
+
+// Checking token type
+if payment.token_identifier == TokenIdentifier::klv() {
+    // Handle KLV payment
+}
+\`\`\``,
+    metadata: {
+      title: 'Correct KLV Token Identifier Usage',
+      description: 'How to properly use TokenIdentifier for KLV and avoid common KlvTokenIdentifier error',
+      tags: ['klv', 'token-identifier', 'balance', 'common-error'],
+      language: 'rust',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-community',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+  // Random Number Generation
+  {
+    type: 'code_example',
+    content: `# Secure Random Number Generation in Klever
+
+## Method 1: Using RandomnessSource (Simple)
+\`\`\`rust
+use klever_sc::api::RandomnessSource;
+
+fn generate_random_u8(&self) -> u8 {
+    let mut rand_source = RandomnessSource::new();
+    rand_source.next_u8()
+}
+
+// For dice (1-6)
+fn roll_dice_v1(&self) -> u8 {
+    let mut rand_source = RandomnessSource::new();
+    let random = rand_source.next_u8();
+    (random % 6) + 1
+}
+\`\`\`
+
+## Method 2: Using Block Random Seed (Recommended)
+\`\`\`rust
+use klever_sc::imports::*;
+
+// Using block random seed (based on validator signatures)
+fn generate_random_from_block(&self) -> u8 {
+    let seed = self.blockchain().get_block_random_seed();
+    // Use the seed to generate random
+    let random_bytes = seed.as_managed_buffer().to_boxed_bytes();
+    random_bytes.as_slice()[0]
+}
+
+// For dice using block seed
+fn roll_dice_v2(&self) -> u8 {
+    let seed = self.blockchain().get_block_random_seed();
+    let bytes = seed.as_managed_buffer().to_boxed_bytes();
+    (bytes.as_slice()[0] % 6) + 1
+}
+\`\`\`
+
+## Method 3: Combined Seed with Transaction Hash (Most Secure)
+\`\`\`rust
+use klever_sc::imports::*;
+
+// Combining block seed with tx hash for better entropy
+fn generate_secure_random(&self) -> u8 {
+    let mut rand = Rand::new(
+        self.blockchain().get_block_random_seed(),
+        self.blockchain().get_tx_hash(),
+    );
+    rand.next_u8()
+}
+
+// For dice with combined entropy
+fn roll_dice_v3(&self) -> u8 {
+    let mut rand = Rand::new(
+        self.blockchain().get_block_random_seed(),
+        self.blockchain().get_tx_hash(),
+    );
+    (rand.next_u8() % 6) + 1
+}
+
+// Generate random in range
+fn random_in_range(&self, min: u64, max: u64) -> u64 {
+    let mut rand = Rand::new(
+        self.blockchain().get_block_random_seed(),
+        self.blockchain().get_tx_hash(),
+    );
+    let range = max - min + 1;
+    min + (rand.next_u64() % range)
+}
+\`\`\`
+
+## Complete Example: Lottery Contract
+\`\`\`rust
+#[klever_sc::contract]
+pub trait LotteryContract {
+    #[endpoint(drawWinner)]
+    fn draw_winner(&self) -> ManagedAddress {
+        let participants = self.participants().len();
+        require!(participants > 0, "No participants");
+        
+        // Use combined entropy for fairness
+        let mut rand = Rand::new(
+            self.blockchain().get_block_random_seed(),
+            self.blockchain().get_tx_hash(),
+        );
+        
+        let winner_index = rand.next_usize() % participants;
+        let winner = self.participants().get(winner_index);
+        
+        self.winner_drawn_event(&winner, winner_index);
+        winner
+    }
+    
+    #[storage_mapper("participants")]
+    fn participants(&self) -> ManagedVec<ManagedAddress>;
+    
+    #[event("winnerDrawn")]
+    fn winner_drawn_event(
+        &self,
+        #[indexed] winner: &ManagedAddress,
+        #[indexed] index: usize,
+    );
+}
+\`\`\`
+
+## Comparison of Methods
+
+| Method | Security | Gas Cost | Use Case |
+|--------|----------|----------|----------|
+| RandomnessSource | Good | Low | Simple random needs |
+| Block Random Seed | Better | Low | Games, lotteries |
+| Combined Seed | Best | Medium | High-stakes games |
+
+## Important Security Notes
+1. **Block random seed** is based on validator signatures - more secure than RandomnessSource
+2. **Combining with tx hash** prevents prediction even if validator colludes
+3. **Never use** block timestamp or block nonce alone - predictable!
+4. **For critical randomness** (large prizes), use Method 3
+5. **Randomness is deterministic** within same block/tx - design accordingly
+
+## Anti-Patterns to Avoid
+\`\`\`rust
+// ❌ NEVER DO THIS - Predictable!
+fn bad_random(&self) -> u8 {
+    let timestamp = self.blockchain().get_block_timestamp();
+    (timestamp % 6) as u8 + 1  // Miners can manipulate!
+}
+
+// ❌ NEVER DO THIS - Same result for all calls in block
+fn bad_random_v2(&self) -> u8 {
+    let nonce = self.blockchain().get_block_nonce();
+    (nonce % 6) as u8 + 1  // Too predictable!
+}
+\`\`\``,
+    metadata: {
+      title: 'Secure Random Number Generation in Klever',
+      description: 'Three methods for generating secure random numbers with comparison and best practices',
+      tags: ['random', 'security', 'best-practice', 'randomness', 'validator-signature'],
+      language: 'rust',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-community',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
 ];
 
 // Deployment Scripts
@@ -6268,4 +6474,366 @@ export const allKleverContexts: ContextPayload[] = [
   ...crossContractPatterns,
   remoteStoragePattern,
   ...projectInitPatterns,
+  // Contract Query Response Handling
+  {
+    type: 'documentation',
+    content: `# Understanding Contract Query Responses
+
+## Empty Values in Responses
+When querying Klever contracts, empty/zero values often return as empty strings:
+
+\`\`\`json
+{
+  "data": {
+    "returnData": [""],  // Empty string for 0 or false
+    "returnCode": "Ok"
+  }
+}
+\`\`\`
+
+## Decoding Response Values
+
+### For BigUint (balances, amounts):
+- Empty string \`""\` = 0
+- Base64 encoded hex for non-zero values
+
+### For bool:
+- Empty string \`""\` = false
+- \`"AQ=="\` (base64 of 0x01) = true
+
+### For u64:
+- Empty string \`""\` = 0
+- Base64 encoded hex for non-zero values
+
+## Query Script Pattern
+\`\`\`bash
+# Decode BigUint to KLV (6 decimals)
+RETURN_DATA=$(echo "$RESPONSE" | jq -r '.data.returnData[]?')
+if [ -n "$RETURN_DATA" ] && [ "$RETURN_DATA" != "" ]; then
+    HEX_VALUE=$(echo "$RETURN_DATA" | base64 -d | xxd -p -c 256)
+    DECIMAL_VALUE=$(echo "ibase=16; \${HEX_VALUE^^}" | bc)
+    KLV_VALUE=$(echo "scale=6; $DECIMAL_VALUE / 1000000" | bc)
+    echo "$KLV_VALUE KLV"
+else
+    echo "0 KLV"
+fi
+\`\`\``,
+    metadata: {
+      title: 'Understanding Contract Query Responses',
+      description: 'How to properly decode empty values and response data from Klever contract queries',
+      tags: ['query', 'api', 'response-parsing', 'debugging'],
+      language: 'bash',
+      relevanceScore: 0.9,
+      contractType: 'any',
+      author: 'klever-community',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+  // Deployment Best Practices
+  {
+    type: 'best_practice',
+    content: `# Klever Contract Deployment Checklist
+
+## Pre-Deployment
+1. **Build and verify WASM size** - Keep under 24KB for lower fees
+2. **Test locally** - Use scenario tests
+3. **Check init parameters** - Ensure proper initialization
+
+## Deployment
+1. **Use correct flags**:
+   \`\`\`bash
+   --upgradeable    # Allow future upgrades
+   --readable       # Enable view functions
+   --payable        # Accept KLV payments
+   --payableBySC    # Accept payments from contracts
+   \`\`\`
+
+2. **Save deployment info**:
+   - Transaction hash
+   - Contract address
+   - Network used
+   - Timestamp
+
+## Post-Deployment
+1. **Verify deployment**:
+   - Query view functions
+   - Check initial state
+   
+2. **Fund contract** (if needed):
+   - For games/DEX: Add liquidity
+   - For prizes: Add reward pool
+
+3. **Test basic operations**:
+   - Small test transactions
+   - Verify events emitted
+   - Check state changes
+
+## Common Issues
+- **"Insufficient balance"** - Contract needs funding
+- **"Smart contracts not allowed"** - Add checks for SC callers
+- **Empty query responses** - Normal for 0/false values`,
+    metadata: {
+      title: 'Klever Contract Deployment Checklist',
+      description: 'Complete checklist for deploying contracts on Klever with best practices',
+      tags: ['deployment', 'testing', 'funding', 'checklist'],
+      language: 'markdown',
+      relevanceScore: 0.95,
+      contractType: 'any',
+      author: 'klever-community',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+  // Decimal Handling for Queries
+  {
+    type: 'code_example',
+    content: `# KLV Decimal Conversion in Query Scripts
+
+## KLV Uses 6 Decimal Places
+1 KLV = 1,000,000 smallest units
+
+## Bash Conversion Functions
+
+\`\`\`bash
+# Convert units to KLV
+units_to_klv() {
+    local units=$1
+    echo "scale=6; $units / 1000000" | bc
+}
+
+# Convert KLV to units
+klv_to_units() {
+    local klv=$1
+    echo "$klv * 1000000" | bc | cut -d. -f1
+}
+
+# Format KLV amount nicely
+format_klv() {
+    local klv=$1
+    printf "%.6f KLV" "$klv" | sed 's/\\.?0*$//'
+}
+
+# Parse BigUint from base64
+parse_biguint() {
+    local base64_data=$1
+    if [ -z "$base64_data" ] || [ "$base64_data" = "" ]; then
+        echo "0"
+    else
+        local hex=$(echo "$base64_data" | base64 -d | xxd -p -c 256)
+        echo "ibase=16; \${hex^^}" | bc
+    fi
+}
+\`\`\`
+
+## Usage in Query Scripts
+\`\`\`bash
+# Get balance and convert to KLV
+RESPONSE=$(curl -s "$API_URL" --data "$REQUEST")
+RETURN_DATA=$(echo "$RESPONSE" | jq -r '.data.returnData[0]')
+UNITS=$(parse_biguint "$RETURN_DATA")
+KLV=$(units_to_klv "$UNITS")
+echo "Balance: $(format_klv "$KLV")"
+\`\`\``,
+    metadata: {
+      title: 'KLV Decimal Conversion in Query Scripts',
+      description: 'Bash functions for converting between KLV units and decimal representation',
+      tags: ['decimals', 'klv', 'query', 'bash', 'conversion'],
+      language: 'bash',
+      relevanceScore: 0.9,
+      contractType: 'any',
+      author: 'klever-community',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+  // Koperator Payment Flags - Critical Information
+  {
+    type: 'documentation',
+    content: `# Koperator Payment Flags - Correct Usage
+
+## ❌ COMMON ERROR - These flags DO NOT EXIST:
+\`\`\`bash
+# WRONG - These will cause errors:
+--klv 1000000         # DOES NOT EXIST
+--payment 1000000     # DOES NOT EXIST
+--amount 1000000      # DOES NOT EXIST
+\`\`\`
+
+## ✅ CORRECT - Sending KLV with Contract Calls
+
+### For KLV Payments:
+\`\`\`bash
+# Send KLV with sc invoke (use --values flag)
+~/klever-sdk/koperator \\
+    --key-file="walletKey.pem" \\
+    sc invoke CONTRACT_ADDRESS methodName \\
+    --values "KLV=1000000" \\              # Format: KDA_ID=AMOUNT (1 KLV = 1,000,000 units)
+    --args String:"hello" \\
+    --await --sign
+\`\`\`
+
+### For KDA Token Payments:
+\`\`\`bash
+# Send KDA tokens with sc invoke
+~/klever-sdk/koperator \\
+    --key-file="walletKey.pem" \\
+    sc invoke CONTRACT_ADDRESS methodName \\
+    --values "DVK-1234=1000000" \\         # Format: KDA_ID=AMOUNT
+    --args String:"hello" \\
+    --await --sign
+\`\`\`
+
+### For Multiple Token Payments:
+\`\`\`bash
+# Send multiple tokens (comma-separated)
+~/klever-sdk/koperator \\
+    --key-file="walletKey.pem" \\
+    sc invoke CONTRACT_ADDRESS methodName \\
+    --values "KLV=1000000,DVK-1234=1000000,BTC-5678=500000" \\
+    --args String:"hello" \\
+    --await --sign
+\`\`\`
+
+## Important Notes:
+1. **--values** is for token payments (format: "KDA_ID=AMOUNT") - use "KLV=AMOUNT" for native KLV
+2. All amounts are in smallest units (6 decimals for KLV/KFI)
+3. For NFTs: use nonce > 0 and amount = 1
+
+## Examples for Common Operations:
+
+### Dice Game Bet (10 KLV):
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="$KEY_FILE" \\
+    sc invoke "$CONTRACT_ADDRESS" rollDice \\
+    --values "KLV=10000000" \\             # 10 KLV (format: KDA_ID=AMOUNT)
+    --args u8:3 \\                    # Betting on number 3
+    --await --sign
+\`\`\`
+
+### Token Swap:
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="$KEY_FILE" \\
+    sc invoke "$DEX_ADDRESS" swap \\
+    --values "DVK-1234=1000000" \\       # Sending 1 DVK
+    --args String:"BTC-5678" \\          # Want BTC token
+    --await --sign
+\`\`\`
+
+### NFT Transfer:
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="$KEY_FILE" \\
+    sc invoke "$CONTRACT_ADDRESS" transferNFT \\
+    --values "MYNFT-1234/42=1" \\        # NFT with ID MYNFT-1234 and nonce 42
+    --args Address:"klv1recipient..." \\
+    --await --sign
+\`\`\`
+
+### NFT with Nonce Format:
+For NFTs and SFTs with nonces, use the format: \`KDA_ID/NONCE=AMOUNT\`
+- Example: \`--values "MYNFT-1234/42=1"\` for NFT with nonce 42
+- Example: \`--values "MYSFT-5678/100=5"\` for 5 SFTs with nonce 100\`\`\``,
+    metadata: {
+      title: 'Koperator Payment Flags - Critical Information',
+      description: 'Correct usage of payment flags in koperator - avoiding common --klv and --payment errors',
+      tags: ['koperator', 'payments', 'klv', 'kda', 'common-error', 'critical'],
+      language: 'bash',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-community',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+  // Complete Koperator Reference for Smart Contracts
+  {
+    type: 'documentation',
+    content: `# Koperator Smart Contract Commands Reference
+
+## SC Deploy
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="path/to/key.pem" \\
+    sc create \\
+    --wasm="contract.wasm" \\
+    --upgradeable \\          # Allow upgrades
+    --readable \\             # Enable queries
+    --payable \\              # Accept KLV
+    --payableBySC \\          # Accept from contracts
+    --args String:"init_arg" \\ # Constructor args
+    --await \\                # Wait for confirmation
+    --sign                   # Sign transaction
+\`\`\`
+
+## SC Invoke (Call Contract Method)
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="path/to/key.pem" \\
+    sc invoke CONTRACT_ADDRESS methodName \\
+    --values "KLV=1000000,TOK-1234=100" \\  # Token payments (comma-separated)
+    --args Type:value \\      # Method arguments
+    --await \\
+    --sign
+\`\`\`
+
+## SC Query (View Functions)
+Note: Queries are done via API, not koperator:
+\`\`\`bash
+curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \\
+    --data-raw '{"ScAddress":"CONTRACT","FuncName":"viewMethod","Arguments":[]}'
+\`\`\`
+
+## SC Upgrade
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="path/to/key.pem" \\
+    sc upgrade CONTRACT_ADDRESS \\
+    --wasm="new_contract.wasm" \\
+    --upgradeable \\
+    --readable \\
+    --payable \\
+    --payableBySC \\
+    --args String:"upgrade_arg" \\
+    --await \\
+    --sign
+\`\`\`
+
+## Argument Types
+\`\`\`bash
+--args String:"hello world"
+--args u64:123
+--args bi:1000000000000
+--args Address:"klv1abc..."
+--args Bool:true
+--args Hex:"0x1234"
+--args Base64:"SGVsbG8="
+\`\`\`
+
+## Common Flags
+- \`--await\` - Wait for transaction confirmation
+- \`--sign\` - Sign the transaction
+- \`--result-only\` - Output only the result JSON
+- \`--network testnet\` - Specify network (if not using KLEVER_NODE env)
+- \`--values\` - Token payments (format: "KDA_ID=AMOUNT" or "KDA_ID/NONCE=AMOUNT" for NFTs)
+  - Examples: \`--values "KLV=1000000"\` or \`--values "KLV=100,USDT-A1B2=50,NFT-XYZ/42=1"\``,
+    metadata: {
+      title: 'Complete Koperator Reference for Smart Contracts',
+      description: 'Full reference for all koperator smart contract commands with examples',
+      tags: ['koperator', 'reference', 'cli', 'commands'],
+      language: 'bash',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-community',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
 ];

@@ -17,6 +17,7 @@ RESET="\\x1b[0m"
 TEMPLATE="empty"
 CONTRACT_NAME=""
 MOVE_TO_CURRENT=true
+NO_MOVE_SPECIFIED=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -31,6 +32,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --no-move)
             MOVE_TO_CURRENT=false
+            NO_MOVE_SPECIFIED=true
             shift
             ;;
         *)
@@ -91,8 +93,10 @@ elif [ -d "./$CONTRACT_NAME" ]; then
     # ksc might have created it in current directory despite --path
     PROJECT_DIR="./$CONTRACT_NAME"
     echo -e "\${YELLOW}Project created in current directory instead of temp\${RESET}"
-    # Since it's already in current dir, we can skip the move
-    MOVE_TO_CURRENT=false
+    # Only skip move if user didn't explicitly specify --no-move
+    if [ "$NO_MOVE_SPECIFIED" = false ]; then
+        MOVE_TO_CURRENT=false
+    fi
 elif [ -d "$TEMP_DIR" ] && [ "$(ls -A $TEMP_DIR)" ]; then
     # If CONTRACT_NAME dir doesn't exist, check if files were created directly in TEMP_DIR
     PROJECT_DIR="$TEMP_DIR"
@@ -172,17 +176,30 @@ if [ "$MOVE_TO_CURRENT" = true ]; then
     echo -e "\${GREEN}Files after move:\${RESET}"
     ls -la .
 else
-    # Move the entire project directory
-    if [ "$PROJECT_DIR" = "$TEMP_DIR/$CONTRACT_NAME" ]; then
-        mv "$PROJECT_DIR" .
-    else
-        # Create project directory and move files
-        mkdir -p "$CONTRACT_NAME"
-        if [ -n "$(ls -A $PROJECT_DIR)" ]; then
-            cp -r "$PROJECT_DIR"/* "$CONTRACT_NAME"/ 2>/dev/null || true
-            cp -r "$PROJECT_DIR"/.[^.]* "$CONTRACT_NAME"/ 2>/dev/null || true
+    echo -e "\${YELLOW}--no-move specified: Using current directory as project root...\${RESET}"
+    # When noMove is specified, we want to place files directly in current directory
+    
+    if [ -d "$PROJECT_DIR" ] && [ -n "$(ls -A $PROJECT_DIR)" ]; then
+        echo -e "\${YELLOW}Moving project files to current directory...\${RESET}"
+        
+        # Move contents directly to current directory (not in a subdirectory)
+        if command -v rsync >/dev/null 2>&1; then
+            rsync -av "$PROJECT_DIR/" . || {
+                echo -e "\${RED}rsync failed, trying cp...\${RESET}"
+                find "$PROJECT_DIR" -maxdepth 1 -mindepth 1 -exec cp -r {} . \; 2>&1 || echo -e "\${RED}Failed to copy files\${RESET}"
+            }
+        else
+            find "$PROJECT_DIR" -maxdepth 1 -mindepth 1 -exec cp -r {} . \; 2>&1 || echo -e "\${RED}Failed to copy files\${RESET}"
+        fi
+        
+        # If PROJECT_DIR was ./$CONTRACT_NAME created by ksc, remove the now-empty directory
+        if [ "$PROJECT_DIR" = "./$CONTRACT_NAME" ]; then
+            rmdir "./$CONTRACT_NAME" 2>/dev/null || true
         fi
     fi
+    
+    echo -e "\${GREEN}Files in current directory:\${RESET}"
+    ls -la .
 fi
 
 # Clean up temp directory
@@ -674,8 +691,17 @@ build_arg() {
         String)
             echo "--args String:\\"\$value\\""
             ;;
-        Number|u64|u32|u16|u8)
-            echo "--args Number:\$value"
+        u64)
+            echo "--args u64:\$value"
+            ;;
+        u32)
+            echo "--args u32:\$value"
+            ;;
+        u16)
+            echo "--args u16:\$value"
+            ;;
+        u8)
+            echo "--args u8:\$value"
             ;;
         Address)
             echo "--args Address:\\"\$value\\""
@@ -775,7 +801,7 @@ main() {
             5)
                 if get_contract_address; then
                     read -p "Enter method name: " method
-                    echo "Enter arguments (format: type:value, e.g., String:hello Number:42)"
+                    echo "Enter arguments (format: type:value, e.g., String:hello u64:42 bi:1000000000000)"
                     echo "Press Enter with empty line when done"
                     args=()
                     while true; do
