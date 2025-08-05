@@ -4811,11 +4811,52 @@ This demonstrates how multiple patterns work together to create a complete dApp!
     type: 'code_example',
     content: `# Secure Random Number Generation in Klever
 
-## Method 1: Using RandomnessSource (Simple)
+## 🎲 How RandomnessSource Works Internally
+
+The \`RandomnessSource\` in Klever provides cryptographically secure randomness by combining multiple entropy sources at the blockchain level. Here's how it works:
+
+### Internal Mechanism
+
+When you call \`RandomnessSource::new()\`, the blockchain internally initializes a randomizer using:
+
+1. **Previous Block Random Seed** - Random seed from the previous block
+2. **Current Block Random Seed** - Random seed from the current block  
+3. **Transaction Hash** - Unique hash of the current transaction
+
+These are combined to create a deterministic but unpredictable random seed:
+
+\`\`\`go
+// This is what happens internally in the Klever node:
+func (context *managedTypesContext) initRandomizer() {
+    blockchainContext := context.host.Blockchain()
+    previousRandomSeed := blockchainContext.LastRandomSeed()
+    currentRandomSeed := blockchainContext.CurrentRandomSeed()
+    txHash := context.host.Runtime().GetCurrentTxHash()
+
+    // Combine all entropy sources
+    blocksRandomSeed := append(previousRandomSeed, currentRandomSeed...)
+    randomSeed := append(blocksRandomSeed, txHash...)
+
+    // Create a deterministic random generator
+    randomizer := math.NewSeedRandReader(randomSeed)
+    context.randomnessGenerator = randomizer
+}
+\`\`\`
+
+### Key Properties
+
+- **Deterministic**: Same transaction will always produce same random numbers (important for consensus)
+- **Unpredictable**: Cannot be predicted before block is produced
+- **Secure**: Combines multiple entropy sources making it resistant to manipulation
+- **Per-Transaction**: Each transaction gets its own unique random seed
+
+## Method 1: Using RandomnessSource (Recommended)
 \`\`\`rust
 use klever_sc::api::RandomnessSource;
 
 fn generate_random_u8(&self) -> u8 {
+    // This internally calls SetRandom blockchain function
+    // which initializes the randomizer with combined entropy
     let mut rand_source = RandomnessSource::new();
     rand_source.next_u8()
 }
@@ -4826,9 +4867,21 @@ fn roll_dice_v1(&self) -> u8 {
     let random = rand_source.next_u8();
     (random % 6) + 1
 }
+
+// Generate multiple random numbers from same source
+fn generate_multiple_randoms(&self) -> (u8, u32, u64) {
+    let mut rand_source = RandomnessSource::new();
+    
+    // All these use the same initialized seed
+    let random_u8 = rand_source.next_u8();
+    let random_u32 = rand_source.next_u32();
+    let random_u64 = rand_source.next_u64();
+    
+    (random_u8, random_u32, random_u64)
+}
 \`\`\`
 
-## Method 2: Using Block Random Seed (Recommended)
+## Method 2: Using Block Random Seed (Alternative)
 \`\`\`rust
 use klever_sc::imports::*;
 
@@ -4878,6 +4931,57 @@ fn random_in_range(&self, min: u64, max: u64) -> u64 {
     );
     let range = max - min + 1;
     min + (rand.next_u64() % range)
+}
+\`\`\`
+
+## Best Practices for Randomness
+
+### ✅ DO:
+- Use \`RandomnessSource\` for most random generation needs
+- Generate all random numbers needed in a single transaction from one source
+- Remember that randomness is deterministic per transaction (for consensus)
+- Use modulo operations for bounded ranges
+
+### ❌ DON'T:
+- Don't use timestamp alone as a random source (predictable)
+- Don't use caller address or nonce as entropy (manipulable)
+- Don't generate random numbers in view functions (no tx context)
+- Don't rely on randomness for high-value decisions without additional verification
+
+## Common Use Cases
+
+### Shuffling an Array
+\`\`\`rust
+fn shuffle_array(&self, items: &mut ManagedVec<u32>) {
+    let mut rand_source = RandomnessSource::new();
+    let len = items.len();
+    
+    for i in 0..len {
+        let j = rand_source.next_u32() % (len - i) + i;
+        // Swap items[i] and items[j]
+        let temp = items.get(i);
+        items.set(i, items.get(j));
+        items.set(j, temp);
+    }
+}
+\`\`\`
+
+### Weighted Random Selection
+\`\`\`rust
+fn weighted_random_selection(&self, weights: &ManagedVec<u32>) -> usize {
+    let mut rand_source = RandomnessSource::new();
+    let total_weight: u32 = weights.iter().sum();
+    let random_weight = rand_source.next_u32() % total_weight;
+    
+    let mut cumulative = 0u32;
+    for (index, weight) in weights.iter().enumerate() {
+        cumulative += weight;
+        if random_weight < cumulative {
+            return index;
+        }
+    }
+    
+    weights.len() - 1
 }
 \`\`\`
 
@@ -4945,9 +5049,9 @@ fn bad_random_v2(&self) -> u8 {
 }
 \`\`\``,
     metadata: {
-      title: 'Secure Random Number Generation in Klever',
-      description: 'Three methods for generating secure random numbers with comparison and best practices',
-      tags: ['random', 'security', 'best-practice', 'randomness', 'validator-signature'],
+      title: 'Secure Random Number Generation - Complete Guide',
+      description: 'Comprehensive guide explaining how RandomnessSource works internally with blockchain entropy sources, plus best practices and common patterns',
+      tags: ['random', 'security', 'best-practice', 'randomness', 'validator-signature', 'randomness-source', 'entropy', 'blockchain', 'gaming'],
       language: 'rust',
       relevanceScore: 1.0,
       contractType: 'any',
