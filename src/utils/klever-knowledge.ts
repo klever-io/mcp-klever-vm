@@ -1,6 +1,137 @@
 import { ContextPayload } from '../types/index.js';
 
 export const kleverKnowledgeBase: ContextPayload[] = [
+  // CODE EXAMPLE DISCOVERY GUIDE
+  {
+    type: 'best_practice',
+    content: `# Finding Contract Patterns and Code Examples
+
+## 🎯 How to Find Code Examples for Different Use Cases
+
+This knowledge base contains extensive code examples for various smart contract implementations. Use these patterns to build gaming, DeFi, NFT, and other contract types.
+
+### Available Code Example Categories
+
+#### Core Contract Patterns
+- **Basic Contract Structure** - Foundation for any contract type
+- **Token Handling Examples** - KLV, KDA token operations
+- **Storage Patterns** - Complete storage with namespaces and views
+- **Admin Access Control** - Permission management for DeFi/gaming
+- **Pausable Contracts** - Emergency stop mechanisms
+
+#### Token & NFT Patterns  
+- **FungibleTokenMapper** - Create fungible tokens (for DeFi)
+- **NonFungibleTokenMapper** - NFT creation and management
+- **Token Payment Patterns** - Accept and process payments
+- **KDA Token Operations** - Working with Klever digital assets
+
+#### DeFi Building Blocks
+- **Payable Endpoints** - Accept token deposits
+- **Cross-Contract Calls** - Interact with other contracts
+- **Remote Storage Access** - Read data from other contracts
+- **Token Mapper Helpers** - Issue, mint, burn tokens
+
+#### Gaming Components
+- **Random Number Generation** - Secure randomness for games
+- **Event Patterns** - Game state changes and notifications
+- **Storage Collections** - Track players, scores, items
+
+### How to Build Different Contract Types
+
+#### 🎮 Gaming Contracts
+Combine these patterns:
+1. **Basic Contract Structure** - Foundation
+2. **Random Number Generation** - For game mechanics
+3. **Storage Collections** (MapMapper, SetMapper) - Track players/items
+4. **Event Patterns** - Notify game state changes
+5. **Admin Module** - Game admin functions
+6. **Pausable Module** - Pause game if needed
+
+#### 💰 DeFi Contracts
+Combine these patterns:
+1. **Basic Contract Structure** - Foundation
+2. **Token Handling Examples** - Accept/send tokens
+3. **FungibleTokenMapper** - Create liquidity tokens
+4. **Payable Endpoints** - Accept deposits
+5. **Cross-Contract Calls** - Interact with other DeFi protocols
+6. **Admin Access Control** - Protocol governance
+
+#### 🎨 NFT Contracts  
+Combine these patterns:
+1. **Basic Contract Structure** - Foundation
+2. **NonFungibleTokenMapper** - NFT creation
+3. **Storage Patterns** - Track NFT metadata
+4. **Token Payment Patterns** - NFT sales
+5. **Event Patterns** - Mint/transfer events
+
+#### 🏦 Staking Contracts
+Combine these patterns:
+1. **Basic Contract Structure** - Foundation
+2. **Token Handling** - Stake/unstake operations
+3. **Storage Mappers** - Track staked amounts
+4. **View Endpoints** - Check balances
+5. **Pausable Module** - Emergency controls
+
+### Finding Specific Examples
+
+To find code examples for your use case:
+1. Search for \`type: 'code_example'\` to see all examples
+2. Look for relevant patterns in the categories above
+3. Combine multiple patterns to build complete contracts
+4. Each example includes working code you can adapt
+
+### Example: Building a Simple Game
+
+\`\`\`rust
+// Combine these patterns:
+// 1. Basic structure
+#![no_std]
+use klever_sc::imports::*;
+
+// 2. Add random number generation
+use klever_sc::api::RandomnessSource;
+
+// 3. Add storage for game state
+#[klever_sc::contract]
+pub trait GameContract {
+    #[storage_mapper("players")]
+    fn players(&self) -> SetMapper<ManagedAddress>;
+    
+    #[storage_mapper("scores")]  
+    fn scores(&self) -> MapMapper<ManagedAddress, BigUint>;
+    
+    // 4. Game logic using randomness
+    #[endpoint]
+    fn play(&self) -> u8 {
+        let mut rand_source = RandomnessSource::new();
+        let dice_roll = (rand_source.next_u8() % 6) + 1;
+        
+        // Update scores...
+        dice_roll
+    }
+}
+\`\`\`
+
+### Tips for Using Examples
+- Start with the Basic Contract Structure
+- Add modules and patterns as needed
+- Each pattern is self-contained and can be combined
+- Examples show real, working code
+- Adapt variable names and logic to your needs`,
+    metadata: {
+      title: 'Code Example Discovery Guide',
+      description: 'How to find and use code examples for different contract types',
+      tags: ['guide', 'examples', 'patterns', 'gaming', 'defi', 'nft', 'discovery'],
+      language: 'mixed',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+
   // CRITICAL: Use Standard Rust Imports, NOT Macros
   {
     type: 'best_practice',
@@ -4479,6 +4610,202 @@ if payment.token_identifier == TokenIdentifier::klv() {
     },
     relatedContextIds: [],
   },
+  // Complete Lottery Game Example - Combining Multiple Patterns
+  {
+    type: 'code_example',
+    content: `# Complete Lottery Game Contract - Combining Patterns
+
+This example shows how to combine multiple patterns to create a complete lottery game contract.
+
+\`\`\`rust
+#![no_std]
+
+use klever_sc::imports::*;
+
+/// A complete lottery game combining multiple patterns:
+/// - Admin control for game management
+/// - Pausable functionality for emergencies
+/// - Token payments for ticket purchases
+/// - Random number generation for winner selection
+/// - Storage patterns for tracking players and prizes
+/// - Events for game state changes
+#[klever_sc::contract]
+pub trait Lottery:
+    klever_sc_modules::pause::PauseModule
+    + klever_sc_modules::only_admin::OnlyAdminModule
+{
+    #[init]
+    fn init(&self, ticket_price: BigUint) {
+        self.ticket_price().set(ticket_price);
+        self.set_paused(false);
+    }
+
+    #[upgrade]
+    fn upgrade(&self, _new_ticket_price: BigUint) {
+        // do nothing for now, can be extended later
+    }
+    
+    /// Buy lottery tickets - combines payable endpoint pattern
+    #[payable("KLV")]
+    #[endpoint(buyTickets)]
+    fn buy_tickets(&self) {
+        self.require_not_paused();
+        
+        let payment = self.call_value().klv_value();
+        let ticket_price = self.ticket_price().get();
+        
+        require!(*payment >= ticket_price, "Insufficient payment");
+        
+        let tickets_bought = &*payment / &ticket_price;
+        let caller = self.blockchain().get_caller();
+        
+        // Convert BigUint to u32 for ticket count
+        let tickets_count = tickets_bought.to_u64().unwrap_or(0) as u32;
+        require!(tickets_count > 0, "No tickets bought, payment too low");
+        
+        // Storage pattern - track player tickets
+        self.player_tickets(&caller).update(|tickets| *tickets += tickets_count);
+        
+        // Add player to the set if not already present
+        self.players().insert(caller.clone());
+
+        self.total_tickets().update(|total| *total += tickets_count);
+        
+        // Add to prize pool
+        self.prize_pool().update(|pool| *pool += &*payment);
+        
+        // Event pattern - notify ticket purchase
+        self.ticket_purchased_event(&caller, tickets_count);
+    }
+    
+    /// Draw winner - combines random generation and cross-contract patterns
+    #[endpoint(drawWinner)]
+    fn draw_winner(&self) {
+        self.require_not_paused();
+        self.require_caller_is_admin();
+        
+        let total = self.total_tickets().get();
+        require!(total > 0u32, "No tickets sold");
+        
+        // Random number generation pattern
+        let mut rand_source = RandomnessSource::new();
+        let winning_ticket = rand_source.next_u32() % total;
+        
+        // Find winner by iterating through players
+        let winner = self.find_winner_by_ticket(winning_ticket);
+        
+        // Transfer prize
+        let prize = self.prize_pool().take();
+        self.send().direct_klv(&winner, &prize);
+        
+        // Event pattern - announce winner
+        self.winner_drawn_event(&winner, &prize, winning_ticket);
+        
+        // Reset for next round
+        self.reset_lottery();
+    }
+    
+    /// Admin function to set new ticket price
+    #[endpoint(setTicketPrice)]
+    fn set_ticket_price(&self, new_price: BigUint) {
+        self.require_caller_is_admin();
+        self.ticket_price().set(new_price);
+    }
+    
+    /// Emergency withdraw - admin only
+    #[endpoint(emergencyWithdraw)]
+    fn emergency_withdraw(&self) {
+        self.require_caller_is_admin();
+        self.set_paused(true);
+        
+        let pool = self.prize_pool().take();
+        let admin = self.blockchain().get_owner_address();
+        self.send().direct_klv(&admin, &pool);
+    }
+    
+    fn find_winner_by_ticket(&self, winning_ticket: u32) -> ManagedAddress {
+        let mut current_ticket = 0u32;
+        
+        for player in self.players().iter() {
+            let player_ticket_count = self.player_tickets(&player).get();
+            current_ticket += player_ticket_count;
+            
+            if current_ticket > winning_ticket {
+                return player;
+            }
+        }
+        
+        sc_panic!("Winner not found");
+    }
+    
+    fn reset_lottery(&self) {
+        // Clear all player tickets
+        for player in self.players().iter() {
+            self.player_tickets(&player).clear();
+        }
+        self.players().clear();
+        self.total_tickets().clear();
+    }
+    
+    // Storage patterns
+    #[storage_mapper("ticket_price")]
+    fn ticket_price(&self) -> SingleValueMapper<BigUint>;
+    
+    #[storage_mapper("player_tickets")]
+    fn player_tickets(&self, player: &ManagedAddress) -> SingleValueMapper<u32>;
+    
+    #[storage_mapper("total_tickets")]
+    fn total_tickets(&self) -> SingleValueMapper<u32>;
+    
+    #[storage_mapper("prize_pool")]
+    fn prize_pool(&self) -> SingleValueMapper<BigUint>;
+    
+    #[storage_mapper("players")]
+    fn players(&self) -> UnorderedSetMapper<ManagedAddress>;
+    
+    // Events
+    #[event("ticketPurchased")]
+    fn ticket_purchased_event(
+        &self,
+        #[indexed] player: &ManagedAddress,
+        #[indexed] tickets: u32,
+    );
+    
+    #[event("winnerDrawn")]
+    fn winner_drawn_event(
+        &self,
+        #[indexed] winner: &ManagedAddress,
+        #[indexed] prize: &BigUint,
+        #[indexed] winning_ticket: u32,
+    );
+}
+\`\`\`
+
+## Patterns Used in This Example:
+1. **Basic Contract Structure** - Foundation with #![no_std] and imports
+2. **Admin Module** - Admin-only functions for game management
+3. **Pausable Module** - Emergency stop functionality
+4. **Payable Endpoints** - Accept KLV for ticket purchases
+5. **Random Number Generation** - Select winner randomly
+6. **Storage Mappers** - Track tickets, players, and prize pool
+7. **Event Patterns** - Notify about purchases and winners
+8. **Token Transfer** - Send prize to winner
+
+This demonstrates how multiple patterns work together to create a complete dApp!`,
+    metadata: {
+      title: 'Complete Lottery Game Example',
+      description: 'Full example combining multiple patterns for a lottery game',
+      tags: ['gaming', 'lottery', 'complete-example', 'patterns', 'defi'],
+      language: 'rust',
+      relevanceScore: 0.95,
+      contractType: 'gaming',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+
   // Random Number Generation
   {
     type: 'code_example',
