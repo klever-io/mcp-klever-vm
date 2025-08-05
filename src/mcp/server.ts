@@ -9,7 +9,7 @@ import {
 } from '../utils/project-init-script.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { writeFile, chmod } from 'fs/promises';
+import { writeFile, chmod, access } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -429,15 +429,35 @@ export class KleverMCPServer {
             await chmod(scriptPath, '755');
 
             // Build command with arguments
-            const cmdArgs = [`--name "${name}"`, `--template "${template}"`];
+            const cmdArgs = ['--name', name, '--template', template];
             if (noMove) {
               cmdArgs.push('--no-move');
             }
 
-            const cmd = `${scriptPath} ${cmdArgs.join(' ')}`;
+            // Properly escape arguments for shell
+            const escapedArgs = cmdArgs.map((arg, index) => {
+              // Don't quote flags (arguments starting with --)
+              if (index % 2 === 0 || arg.startsWith('--')) {
+                return arg;
+              }
+              // Quote values that might contain spaces
+              return `"${arg.replace(/"/g, '\\"')}"`;
+            }).join(' ');
+
+            const cmd = `${scriptPath} ${escapedArgs}`;
             console.error(`[MCP] Running: ${cmd}`);
 
             try {
+              console.error(`[MCP] Current working directory: ${process.cwd()}`);
+              
+              // Check if script exists
+              try {
+                await access(scriptPath);
+                console.error(`[MCP] Script path exists: true`);
+              } catch {
+                console.error(`[MCP] Script path exists: false`);
+              }
+              
               // Execute the script
               const { stdout, stderr } = await execAsync(cmd, {
                 cwd: process.cwd(),
@@ -445,6 +465,7 @@ export class KleverMCPServer {
                 shell: '/bin/bash',
               });
 
+              console.error(`[MCP] Script stdout length: ${stdout.length}`);
               console.error(`[MCP] Script output: ${stdout}`);
               if (stderr) {
                 console.error(`[MCP] Script stderr: ${stderr}`);
