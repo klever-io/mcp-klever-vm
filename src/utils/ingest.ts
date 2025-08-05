@@ -5,7 +5,7 @@ import { KleverParser } from '../parsers/klever.js';
 
 export class ContractIngester {
   constructor(private contextService: ContextService) {}
-  
+
   /**
    * Ingest a single Klever contract file
    */
@@ -13,24 +13,24 @@ export class ContractIngester {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
       const fileName = path.basename(filePath);
-      
+
       // Parse and extract contexts
       const contexts = KleverParser.parseAndExtractContexts(content);
-      
+
       // Add author if provided
       if (author) {
         contexts.forEach(ctx => {
           ctx.metadata.author = author;
         });
       }
-      
+
       // Ingest all contexts
       const ids: string[] = [];
       for (const context of contexts) {
         const id = await this.contextService.ingest(context);
         ids.push(id);
       }
-      
+
       console.log(`Ingested ${ids.length} contexts from ${fileName}`);
       return ids;
     } catch (error) {
@@ -38,19 +38,19 @@ export class ContractIngester {
       throw error;
     }
   }
-  
+
   /**
    * Ingest all Rust files in a directory
    */
   async ingestDirectory(dirPath: string, author?: string): Promise<string[]> {
     const ids: string[] = [];
-    
+
     try {
       const entries = await fs.readdir(dirPath, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         const fullPath = path.join(dirPath, entry.name);
-        
+
         if (entry.isDirectory()) {
           // Recursively process subdirectories
           const subIds = await this.ingestDirectory(fullPath, author);
@@ -65,14 +65,14 @@ export class ContractIngester {
           }
         }
       }
-      
+
       return ids;
     } catch (error) {
       console.error(`Error processing directory ${dirPath}:`, error);
       throw error;
     }
   }
-  
+
   /**
    * Ingest common Klever patterns and best practices
    */
@@ -99,8 +99,8 @@ pub trait MyContract {
           language: 'rust',
           relevanceScore: 0.9,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       },
       {
         type: 'security_tip' as const,
@@ -114,8 +114,8 @@ require!(self.blockchain().get_caller() == self.owner().get(), "Only owner can c
           language: 'rust',
           relevanceScore: 0.95,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       },
       {
         type: 'optimization' as const,
@@ -135,8 +135,8 @@ for item in items {
           language: 'rust',
           relevanceScore: 0.8,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       },
       {
         type: 'error_pattern' as const,
@@ -152,18 +152,18 @@ let result = a.checked_add(&b).ok_or("Overflow")?;`,
           language: 'rust',
           relevanceScore: 0.85,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      }
+          updatedAt: new Date().toISOString(),
+        },
+      },
     ];
-    
+
     for (const pattern of commonPatterns) {
       await this.contextService.ingest({
         ...pattern,
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     console.log(`Ingested ${commonPatterns.length} common patterns`);
   }
 }

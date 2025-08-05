@@ -500,19 +500,19 @@ export const projectInitToolDefinition = {
     properties: {
       name: {
         type: 'string',
-        description: 'The name of the contract'
+        description: 'The name of the contract',
       },
       template: {
         type: 'string',
         description: 'Template to use (default: empty)',
-        default: 'empty'
+        default: 'empty',
       },
       noMove: {
         type: 'boolean',
         description: 'Do not move project files to current directory',
-        default: false
-      }
+        default: false,
+      },
     },
-    required: ['name']
-  }
+    required: ['name'],
+  },
 };

@@ -6,7 +6,7 @@ export class KleverValidator {
    */
   static validateContract(content: string): ContextPayload[] {
     const issues: ContextPayload[] = [];
-    
+
     // Check event annotation format
     const badEventRegex = /#\[event\('[^']+'\)\]/g;
     if (badEventRegex.test(content)) {
@@ -20,12 +20,12 @@ export class KleverValidator {
           language: 'rust',
           relevanceScore: 0.95,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     // Check for snake_case in event names
     const eventSnakeCaseRegex = /#\[event\("([^"]+)"\)\]/g;
     let match;
@@ -42,15 +42,16 @@ export class KleverValidator {
             language: 'rust',
             relevanceScore: 0.8,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
           },
-          relatedContextIds: []
+          relatedContextIds: [],
         });
       }
     }
-    
+
     // Check for missing Self::Api in managed types
-    const managedTypeRegex = /:\s*(ManagedBuffer|BigUint|ManagedAddress|ManagedVec|TokenIdentifier)\s*[;,>]/g;
+    const managedTypeRegex =
+      /:\s*(ManagedBuffer|BigUint|ManagedAddress|ManagedVec|TokenIdentifier)\s*[;,>]/g;
     if (managedTypeRegex.test(content)) {
       issues.push({
         type: 'error_pattern',
@@ -62,18 +63,19 @@ export class KleverValidator {
           language: 'rust',
           relevanceScore: 0.9,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     // Check for Option instead of OptionalValue in endpoints
     const endpointWithOption = /#\[endpoint[^\]]*\]\s*(?:async\s+)?fn\s+\w+[^{]*Option<[^>]+>/;
     if (endpointWithOption.test(content)) {
       issues.push({
         type: 'optimization',
-        content: 'Consider using OptionalValue<T> instead of Option<T> in endpoints for better gas efficiency',
+        content:
+          'Consider using OptionalValue<T> instead of Option<T> in endpoints for better gas efficiency',
         metadata: {
           title: 'Suboptimal Optional Parameter Usage',
           description: 'OptionalValue is more efficient than Option for endpoint parameters',
@@ -81,14 +83,15 @@ export class KleverValidator {
           language: 'rust',
           relevanceScore: 0.7,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     // Check for missing require! validations
-    const transferWithoutValidation = /fn\s+transfer[^{]*{(?:(?!require\s*!\s*\(\s*!to\.is_zero).)*$/s;
+    const transferWithoutValidation =
+      /fn\s+transfer[^{]*{(?:(?!require\s*!\s*\(\s*!to\.is_zero).)*$/s;
     if (transferWithoutValidation.test(content)) {
       issues.push({
         type: 'security_tip',
@@ -100,18 +103,20 @@ export class KleverValidator {
           language: 'rust',
           relevanceScore: 0.95,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     // Check for VecMapper used for whitelists
-    const vecMapperWhitelist = /#\[storage_mapper\("[^"]*whitelist[^"]*"\)\]\s*fn\s+\w+[^;]*VecMapper/i;
+    const vecMapperWhitelist =
+      /#\[storage_mapper\("[^"]*whitelist[^"]*"\)\]\s*fn\s+\w+[^;]*VecMapper/i;
     if (vecMapperWhitelist.test(content)) {
       issues.push({
         type: 'optimization',
-        content: 'Use SetMapper or UnorderedSetMapper for whitelists instead of VecMapper for O(1) lookups',
+        content:
+          'Use SetMapper or UnorderedSetMapper for whitelists instead of VecMapper for O(1) lookups',
         metadata: {
           title: 'Inefficient Whitelist Storage',
           description: 'VecMapper has O(n) lookup time, use SetMapper for whitelists',
@@ -119,12 +124,12 @@ export class KleverValidator {
           language: 'rust',
           relevanceScore: 0.85,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     // Check for module naming convention
     const moduleSnakeCase = /#\[klever_sc::module\]\s*pub\s+trait\s+[a-z_]+/;
     if (moduleSnakeCase.test(content)) {
@@ -138,21 +143,21 @@ export class KleverValidator {
           language: 'rust',
           relevanceScore: 0.8,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     return issues;
   }
-  
+
   /**
    * Extract best practices from well-written contract code
    */
   static extractBestPractices(content: string): ContextPayload[] {
     const practices: ContextPayload[] = [];
-    
+
     // Check for proper input validation
     if (content.includes('require!') && content.includes('is_zero()')) {
       practices.push({
@@ -165,12 +170,12 @@ export class KleverValidator {
           language: 'rust',
           relevanceScore: 0.8,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     // Check for event emission
     if (content.includes('#[event') && content.includes('self.') && content.includes('_event(')) {
       practices.push({
@@ -183,12 +188,12 @@ export class KleverValidator {
           language: 'rust',
           relevanceScore: 0.75,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     // Check for upgrade function
     if (content.includes('#[upgrade]')) {
       practices.push({
@@ -201,12 +206,12 @@ export class KleverValidator {
           language: 'rust',
           relevanceScore: 0.7,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     return practices;
   }
 }

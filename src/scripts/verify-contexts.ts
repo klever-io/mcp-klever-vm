@@ -12,7 +12,7 @@ const typeExamples = new Map<ContextType, string[]>();
 for (const context of allKleverContexts) {
   const count = typeCounts.get(context.type) || 0;
   typeCounts.set(context.type, count + 1);
-  
+
   // Store first 3 examples of each type
   const examples = typeExamples.get(context.type) || [];
   if (examples.length < 3) {
@@ -42,12 +42,8 @@ console.log('\n🔎 Content Type Verification:');
 const rustCodeContexts = allKleverContexts.filter(
   ctx => ctx.type === 'code_example' && ctx.metadata.language === 'rust'
 );
-const bashContexts = allKleverContexts.filter(
-  ctx => ctx.metadata.language === 'bash'
-);
-const jsonContexts = allKleverContexts.filter(
-  ctx => ctx.metadata.language === 'json'
-);
+const bashContexts = allKleverContexts.filter(ctx => ctx.metadata.language === 'bash');
+const jsonContexts = allKleverContexts.filter(ctx => ctx.metadata.language === 'json');
 
 console.log(`  • Rust code examples: ${rustCodeContexts.length}`);
 console.log(`  • Bash scripts: ${bashContexts.length}`);
@@ -65,9 +61,7 @@ if (bashCodeExamples.length > 0) {
   bashCodeExamples.forEach(ctx => console.log(`    - ${ctx.metadata.title}`));
 }
 
-const deploymentTools = allKleverContexts.filter(
-  ctx => ctx.type === 'deployment_tool'
-);
+const deploymentTools = allKleverContexts.filter(ctx => ctx.type === 'deployment_tool');
 
 console.log(`\n✅ Deployment Tools: ${deploymentTools.length}`);
 deploymentTools.forEach(ctx => console.log(`  • ${ctx.metadata.title}`));

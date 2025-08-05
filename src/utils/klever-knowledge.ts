@@ -77,9 +77,9 @@ If you see old code using macros, replace:
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // CRITICAL: Klever vs MultiversX Differences
@@ -150,9 +150,9 @@ sc-meta all build
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Import Patterns
@@ -221,16 +221,17 @@ pub trait MyContract {
 \`\`\``,
     metadata: {
       title: 'Klever Import Patterns with Unused Imports',
-      description: 'Proper import statements with #[allow(unused_imports)] for Klever smart contracts',
+      description:
+        'Proper import statements with #[allow(unused_imports)] for Klever smart contracts',
       tags: ['imports', 'best-practice', 'setup', 'contract', 'test', 'interactor', 'warnings'],
       language: 'rust',
       relevanceScore: 1.0,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Basic Contract Structure
@@ -298,15 +299,16 @@ pub trait MyContract {
 }`,
     metadata: {
       title: 'Basic Klever Smart Contract Template',
-      description: 'Complete template showing the structure of a Klever smart contract with init, upgrade, endpoints, views, events, and storage',
+      description:
+        'Complete template showing the structure of a Klever smart contract with init, upgrade, endpoints, views, events, and storage',
       tags: ['template', 'structure', 'basic', 'contract'],
       language: 'rust',
       contractType: 'template',
       relevanceScore: 0.95,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Event Annotations Best Practices
@@ -344,9 +346,9 @@ fn my_event(
       language: 'rust',
       relevanceScore: 0.9,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Contract and Module Annotations
@@ -375,9 +377,9 @@ fn my_event(
       language: 'rust',
       relevanceScore: 0.85,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // MultiValueEncoded vs Option
@@ -418,14 +420,15 @@ fn my_var_args_endpoint_2(&self, args: MultiValueManagedVec<TokenIdentifier, u64
 }`,
     metadata: {
       title: 'OptionalValue and MultiValueEncoded Optimization',
-      description: 'Performance optimizations using OptionalValue over Option and MultiValueEncoded over ManagedVec',
+      description:
+        'Performance optimizations using OptionalValue over Option and MultiValueEncoded over ManagedVec',
       tags: ['optimization', 'performance', 'endpoints', 'multivalue', 'optional'],
       language: 'rust',
       relevanceScore: 0.9,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Storage Mapper Patterns
@@ -466,14 +469,15 @@ fn pending_tasks(&self) -> LinkedListMapper<Task>;
 fn available_ids(&self) -> UniqueIdMapper<Self::Api>;`,
     metadata: {
       title: 'Storage Mapper Selection Guide',
-      description: 'Comprehensive guide for choosing the right storage mapper for different use cases',
+      description:
+        'Comprehensive guide for choosing the right storage mapper for different use cases',
       tags: ['storage', 'mappers', 'patterns', 'best-practice'],
       language: 'rust',
       relevanceScore: 0.95,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Storage Namespace Organization Pattern
@@ -517,16 +521,17 @@ fn rewards_per_share(&self) -> SingleValueMapper<BigUint>;
 // - "staking:" for staking mechanisms`,
     metadata: {
       title: 'Storage Namespace Organization Pattern',
-      description: 'Using colon separator in storage mappers for better organization and visualization',
+      description:
+        'Using colon separator in storage mappers for better organization and visualization',
       tags: ['storage', 'organization', 'namespace', 'best-practice', 'patterns'],
       language: 'rust',
       relevanceScore: 0.9,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // View Endpoint Pattern
@@ -585,9 +590,9 @@ fn config_settings(&self) -> SingleValueMapper<ConfigStruct>;
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Complete Storage Pattern Example
@@ -665,9 +670,9 @@ fn transfer(&self, to: ManagedAddress, amount: BigUint) -> SCResult<()> {
       contractType: 'token',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Storage Mapper Comparison
@@ -700,14 +705,15 @@ Use VecMapper when:
 - MapMapper: 4*N+1 entries (most expensive)`,
     metadata: {
       title: 'Storage Mapper Performance Comparison',
-      description: 'Detailed comparison of storage requirements and performance characteristics for different mappers',
+      description:
+        'Detailed comparison of storage requirements and performance characteristics for different mappers',
       tags: ['storage', 'performance', 'comparison', 'optimization'],
       language: 'rust',
       relevanceScore: 0.85,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Admin Module - Common Mistakes vs Correct Usage
@@ -778,9 +784,9 @@ src/
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Admin Access Control Pattern
@@ -840,16 +846,17 @@ pub trait MyContract: only_admin::OnlyAdminModule {
 }`,
     metadata: {
       title: 'Admin Access Control Pattern',
-      description: 'Using #[only_admin] annotation and OnlyAdminModule for multi-admin access control',
+      description:
+        'Using #[only_admin] annotation and OnlyAdminModule for multi-admin access control',
       tags: ['admin', 'access-control', 'security', 'only_admin', 'module'],
       language: 'rust',
       relevanceScore: 0.95,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // OnlyAdminModule Reference
@@ -951,9 +958,9 @@ Once the module is included, you can use the \`#[only_admin]\` annotation on any
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // IMPORTANT: Do NOT Create Custom Admin Module
@@ -999,9 +1006,9 @@ pub trait MyContract: only_admin::OnlyAdminModule {
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Klever VM SDK Built-in Admin Module
@@ -1098,9 +1105,9 @@ pub trait KleverLabsHub:
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Access Control Comparison
@@ -1154,16 +1161,17 @@ fn complex_access(&self) {
 // - Consider time-locks for critical admin actions`,
     metadata: {
       title: 'Access Control Patterns Comparison',
-      description: 'Comparison of different access control patterns: owner, admin, and custom roles',
+      description:
+        'Comparison of different access control patterns: owner, admin, and custom roles',
       tags: ['access-control', 'security', 'only_owner', 'only_admin', 'best-practice'],
       language: 'rust',
       relevanceScore: 0.9,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // PauseModule Pattern
@@ -1232,9 +1240,9 @@ pub trait MyContract: pause::PauseModule {
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // PauseModule Reference
@@ -1331,9 +1339,9 @@ pub trait PauseModule {
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Pausable Contract Best Practices
@@ -1433,9 +1441,9 @@ pub trait SecureContract: pause::PauseModule {
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Klever Token System
@@ -1529,9 +1537,9 @@ let sft_type = 5u64; // SFT type 5
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // NFT and SFT Indexing
@@ -1592,9 +1600,9 @@ let sft_amount = BigUint::from(100u32);
       contractType: 'nft',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Token Handling Examples
@@ -1697,9 +1705,9 @@ pub trait TokenContract {
       contractType: 'token',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Common API Functions
@@ -1736,9 +1744,9 @@ pub trait TokenContract {
       language: 'rust',
       relevanceScore: 0.8,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // KDA Token Payment Pattern
@@ -1874,9 +1882,9 @@ fn send_fee(&self, recipient: ManagedAddress, fee_amount: BigUint) {
       language: 'rust',
       relevanceScore: 0.9,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Testing Pattern
@@ -1940,9 +1948,9 @@ fn test_my_function() {
       language: 'rust',
       relevanceScore: 0.85,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Common Errors and Solutions
@@ -1988,14 +1996,15 @@ allocator = "static64k"
 \`\`\``,
     metadata: {
       title: 'Common Klever Contract Errors and Solutions',
-      description: 'Frequently encountered errors in Klever smart contract development and their solutions',
+      description:
+        'Frequently encountered errors in Klever smart contract development and their solutions',
       tags: ['errors', 'debugging', 'solutions', 'troubleshooting'],
       language: 'rust',
       relevanceScore: 0.9,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Input Validation Pattern
@@ -2033,14 +2042,15 @@ fn transfer(&self, to: ManagedAddress, amount: BigUint) {
 // - Check token existence: self.token_exists(&token_id)`,
     metadata: {
       title: 'Input Validation Security Patterns',
-      description: 'Best practices for validating inputs in Klever smart contracts using require! macro',
+      description:
+        'Best practices for validating inputs in Klever smart contracts using require! macro',
       tags: ['security', 'validation', 'require', 'best-practice'],
       language: 'rust',
       relevanceScore: 0.95,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Project Structure
@@ -2085,9 +2095,9 @@ my-contract/
       language: 'rust',
       relevanceScore: 0.8,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Managed Types Overview
@@ -2128,14 +2138,15 @@ fn process_payment(&self, payment: KdaTokenPayment<Self::Api>) {
 - More efficient than heap-allocated alternatives`,
     metadata: {
       title: 'Klever Managed Types Reference',
-      description: 'Overview of managed types available in Klever VM for efficient memory management',
+      description:
+        'Overview of managed types available in Klever VM for efficient memory management',
       tags: ['types', 'managed', 'reference', 'memory'],
       language: 'rust',
       relevanceScore: 0.85,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Contract Project Setup
@@ -2187,14 +2198,15 @@ The empty template creates a basic contract with:
 - **multisig**: Multi-signature wallet example`,
     metadata: {
       title: 'Setting Up New Klever Contract Project',
-      description: 'Complete guide for creating and setting up a new Klever smart contract project from templates',
+      description:
+        'Complete guide for creating and setting up a new Klever smart contract project from templates',
       tags: ['setup', 'create', 'project', 'template', 'getting-started'],
       language: 'markdown',
       relevanceScore: 0.9,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Build Configuration
@@ -2258,9 +2270,9 @@ version = "0.44.0"
       language: 'toml',
       relevanceScore: 0.75,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Enhanced Error Handling Patterns
@@ -2383,9 +2395,9 @@ fn validate_token_payment(&self) -> (TokenIdentifier, BigUint) {
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Token Mapper Helpers
@@ -2646,9 +2658,9 @@ fn stake(&self) {
       contractType: 'token',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Gas Optimization Techniques
@@ -2832,9 +2844,9 @@ fn user_updated_event(
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Cross-Contract Calls
@@ -2999,16 +3011,17 @@ fn deploy_child_contract(&self, code: ManagedBuffer, initial_value: BigUint) {
 4. **Gas limitations**: Complex call chains may run out of gas`,
     metadata: {
       title: 'Cross-Contract Call Patterns (Synchronous Only)',
-      description: 'Patterns for synchronous cross-contract calls in Klever - no async or callbacks',
+      description:
+        'Patterns for synchronous cross-contract calls in Klever - no async or callbacks',
       tags: ['contract-calls', 'synchronous', 'cross-contract', 'no-async'],
       language: 'rust',
       relevanceScore: 0.95,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Deployment Tool Context - Correct patterns for using koperator
@@ -3114,9 +3127,9 @@ curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \\
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Best Practice Context - Common mistakes when using Klever tools
@@ -3221,9 +3234,9 @@ curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \\
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Code Example Context - Bash script functions for Klever smart contracts
@@ -3433,16 +3446,17 @@ fi
 \`\`\``,
     metadata: {
       title: 'Bash Script Functions for Klever Smart Contracts',
-      description: 'Reusable bash functions for Klever contract development, deployment, and testing',
+      description:
+        'Reusable bash functions for Klever contract development, deployment, and testing',
       tags: ['bash', 'scripts', 'automation', 'deployment', 'testing', 'functions'],
       language: 'bash',
       relevanceScore: 0.9,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Documentation Context - Klever argument types for Koperator
@@ -3743,17 +3757,18 @@ pub struct UserData {
 \`\`\``,
     metadata: {
       title: 'Klever Argument Types for Koperator',
-      description: 'Complete reference for argument types and formatting when using Koperator CLI tool',
+      description:
+        'Complete reference for argument types and formatting when using Koperator CLI tool',
       tags: ['koperator', 'arguments', 'types', 'documentation', 'cli', 'reference'],
       language: 'bash',
       relevanceScore: 1.0,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
-  }
+    relatedContextIds: [],
+  },
 ];
 
 // Deployment Scripts
@@ -3797,9 +3812,9 @@ TX_HASH=$(echo "$DEPLOY_OUTPUT" | grep -o '"hash": "[^"]*"' | head -1 | cut -d'"
       language: 'bash',
       relevanceScore: 0.95,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // History.json Pattern
@@ -3838,9 +3853,9 @@ Benefits:
       language: 'bash',
       relevanceScore: 0.9,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Query Argument Encoding Pattern
@@ -3889,9 +3904,9 @@ done
       language: 'bash',
       relevanceScore: 0.95,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   // Project Structure Handling
@@ -3932,9 +3947,9 @@ Important: Always handle both subdirectory and direct creation patterns.`,
       language: 'bash',
       relevanceScore: 0.85,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
   {
     type: 'deployment_tool',
@@ -3962,9 +3977,9 @@ Important: Always handle both subdirectory and direct creation patterns.`,
       language: 'bash',
       relevanceScore: 0.9,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -3983,14 +3998,15 @@ Important: Always handle both subdirectory and direct creation patterns.`,
 ~/klever-sdk/ksc templates`,
     metadata: {
       title: 'Create New Klever Contract Command',
-      description: 'Command to create a new empty Klever smart contract from template using ksc tool',
+      description:
+        'Command to create a new empty Klever smart contract from template using ksc tool',
       tags: ['create', 'new', 'template', 'ksc', 'command'],
       language: 'bash',
       relevanceScore: 0.95,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -4039,14 +4055,15 @@ Important: Always handle both subdirectory and direct creation patterns.`,
 \`\`\``,
     metadata: {
       title: 'Klever Smart Contract CLI (ksc) Commands Reference',
-      description: 'Complete reference for all ksc commands used in Klever smart contract development',
+      description:
+        'Complete reference for all ksc commands used in Klever smart contract development',
       tags: ['ksc', 'commands', 'reference', 'cli', 'build', 'templates'],
       language: 'bash',
       relevanceScore: 0.95,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -4097,9 +4114,9 @@ This example:
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -4177,16 +4194,17 @@ When sending multiple tokens in a single transaction, use the \`--values\` param
 \`\`\``,
     metadata: {
       title: 'Koperator Argument Types Reference',
-      description: 'Complete reference for argument type encoding in koperator smart contract calls',
+      description:
+        'Complete reference for argument type encoding in koperator smart contract calls',
       tags: ['koperator', 'arguments', 'types', 'encoding', 'reference'],
       language: 'bash',
       relevanceScore: 0.95,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -4264,9 +4282,9 @@ KLEVER_NODE=https://node.testnet.klever.org \\
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -4332,16 +4350,17 @@ KLEVER_NODE=https://node.testnet.klever.org \\
 The koperator query command exists but the API is the recommended approach for production systems.`,
     metadata: {
       title: 'API vs Koperator - When to Use Each',
-      description: 'Clear guidance on using the API for contract queries vs koperator for transactions',
+      description:
+        'Clear guidance on using the API for contract queries vs koperator for transactions',
       tags: ['api', 'koperator', 'view', 'query', 'invoke', 'best-practice', 'contract'],
       language: 'bash',
       relevanceScore: 1.0,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -4396,16 +4415,26 @@ KLEVER_NODE=https://node.testnet.klever.org \\
 # Or: koperator account info | grep -A 100 "^{" | jq .`,
     metadata: {
       title: 'Koperator Account Utilities',
-      description: 'Developer utilities for fetching account information - address, balance, nonce, and other details',
-      tags: ['koperator', 'account', 'balance', 'address', 'nonce', 'info', 'developer-tools', 'utilities'],
+      description:
+        'Developer utilities for fetching account information - address, balance, nonce, and other details',
+      tags: [
+        'koperator',
+        'account',
+        'balance',
+        'address',
+        'nonce',
+        'info',
+        'developer-tools',
+        'utilities',
+      ],
       language: 'bash',
       relevanceScore: 0.95,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -4501,16 +4530,17 @@ else
 fi`,
     metadata: {
       title: 'Klever API - Address Information',
-      description: 'API endpoints for retrieving detailed address information from Klever blockchain',
+      description:
+        'API endpoints for retrieving detailed address information from Klever blockchain',
       tags: ['api', 'address', 'balance', 'account', 'rest', 'http', 'mainnet', 'testnet'],
       language: 'bash',
       relevanceScore: 0.95,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -4671,16 +4701,17 @@ For complete API documentation with all endpoints, visit:
 - Mainnet: https://api.klever.org/swagger`,
     metadata: {
       title: 'Klever API Reference',
-      description: 'Comprehensive API reference for Klever blockchain including endpoints for smart contracts, transactions, and assets',
+      description:
+        'Comprehensive API reference for Klever blockchain including endpoints for smart contracts, transactions, and assets',
       tags: ['api', 'reference', 'endpoints', 'rest', 'http', 'documentation'],
       language: 'bash',
       relevanceScore: 0.9,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -4735,9 +4766,9 @@ echo "Contract: $CONTRACT_ADDRESS"`,
       language: 'bash',
       relevanceScore: 0.9,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -4785,9 +4816,9 @@ echo "Contract upgrade complete!"`,
       language: 'bash',
       relevanceScore: 0.85,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -4872,10 +4903,10 @@ fi`,
       language: 'bash',
       relevanceScore: 0.8,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
-  }
+    relatedContextIds: [],
+  },
 ];
 
 // Testing Examples
@@ -4975,15 +5006,16 @@ export const testingExamples: ContextPayload[] = [
 }`,
     metadata: {
       title: 'Klever Scenario Test Example',
-      description: 'Complete JSON scenario test for an adder contract showing deployment, query, call, and state check',
+      description:
+        'Complete JSON scenario test for an adder contract showing deployment, query, call, and state check',
       tags: ['testing', 'scenario', 'json', 'example', 'test-format'],
       language: 'json',
       relevanceScore: 0.85,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
-  }
+    relatedContextIds: [],
+  },
 ];
 
 // Payable endpoints and payment handling
@@ -5056,14 +5088,15 @@ fn view_only(&self) -> BigUint {
 }`,
     metadata: {
       title: 'Payable Endpoints and Token Restrictions',
-      description: 'How to create payable endpoints with token restrictions using #[payable] annotation',
+      description:
+        'How to create payable endpoints with token restrictions using #[payable] annotation',
       tags: ['payable', 'tokens', 'payment', 'klv', 'kfi', 'endpoints'],
       language: 'rust',
       relevanceScore: 0.9,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -5140,14 +5173,15 @@ let payment = self.call_value().any_payment();
 5. Update balances atomically`,
     metadata: {
       title: 'Payable Endpoints Documentation',
-      description: 'Comprehensive guide on using payable endpoints and token restrictions in Klever smart contracts',
+      description:
+        'Comprehensive guide on using payable endpoints and token restrictions in Klever smart contracts',
       tags: ['payable', 'documentation', 'tokens', 'payment', 'guide'],
       language: 'rust',
       relevanceScore: 0.85,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
 
   {
@@ -5208,10 +5242,10 @@ fn withdraw(&self, token: TokenIdentifier, amount: BigUint) {
       language: 'rust',
       relevanceScore: 0.9,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
-  }
+    relatedContextIds: [],
+  },
 ];
 
 // Cross-contract communication
@@ -5272,10 +5306,10 @@ pub trait MyContract {
       language: 'rust',
       relevanceScore: 0.9,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
-  }
+    relatedContextIds: [],
+  },
 ];
 
 // Remote storage access
@@ -5317,14 +5351,15 @@ pub trait MyContract {
 }`,
   metadata: {
     title: 'Remote Storage Access Pattern',
-    description: 'Pattern for accessing storage from other contracts using storage_mapper_from_address',
+    description:
+      'Pattern for accessing storage from other contracts using storage_mapper_from_address',
     tags: ['storage', 'remote', 'cross-contract', 'advanced'],
     language: 'rust',
     relevanceScore: 0.8,
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   },
-  relatedContextIds: []
+  relatedContextIds: [],
 };
 
 // Project initialization patterns
@@ -5367,9 +5402,9 @@ This will:
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
   {
     type: 'documentation',
@@ -5468,9 +5503,9 @@ cd MyFirstContract && ../scripts/query.sh --endpoint myEndpoint
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
   {
     type: 'best_practice',
@@ -5563,10 +5598,10 @@ wasm/
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
-    relatedContextIds: []
-  }
+    relatedContextIds: [],
+  },
 ];
 
 // All contexts combined
@@ -5577,5 +5612,5 @@ export const allKleverContexts: ContextPayload[] = [
   ...payableEndpointPatterns,
   ...crossContractPatterns,
   remoteStoragePattern,
-  ...projectInitPatterns
+  ...projectInitPatterns,
 ];
