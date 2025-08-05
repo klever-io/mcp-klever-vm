@@ -4140,7 +4140,7 @@ KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address_here deposit \\
-    --value 1000000 \\
+    --values "KLV=1000000" \\
     --await --sign --result-only
 
 # 5. Invoke with KDA token payment
@@ -4148,7 +4148,7 @@ KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address_here depositToken \\
-    --token-transfers="USDT-A1B2:1000000" \\
+    --values "USDT-A1B2=1000000" \\
     --await --sign --result-only
 
 # 5b. Invoke with multiple token values in the same transaction
