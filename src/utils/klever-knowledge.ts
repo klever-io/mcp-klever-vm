@@ -331,12 +331,37 @@ fn my_event(
     value: &BigUint                      // ✓ Correct - reference
 );
 
-// 4. Only one non-indexed argument allowed
-#[event("myEvent")]
-fn my_event(
+// 4. CRITICAL: In Klever, ALL event parameters must be indexed except at most ONE
+// ❌ WRONG - Multiple non-indexed parameters will cause errors:
+#[event("gamePlayed")]
+fn game_played_event(
     &self,
-    #[indexed] address: &ManagedAddress,
-    #[indexed] token: &TokenIdentifier,
+    #[indexed] player: &ManagedAddress,
+    bet_amount: &BigUint,      // ❌ Error: too many non-indexed
+    chosen_number: u8,         // ❌ Error: too many non-indexed
+    rolled_number: u8,         // ❌ Error: too many non-indexed
+    won: bool,                 // ❌ Error: too many non-indexed
+    payout: &BigUint,         // ❌ Error: too many non-indexed
+);
+
+// ✅ CORRECT - All parameters indexed except one (or all indexed):
+#[event("gamePlayed")]
+fn game_played_event(
+    &self,
+    #[indexed] player: &ManagedAddress,
+    #[indexed] bet_amount: &BigUint,
+    #[indexed] chosen_number: u8,
+    #[indexed] rolled_number: u8,
+    #[indexed] won: bool,
+    #[indexed] payout: &BigUint,  // All indexed is valid
+);
+
+// ✅ ALSO CORRECT - One non-indexed parameter:
+#[event("transfer")]
+fn transfer_event(
+    &self,
+    #[indexed] from: &ManagedAddress,
+    #[indexed] to: &ManagedAddress,
     amount: &BigUint  // Only one non-indexed parameter
 );`,
     metadata: {
@@ -472,6 +497,199 @@ fn available_ids(&self) -> UniqueIdMapper<Self::Api>;`,
       description:
         'Comprehensive guide for choosing the right storage mapper for different use cases',
       tags: ['storage', 'mappers', 'patterns', 'best-practice'],
+      language: 'rust',
+      relevanceScore: 0.95,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+
+  // ManagedTypeApi Requirement for Structs
+  {
+    type: 'best_practice',
+    content: `# ManagedTypeApi Requirement for Custom Structs
+
+## When to Use ManagedTypeApi
+
+Any struct that contains Klever managed types MUST have a generic parameter M with ManagedTypeApi bound:
+- BigUint<M>
+- BigInt<M>
+- ManagedAddress<M>
+- ManagedBuffer<M>
+- ManagedVec<M>
+- TokenIdentifier<M>
+- ManagedByteArray<M, N>
+- Any other managed type
+
+## Correct Implementation Patterns
+
+### Pattern 1: Using Where Clause (Explicit)
+\`\`\`rust
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode)]
+pub struct GameResult<M> 
+where
+    M: ManagedTypeApi,
+{
+    player: ManagedAddress<M>,
+    bet_amount: BigUint<M>,
+    chosen_number: u8,
+    rolled_number: u8,
+    won: bool,
+    payout: BigUint<M>,
+    timestamp: u64,
+}
+\`\`\`
+
+### Pattern 2: Inline Bound (Shorthand)
+\`\`\`rust
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode)]
+pub struct UserProfile<M: ManagedTypeApi> {
+    address: ManagedAddress<M>,
+    username: ManagedBuffer<M>,
+    balance: BigUint<M>,
+    level: u32,
+    created_at: u64,
+}
+\`\`\`
+
+### Pattern 3: Multiple Bounds
+\`\`\`rust
+#[derive(TopEncode, TopDecode)]
+pub struct ComplexData<M>
+where
+    M: ManagedTypeApi + Clone,
+{
+    id: ManagedBuffer<M>,
+    tokens: ManagedVec<M, TokenIdentifier<M>>,
+    amounts: ManagedVec<M, BigUint<M>>,
+    metadata: ManagedBuffer<M>,
+}
+\`\`\`
+
+## Common Mistakes
+
+### ❌ WRONG - Missing ManagedTypeApi
+\`\`\`rust
+// This will NOT compile
+struct GameResult {
+    player: ManagedAddress,    // Error: missing type parameter
+    bet_amount: BigUint,       // Error: missing type parameter
+    timestamp: u64,
+}
+\`\`\`
+
+### ❌ WRONG - Using concrete Self::Api in struct definition
+\`\`\`rust
+// This will NOT work in struct definition
+struct GameResult {
+    player: ManagedAddress<Self::Api>,  // Error: Self not available here
+    bet_amount: BigUint<Self::Api>,
+}
+\`\`\`
+
+## Usage in Smart Contracts
+
+When using these structs in contracts, use Self::Api:
+
+\`\`\`rust
+#[klever_sc::contract]
+pub trait GameContract {
+    #[endpoint]
+    fn process_game_result(&self, result: GameResult<Self::Api>) {
+        // Self::Api is available in trait methods
+        let player = result.player;
+        let payout = result.payout;
+        // ...
+    }
+    
+    #[view]
+    fn get_last_result(&self) -> GameResult<Self::Api> {
+        // Return type uses Self::Api
+        GameResult {
+            player: self.last_player().get(),
+            bet_amount: self.last_bet().get(),
+            chosen_number: self.last_choice().get(),
+            rolled_number: self.last_roll().get(),
+            won: self.last_won().get(),
+            payout: self.last_payout().get(),
+            timestamp: self.blockchain().get_block_timestamp(),
+        }
+    }
+}
+\`\`\`
+
+## Key Points
+
+1. **Always include M: ManagedTypeApi** for structs with managed types
+2. **Use where clause** for better readability with complex bounds
+3. **Use Self::Api** when inside contract trait methods
+4. **Include necessary derives**: TopEncode, TopDecode for storage/events
+5. **NestedEncode, NestedDecode** for structs used inside other structures
+
+## CRITICAL: Always Specify Type Parameter in Function Signatures
+
+When using custom structs with managed types in function signatures, you MUST specify the API type parameter:
+
+### ❌ WRONG - Missing type parameter in return types
+\`\`\`rust
+// This will NOT compile
+#[view]
+fn get_player_history(&self, player: ManagedAddress) -> MultiValueEncoded<GameResult> {
+    // Error: missing type parameter for GameResult
+}
+
+#[endpoint]
+fn process_results(&self, results: ManagedVec<GameResult>) {
+    // Error: missing type parameter for GameResult
+}
+\`\`\`
+
+### ✅ CORRECT - Always include Self::Api
+\`\`\`rust
+#[view]
+fn get_player_history(&self, player: ManagedAddress) -> MultiValueEncoded<GameResult<Self::Api>> {
+    let mut history = MultiValueEncoded::new();
+    for result in self.player_results(&player).iter() {
+        history.push(result);
+    }
+    history
+}
+
+#[endpoint]
+fn process_results(&self, results: ManagedVec<GameResult<Self::Api>>) {
+    for result in results.iter() {
+        // Process each result
+    }
+}
+
+#[view]
+fn get_last_game(&self) -> OptionalValue<GameResult<Self::Api>> {
+    if self.last_game_id().get() > 0 {
+        OptionalValue::Some(self.get_game_by_id(self.last_game_id().get()))
+    } else {
+        OptionalValue::None
+    }
+}
+
+// Storage mapper must also include type parameter
+#[storage_mapper("game_history")]
+fn game_history(&self, game_id: u64) -> SingleValueMapper<GameResult<Self::Api>>;
+
+#[storage_mapper("player_games")]
+fn player_games(&self, player: &ManagedAddress) -> VecMapper<GameResult<Self::Api>>;
+\`\`\`
+
+### Common Places Requiring Type Parameter
+1. **Return types**: MultiValueEncoded, OptionalValue, ManagedVec
+2. **Function parameters**: Any custom struct parameter
+3. **Storage mappers**: SingleValueMapper, VecMapper, SetMapper, etc.
+4. **Event parameters**: Event function signatures
+5. **Inside other generic types**: ManagedVec<T>, Option<T>, etc.`,
+    metadata: {
+      title: 'ManagedTypeApi Requirements for Structs',
+      description: 'Complete guide on using ManagedTypeApi with custom structs containing managed types',
+      tags: ['managed-types', 'structs', 'generics', 'best-practice', 'patterns'],
       language: 'rust',
       relevanceScore: 0.95,
       createdAt: new Date().toISOString(),
@@ -1455,14 +1673,30 @@ pub trait SecureContract: pause::PauseModule {
 
 ### KLV - Main Blockchain Token
 - Token Identifier: \`KLV\`
+- **Decimals: 6**
 - Purpose: Transaction fees (gas)
 - The main token of the Klever blockchain
 - Similar to ETH on Ethereum
+- 1 KLV = 1,000,000 smallest units
 
 ### KFI - Governance Token
 - Token Identifier: \`KFI\`
+- **Decimals: 6**
 - Purpose: Governance and voting
 - Used for participating in blockchain governance
+- 1 KFI = 1,000,000 smallest units
+
+### Important: Decimal Places
+Both KLV and KFI use 6 decimal places. This means:
+- To send 1 KLV, you need to specify 1000000 (1 * 10^6)
+- To send 0.5 KLV, you need to specify 500000 (0.5 * 10^6)
+- To send 100 KLV, you need to specify 100000000 (100 * 10^6)
+
+Example conversions:
+- 1 KLV = 1,000,000 units
+- 10 KLV = 10,000,000 units
+- 0.001 KLV = 1,000 units
+- 0.000001 KLV = 1 unit (smallest possible)
 
 ## KDA - Klever Digital Assets
 
@@ -1749,6 +1983,176 @@ pub trait TokenContract {
     relatedContextIds: [],
   },
 
+  // Working with KLV/KFI Decimals
+  {
+    type: 'code_example',
+    content: `# Working with KLV/KFI Decimals (6 decimal places)
+
+## Understanding KLV/KFI Amounts
+
+Both KLV and KFI use 6 decimal places, so all amounts in smart contracts are in the smallest unit.
+
+### Conversion Examples
+\`\`\`rust
+// 1 KLV = 1,000,000 units
+let one_klv = BigUint::from(1_000_000u32);
+
+// 10 KLV = 10,000,000 units  
+let ten_klv = BigUint::from(10_000_000u32);
+
+// 0.5 KLV = 500,000 units
+let half_klv = BigUint::from(500_000u32);
+
+// 0.001 KLV = 1,000 units
+let one_milliKLV = BigUint::from(1_000u32);
+
+// 100 KLV = 100,000,000 units
+let hundred_klv = BigUint::from(100_000_000u64);
+
+// For very large amounts, use u64 or u128
+let thousand_klv = BigUint::from(1_000_000_000u64); // 1000 KLV
+let million_klv = BigUint::from(1_000_000_000_000u128); // 1,000,000 KLV
+\`\`\`
+
+### Practical Examples in Smart Contracts
+
+\`\`\`rust
+#[klever_sc::contract]
+pub trait TokenContract {
+    // Constant for decimal conversion
+    const DECIMALS: u64 = 1_000_000; // 10^6 for 6 decimals
+    
+    #[payable("KLV")]
+    #[endpoint]
+    fn deposit(&self) {
+        let payment = self.call_value().klv_value();
+        let caller = self.blockchain().get_caller();
+        
+        // Check minimum deposit of 1 KLV
+        require!(payment >= BigUint::from(Self::DECIMALS), "Minimum deposit is 1 KLV");
+        
+        // Store the deposit
+        self.user_balance(&caller).update(|balance| *balance += payment);
+        
+        // Event showing both raw and human-readable amounts
+        let klv_amount = &payment / Self::DECIMALS; // Integer division for display
+        self.deposit_event(&caller, &payment, klv_amount.to_u64().unwrap_or(0));
+    }
+    
+    #[endpoint]
+    fn withdraw_klv(&self, klv_amount: u64) {
+        let caller = self.blockchain().get_caller();
+        
+        // Convert KLV amount to smallest units
+        let amount_in_units = BigUint::from(klv_amount) * Self::DECIMALS;
+        
+        // Check balance
+        let balance = self.user_balance(&caller).get();
+        require!(balance >= amount_in_units, "Insufficient balance");
+        
+        // Update balance and send
+        self.user_balance(&caller).update(|b| *b -= &amount_in_units);
+        self.send().direct_klv(&caller, &amount_in_units);
+    }
+    
+    // Helper function to convert units to KLV
+    #[view]
+    fn units_to_klv(&self, units: BigUint) -> u64 {
+        (&units / Self::DECIMALS).to_u64().unwrap_or(0)
+    }
+    
+    // Helper function to convert KLV to units
+    #[view]
+    fn klv_to_units(&self, klv: u64) -> BigUint {
+        BigUint::from(klv) * Self::DECIMALS
+    }
+    
+    // Storage
+    #[storage_mapper("user_balance")]
+    fn user_balance(&self, user: &ManagedAddress) -> SingleValueMapper<BigUint>;
+    
+    // Events
+    #[event("deposit")]
+    fn deposit_event(
+        &self,
+        #[indexed] user: &ManagedAddress,
+        #[indexed] amount_units: &BigUint,
+        #[indexed] amount_klv: u64
+    );
+}
+\`\`\`
+
+### Common Patterns for Minimum/Maximum Amounts
+
+\`\`\`rust
+// Define constants for common amounts
+const MIN_BET: u64 = 10_000_000;      // 10 KLV
+const MAX_BET: u64 = 1_000_000_000;   // 1000 KLV
+const HOUSE_FEE: u64 = 100_000;       // 0.1 KLV
+
+#[endpoint]
+fn place_bet(&self, bet_number: u8) {
+    let bet_amount = self.call_value().klv_value();
+    
+    // Validate bet amount
+    require!(
+        bet_amount >= BigUint::from(MIN_BET),
+        "Minimum bet is 10 KLV"
+    );
+    require!(
+        bet_amount <= BigUint::from(MAX_BET),
+        "Maximum bet is 1000 KLV"
+    );
+    
+    // Deduct house fee
+    let fee = BigUint::from(HOUSE_FEE);
+    let net_bet = &bet_amount - &fee;
+    
+    // Process bet...
+}
+\`\`\`
+
+### Working with KFI (Same 6 Decimals)
+
+\`\`\`rust
+// KFI uses the same 6 decimal places as KLV
+const KFI_DECIMALS: u64 = 1_000_000;
+
+#[payable("KFI")]
+#[endpoint]
+fn stake_kfi(&self) {
+    let kfi_amount = self.call_value().kda_value().amount;
+    
+    // Minimum stake of 100 KFI
+    let min_stake = BigUint::from(100u32) * KFI_DECIMALS;
+    require!(kfi_amount >= min_stake, "Minimum stake is 100 KFI");
+    
+    // Process staking...
+}
+\`\`\`
+
+## Important Notes
+
+1. **Always use smallest units** in smart contracts (1 KLV = 1,000,000 units)
+2. **Be careful with divisions** - integer division loses precision
+3. **Use constants** for decimal conversions to avoid errors
+4. **Validate minimum amounts** to prevent dust transactions
+5. **Both KLV and KFI** have 6 decimal places
+6. **Other KDA tokens** may have different decimal places - always check`,
+    metadata: {
+      title: 'Working with KLV/KFI Decimals',
+      description: 'Complete guide for handling KLV and KFI amounts with 6 decimal places',
+      tags: ['klv', 'kfi', 'decimals', 'amounts', 'conversion', 'code-example'],
+      language: 'rust',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+
   // KDA Token Payment Pattern
   {
     type: 'code_example',
@@ -1969,6 +2373,80 @@ fn my_value(&self) -> SingleValueMapper<BigUint>;
 fn my_value(&self) -> SingleValueMapper<BigUint<Self::Api>>;
 \`\`\`
 
+## Struct Type Parameter Errors
+**Issue**: "missing type parameter" or "cannot find type \`Self\` in this scope" 
+**Solution**: Add ManagedTypeApi bound to structs containing managed types
+\`\`\`rust
+// ❌ Wrong - Missing type parameter
+struct GameResult {
+    player: ManagedAddress,  // Error: missing type parameter
+    amount: BigUint,         // Error: missing type parameter
+}
+
+// ❌ Wrong - Using Self::Api in struct definition
+struct GameResult {
+    player: ManagedAddress<Self::Api>,  // Error: Self not in scope
+}
+
+// ✅ Correct - With ManagedTypeApi bound
+pub struct GameResult<M> 
+where
+    M: ManagedTypeApi,
+{
+    player: ManagedAddress<M>,
+    amount: BigUint<M>,
+    timestamp: u64,
+}
+\`\`\`
+
+## Missing Type Parameter in Function Signatures
+**Issue**: "missing generics for struct" or type parameter errors in functions
+**Solution**: Always specify Self::Api when using custom structs in function signatures
+\`\`\`rust
+// ❌ Wrong - Missing type parameter
+fn get_history(&self) -> MultiValueEncoded<GameResult> {
+    // Error: missing generics for struct GameResult
+}
+
+// ❌ Wrong - Missing in storage mapper
+fn game_storage(&self) -> VecMapper<GameResult> {
+    // Error: missing generics for struct GameResult
+}
+
+// ✅ Correct - With Self::Api
+fn get_history(&self) -> MultiValueEncoded<GameResult<Self::Api>> {
+    // Works correctly
+}
+
+// ✅ Correct - In storage mapper
+#[storage_mapper("games")]
+fn game_storage(&self) -> VecMapper<GameResult<Self::Api>>;
+\`\`\`
+
+## Koperator Command Syntax Errors
+**Issue**: Using wrong koperator parameters that don't exist
+**Common mistakes**:
+\`\`\`bash
+# ❌ WRONG - These parameters DO NOT EXIST in koperator:
+sc invoke \\
+    --contract="$CONTRACT_ADDRESS" \\    # ❌ WRONG
+    --function="placeBet" \\             # ❌ WRONG
+    --value="$BET_AMOUNT" \\             # ❌ WRONG
+    --kdaFee="KLV"                       # ❌ WRONG
+
+# ✅ CORRECT - Use positional arguments and correct parameters:
+sc invoke $CONTRACT_ADDRESS placeBet \\
+    --args "u8:6" \\
+    --values "KLV=$BET_AMOUNT" \\
+    --await --sign --result-only
+\`\`\`
+
+**Solution**: 
+- CONTRACT_ADDRESS and FUNCTION_NAME are positional arguments
+- Use --values for token payments (not --value)
+- Use --args for function arguments with type prefixes
+- No --contract, --function, --kdaFee parameters exist
+
 ## Storage Errors
 **Issue**: Storage access errors
 **Solution**: Check storage mapper definitions match usage
@@ -2001,6 +2479,110 @@ allocator = "static64k"
       tags: ['errors', 'debugging', 'solutions', 'troubleshooting'],
       language: 'rust',
       relevanceScore: 0.9,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+
+  // Event Parameter Limitation Error
+  {
+    type: 'error_pattern',
+    content: `# Event Parameter Limitation Error in Klever
+
+## Error Description
+**Issue**: "too many non-indexed parameters in event" or event compilation errors
+**Cause**: Klever has a strict limitation on event parameters - you can have at most ONE non-indexed parameter
+
+## Example of the Error
+\`\`\`rust
+// ❌ THIS WILL CAUSE AN ERROR
+#[event("gamePlayed")]
+fn game_played_event(
+    &self,
+    #[indexed] player: &ManagedAddress,
+    bet_amount: &BigUint,     // ❌ Error: non-indexed
+    chosen_number: u8,        // ❌ Error: non-indexed
+    rolled_number: u8,        // ❌ Error: non-indexed
+    won: bool,                // ❌ Error: non-indexed
+    payout: &BigUint,        // ❌ Error: non-indexed
+);
+// Error: Multiple non-indexed parameters not allowed
+\`\`\`
+
+## Solutions
+
+### Solution 1: Make All Parameters Indexed
+\`\`\`rust
+// ✅ CORRECT - All parameters indexed
+#[event("gamePlayed")]
+fn game_played_event(
+    &self,
+    #[indexed] player: &ManagedAddress,
+    #[indexed] bet_amount: &BigUint,
+    #[indexed] chosen_number: u8,
+    #[indexed] rolled_number: u8,
+    #[indexed] won: bool,
+    #[indexed] payout: &BigUint,
+);
+\`\`\`
+
+### Solution 2: Use Only One Non-Indexed Parameter
+\`\`\`rust
+// ✅ CORRECT - Combine data into a single parameter
+#[derive(TopEncode)]
+pub struct GameResult<M> 
+where
+    M: ManagedTypeApi,
+{
+    bet_amount: BigUint<M>,
+    chosen_number: u8,
+    rolled_number: u8,
+    won: bool,
+    payout: BigUint<M>,
+}
+
+#[event("gamePlayed")]
+fn game_played_event(
+    &self,
+    #[indexed] player: &ManagedAddress,
+    result: &GameResult<Self::Api>,  // Only one non-indexed parameter
+);
+\`\`\`
+
+### Solution 3: Use Multiple Events
+\`\`\`rust
+// ✅ CORRECT - Split into multiple events if needed
+#[event("betPlaced")]
+fn bet_placed_event(
+    &self,
+    #[indexed] player: &ManagedAddress,
+    #[indexed] amount: &BigUint,
+    #[indexed] chosen_number: u8,
+);
+
+#[event("gameResult")]
+fn game_result_event(
+    &self,
+    #[indexed] player: &ManagedAddress,
+    #[indexed] rolled_number: u8,
+    #[indexed] won: bool,
+    #[indexed] payout: &BigUint,
+);
+\`\`\`
+
+## Key Rule
+**Remember**: In Klever, you can have either:
+1. All parameters indexed, or
+2. All parameters indexed except ONE
+
+This is different from other blockchains where multiple non-indexed parameters are allowed.`,
+    metadata: {
+      title: 'Event Parameter Limitation Error',
+      description: 'Common error when defining events with multiple non-indexed parameters in Klever',
+      tags: ['error', 'events', 'indexed', 'parameters', 'compilation'],
+      language: 'rust',
+      relevanceScore: 0.95,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -3016,6 +3598,79 @@ fn deploy_child_contract(&self, code: ManagedBuffer, initial_value: BigUint) {
       tags: ['contract-calls', 'synchronous', 'cross-contract', 'no-async'],
       language: 'rust',
       relevanceScore: 0.95,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+
+  // CRITICAL: Correct Koperator Syntax - MUST BE FIRST
+  {
+    type: 'deployment_tool',
+    content: `# ⚠️ CRITICAL: Correct Koperator Command Syntax ⚠️
+
+## ALWAYS Use This Format for sc invoke:
+
+\`\`\`bash
+# CORRECT FORMAT:
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke CONTRACT_ADDRESS FUNCTION_NAME \\
+    --args "type:value" \\
+    --values "KLV=amount" \\
+    --await --sign --result-only
+\`\`\`
+
+## ❌ NEVER USE These Wrong Patterns:
+- \`--contract="address"\` ❌ WRONG - use positional argument
+- \`--function="name"\` ❌ WRONG - use positional argument  
+- \`--value="amount"\` ❌ WRONG - use --values "KLV=amount"
+- \`--kdaFee="KLV"\` ❌ WRONG - does not exist
+- \`--token-transfers\` ❌ WRONG - use --values
+
+## Real Examples:
+
+### 1. Place Bet with KLV Payment:
+\`\`\`bash
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1contract123... placeBet \\
+    --args "u8:6" \\
+    --values "KLV=10000000" \\
+    --await --sign --result-only
+\`\`\`
+
+### 2. Transfer Function:
+\`\`\`bash
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1contract123... transfer \\
+    --args "Address:klv1recipient..." \\
+    --args "bi:1000000" \\
+    --await --sign --result-only
+\`\`\`
+
+### Key Rules:
+1. CONTRACT_ADDRESS is positional (no --contract)
+2. FUNCTION_NAME is positional (no --function)
+3. Use --values for payments (not --value)
+4. Each argument needs --args with type
+5. Always use --await --sign --result-only
+
+### Important Flags:
+- \`--await\`: Wait for transaction to be processed
+- \`--sign\`: Sign the transaction with your key
+- \`--result-only\`: Show only the transaction result (clean JSON output without logs)`,
+    metadata: {
+      title: 'CRITICAL: Correct Koperator Syntax - READ THIS FIRST',
+      description: 'The ONLY correct way to use koperator sc invoke - NEVER use --contract, --function, --value. Always include --result-only for clean output',
+      tags: ['koperator', 'critical', 'syntax', 'sc-invoke', 'commands'],
+      language: 'bash',
+      relevanceScore: 1.0,
       contractType: 'any',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
