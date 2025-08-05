@@ -3675,6 +3675,184 @@ pub struct UserData {
 
 // Deployment Scripts
 export const deploymentScripts: ContextPayload[] = [
+  // Contract Address Extraction Pattern
+  {
+    type: 'code_example',
+    content: `# Extract Contract Address from Deployment Output
+
+When deploying a contract with koperator, extract the address from the SCDeploy event:
+
+\`\`\`bash
+# Deploy and capture output
+DEPLOY_OUTPUT=$(KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc create \\
+    --wasm="contract.wasm" \\
+    --await --sign --result-only)
+
+# Extract contract address using Python
+CONTRACT_ADDRESS=$(echo "$DEPLOY_OUTPUT" | python3 -c "
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    if 'logs' in data and 'events' in data['logs']:
+        for event in data['logs']['events']:
+            if event.get('identifier') == 'SCDeploy':
+                print(event.get('address', ''))
+                break
+except: pass
+" 2>/dev/null)
+
+# Extract transaction hash
+TX_HASH=$(echo "$DEPLOY_OUTPUT" | grep -o '"hash": "[^"]*"' | head -1 | cut -d'"' -f4)
+\`\`\``,
+    metadata: {
+      title: 'Extract Contract Address from Deploy Output',
+      description: 'Pattern for parsing koperator deployment response to get contract address',
+      tags: ['deployment', 'parsing', 'SCDeploy', 'python', 'bash'],
+      language: 'bash',
+      relevanceScore: 0.95,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    relatedContextIds: []
+  },
+
+  // History.json Pattern
+  {
+    type: 'best_practice',
+    content: `# Deployment History Management Pattern
+
+Maintain a history.json file to track all deployments:
+
+\`\`\`bash
+# Initialize history file
+HISTORY_FILE="output/history.json"
+[ ! -f "$HISTORY_FILE" ] && echo "[]" > "$HISTORY_FILE"
+
+# Add deployment to history
+jq --arg tx "$TX_HASH" --arg addr "$CONTRACT_ADDRESS" \\
+   '. + [{"hash": $tx, "contractAddress": $addr, "timestamp": now | strftime("%Y-%m-%d %H:%M:%S")}]' \\
+   "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"
+
+# Get latest deployed contract
+CONTRACT_ADDRESS=$(jq -r '.[-1].contractAddress' output/history.json 2>/dev/null)
+
+# Get all deployments
+jq '.' output/history.json
+\`\`\`
+
+Benefits:
+- Automatic contract tracking
+- No need to manually copy addresses
+- Deployment audit trail
+- Easy upgrades and queries`,
+    metadata: {
+      title: 'Deployment History Management',
+      description: 'Best practice for tracking contract deployments with history.json',
+      tags: ['deployment', 'history', 'jq', 'best-practice', 'automation'],
+      language: 'bash',
+      relevanceScore: 0.9,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    relatedContextIds: []
+  },
+
+  // Query Argument Encoding Pattern
+  {
+    type: 'code_example',
+    content: `# Query Endpoint Argument Encoding
+
+For querying Klever smart contracts via API, arguments must be base64 encoded:
+
+\`\`\`bash
+# Encode arguments for query
+ARGUMENTS=("arg1" "arg2" "0x48656c6c6f")
+JSON_ARGS="["
+
+for ((i=0; i<\${#ARGUMENTS[@]}; i++)); do
+    ARG="\${ARGUMENTS[$i]}"
+    
+    # Special handling for hex values
+    if [[ "$ARG" == 0x* ]]; then
+        HEX_VALUE="\${ARG#0x}"
+        ENCODED=$(echo -n "$HEX_VALUE" | xxd -r -p | base64)
+    else
+        ENCODED=$(echo -n "$ARG" | base64)
+    fi
+    
+    [[ $i -gt 0 ]] && JSON_ARGS="$JSON_ARGS,"
+    JSON_ARGS="$JSON_ARGS\\"$ENCODED\\""
+done
+JSON_ARGS="$JSON_ARGS]"
+
+# Build and send query
+JSON_REQUEST="{\\"ScAddress\\":\\"$CONTRACT_ADDRESS\\",\\"FuncName\\":\\"$ENDPOINT\\",\\"Arguments\\":$JSON_ARGS}"
+RESPONSE=$(curl -s 'https://api.testnet.klever.org/v1.0/sc/query' --data-raw "$JSON_REQUEST")
+
+# Decode return data
+RETURN_DATA=$(echo "$RESPONSE" | jq -r '.data.returnData[]? // empty')
+for data in $RETURN_DATA; do
+    echo "Base64: $data"
+    echo "Hex: $(echo "$data" | base64 -d | xxd -p)"
+done
+\`\`\``,
+    metadata: {
+      title: 'Query Argument Encoding Pattern',
+      description: 'How to encode arguments for Klever API queries with special hex handling',
+      tags: ['query', 'api', 'base64', 'encoding', 'hex'],
+      language: 'bash',
+      relevanceScore: 0.95,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    relatedContextIds: []
+  },
+
+  // Project Structure Handling
+  {
+    type: 'best_practice',
+    content: `# Handling ksc new Project Structure
+
+The \`ksc new\` command may create projects in different structures:
+
+\`\`\`bash
+# Create in temp directory first
+TEMP_DIR="/tmp/klever-contract-$$"
+~/klever-sdk/ksc new --template "$TEMPLATE" --name "$CONTRACT_NAME" --path "$TEMP_DIR"
+
+# Find actual project directory
+PROJECT_DIR=""
+if [ -d "$TEMP_DIR/$CONTRACT_NAME" ]; then
+    # Created in subdirectory
+    PROJECT_DIR="$TEMP_DIR/$CONTRACT_NAME"
+elif [ -d "$TEMP_DIR" ] && [ "$(ls -A $TEMP_DIR)" ]; then
+    # Created directly in temp dir
+    PROJECT_DIR="$TEMP_DIR"
+fi
+
+# Move files including hidden ones
+cp -r "$PROJECT_DIR"/* . 2>/dev/null || true
+cp -r "$PROJECT_DIR"/.[^.]* . 2>/dev/null || true
+
+# Clean up
+rm -rf "$TEMP_DIR"
+\`\`\`
+
+Important: Always handle both subdirectory and direct creation patterns.`,
+    metadata: {
+      title: 'Project Structure Handling for ksc new',
+      description: 'Best practice for handling different project creation patterns',
+      tags: ['ksc', 'project', 'structure', 'best-practice'],
+      language: 'bash',
+      relevanceScore: 0.85,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    relatedContextIds: []
+  },
   {
     type: 'deployment_tool',
     content: `# List all available Klever smart contract templates
