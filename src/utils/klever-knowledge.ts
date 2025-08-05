@@ -4805,6 +4805,254 @@ fn process(&self, payment: KlvTokenPayment) {  // Compilation error!
     relatedContextIds: [],
   },
 
+  // COMPREHENSIVE Koperator Argument Encoding Guide
+  {
+    type: 'best_practice',
+    content: `# 📚 Complete Koperator Argument Encoding Guide
+
+## 🎯 Quick Reference - Most Common Patterns
+
+\`\`\`bash
+# Basic Types
+--args "u8:5"                    # Unsigned 8-bit integer (0-255)
+--args "u32:1000"                # Unsigned 32-bit integer
+--args "u64:1000000"             # Unsigned 64-bit integer
+--args "bi:1000000"              # BigInt/BigUint (any size)
+--args "String:hello world"      # String value
+--args "Address:klv1abc..."      # Klever address
+--args "bool:true"               # Boolean (true/false)
+
+# Token Payments (using --values, not --args!)
+--values "KLV=1000000"           # 1 KLV (6 decimals)
+--values "KFI=500000"            # 0.5 KFI (6 decimals)
+--values "DVK-34ZH=100000"       # Custom KDA token
+--values "KLV=1000000,KFI=500000" # Multiple tokens
+
+# NFT/SFT with nonce
+--values "MYNFT-ABC1/42=1"       # NFT with nonce 42
+--values "MYSFT-XYZ2/10=5"       # 5 SFTs with nonce 10
+\`\`\`
+
+## ⚠️ CRITICAL Rules
+
+1. **Arguments use --args with type prefix**: \`--args "type:value"\`
+2. **Payments use --values with equals sign**: \`--values "TOKEN=AMOUNT"\`
+3. **Each argument needs its own --args flag**: Multiple args = multiple flags
+4. **KLV/KFI use 6 decimals**: 1 KLV = 1,000,000 units
+
+## 📊 Complete Type Reference Table
+
+| Type | Prefix | Example | Description |
+|------|--------|---------|-------------|
+| **Unsigned 8-bit** | u8 | \`--args "u8:255"\` | 0 to 255 |
+| **Unsigned 16-bit** | u16 | \`--args "u16:65535"\` | 0 to 65,535 |
+| **Unsigned 32-bit** | u32 | \`--args "u32:4294967295"\` | 0 to ~4.3 billion |
+| **Unsigned 64-bit** | u64 | \`--args "u64:18446744073709551615"\` | 0 to ~18.4 quintillion |
+| **Signed 8-bit** | i8 | \`--args "i8:-128"\` | -128 to 127 |
+| **Signed 16-bit** | i16 | \`--args "i16:-32768"\` | -32,768 to 32,767 |
+| **Signed 32-bit** | i32 | \`--args "i32:-2147483648"\` | ~-2.1 to 2.1 billion |
+| **Signed 64-bit** | i64 | \`--args "i64:-9223372036854775808"\` | Very large range |
+| **BigUint** | bi, BigUint | \`--args "bi:999999999999999999"\` | Unlimited size |
+| **Boolean** | bool, b | \`--args "bool:true"\` | true or false |
+| **String** | String, ManagedBuffer | \`--args "String:Hello World"\` | Text data |
+| **Address** | Address, a | \`--args "Address:klv1abc..."\` | Klever address |
+| **TokenIdentifier** | TokenIdentifier | \`--args "TokenIdentifier:KLV"\` | Token ID |
+| **Hex Data** | hex | \`--args "hex:48656c6c6f"\` | Raw hex bytes |
+| **Base64** | base64 | \`--args "base64:SGVsbG8="\` | Base64 encoded |
+| **Option (Some)** | option, Option | \`--args "option:bi:1000"\` | Optional value |
+| **Option (None)** | empty, none | \`--args "empty"\` | No value |
+| **List** | List | \`--args "List:u32:1,2,3,4,5"\` | Array of values |
+| **Tuple** | tuple | \`--args "tuple:u32:100,String:test"\` | Multiple types |
+
+## 🔥 Real-World Examples
+
+### Example 1: Simple Transfer
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1contract123... transfer \\
+    --args "Address:klv1recipient456..." \\
+    --args "bi:1000000" \\
+    --await --sign --result-only
+\`\`\`
+
+### Example 2: Gaming Contract - Place Bet
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1game789... placeBet \\
+    --args "u8:6" \\                    # Betting on number 6
+    --values "KLV=10000000" \\           # Betting 10 KLV
+    --await --sign --result-only
+\`\`\`
+
+### Example 3: DeFi - Add Liquidity
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1dex123... addLiquidity \\
+    --args "bi:1000000" \\               # Min liquidity
+    --values "KLV=5000000,DVK-34ZH=2500000" \\ # Multiple tokens
+    --await --sign --result-only
+\`\`\`
+
+### Example 4: NFT Marketplace - List NFT
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1market... listNFT \\
+    --args "TokenIdentifier:MYNFT-ABC1" \\
+    --args "u64:42" \\                   # NFT nonce
+    --args "bi:50000000" \\              # Price: 50 KLV
+    --values "MYNFT-ABC1/42=1" \\        # The NFT itself
+    --await --sign --result-only
+\`\`\`
+
+### Example 5: Complex Configuration
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1config... setParameters \\
+    --args "String:MainPool" \\          # Pool name
+    --args "u32:300" \\                  # Duration in seconds
+    --args "bool:true" \\                # Is active
+    --args "Address:klv1admin..." \\     # Admin address
+    --args "bi:1000000" \\               # Min stake
+    --args "option:u8:5" \\              # Optional fee percent
+    --await --sign --result-only
+\`\`\`
+
+## 🔧 Advanced Patterns
+
+### Optional Values
+\`\`\`bash
+# Some value
+--args "option:bi:1000"           # Optional BigUint with value
+--args "option:Address:klv1..."   # Optional address with value
+
+# None/Empty
+--args "empty"                    # No value (None)
+--args "none"                     # Alternative for None
+\`\`\`
+
+### Lists and Arrays
+\`\`\`bash
+# List of numbers
+--args "List:u32:100,200,300,400,500"
+
+# List of addresses
+--args "List:Address:klv1addr1,klv1addr2,klv1addr3"
+
+# Variadic arguments (unbounded)
+--args "variadic:bi:100,200,300"
+\`\`\`
+
+### Tuples (Multiple Types Together)
+\`\`\`bash
+# User struct: (id, name, active, balance)
+--args "tuple:u64:123,String:Alice,bool:true,bi:1000000"
+\`\`\`
+
+### Token Identifiers
+\`\`\`bash
+# Native tokens (no random suffix)
+--args "TokenIdentifier:KLV"
+--args "TokenIdentifier:KFI"
+
+# Custom KDA tokens (4 char random suffix)
+--args "TokenIdentifier:DVK-34ZH"
+--args "TokenIdentifier:USDT-A1B2"
+\`\`\`
+
+## ❌ Common Mistakes to Avoid
+
+\`\`\`bash
+# ❌ WRONG - Missing type prefix
+--args "hello"                    # ERROR!
+
+# ✅ CORRECT - With type prefix
+--args "String:hello"
+
+# ❌ WRONG - Using --args for payments
+--args "KLV:1000000"              # ERROR!
+
+# ✅ CORRECT - Use --values for payments
+--values "KLV=1000000"
+
+# ❌ WRONG - Colon in --values
+--values "KLV:1000000"            # ERROR!
+
+# ✅ CORRECT - Equals sign in --values
+--values "KLV=1000000"
+
+# ❌ WRONG - All args in one flag
+--args "Address:klv1...,bi:1000" # ERROR!
+
+# ✅ CORRECT - Separate flags
+--args "Address:klv1..." --args "bi:1000"
+\`\`\`
+
+## 💰 Payment Patterns with --values
+
+### Single Token Payment
+\`\`\`bash
+--values "KLV=1000000"            # 1 KLV
+--values "KFI=500000"             # 0.5 KFI
+--values "DVK-34ZH=100000"        # Custom token
+\`\`\`
+
+### Multiple Token Payments
+\`\`\`bash
+--values "KLV=1000000,KFI=500000,DVK-34ZH=250000"
+\`\`\`
+
+### NFT/SFT Transfers
+\`\`\`bash
+# NFT (amount must be 1)
+--values "MYNFT-ABC1/42=1"        # NFT with nonce 42
+
+# SFT (amount can be > 1)
+--values "MYSFT-XYZ2/10=5"        # 5 SFTs with nonce 10
+
+# Multiple NFTs/SFTs
+--values "MYNFT-ABC1/42=1,MYSFT-XYZ2/10=3"
+\`\`\`
+
+## 📝 Complete Command Template
+
+\`\`\`bash
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke CONTRACT_ADDRESS METHOD_NAME \\
+    --args "type1:value1" \\
+    --args "type2:value2" \\
+    --values "TOKEN1=AMOUNT1,TOKEN2=AMOUNT2" \\
+    --await --sign --result-only
+\`\`\`
+
+## 🎓 Pro Tips
+
+1. **Decimals**: KLV and KFI use 6 decimals (1 KLV = 1,000,000)
+2. **Big Numbers**: Use \`bi:\` prefix for amounts over u64 max
+3. **Strings with Spaces**: Quote them: \`--args "String:Hello World"\`
+4. **Multiple Args**: Each needs its own \`--args\` flag
+5. **Token Format**: \`--values\` uses \`=\` not \`:\`
+6. **NFT Format**: \`TOKEN_ID/NONCE=AMOUNT\` for NFTs/SFTs`,
+    metadata: {
+      title: 'Complete Koperator Argument Encoding Guide',
+      description: 'Comprehensive guide for encoding arguments and payments in koperator commands',
+      tags: ['koperator', 'arguments', 'encoding', 'payments', 'guide', 'reference', 'critical'],
+      language: 'bash',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+
   // KLV Token Identifier Usage
   {
     type: 'code_example',
