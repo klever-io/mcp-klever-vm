@@ -415,12 +415,14 @@ pub trait MyContract {
     }
     
     // Events
+    // ⚠️ CRITICAL: Klever allows MAX ONE non-indexed parameter per event!
+    // Best practice: Use #[indexed] on ALL parameters to avoid errors
     #[event("myEvent")]
     fn my_event(
         &self,
-        #[indexed] caller: &ManagedAddress,
-        #[indexed] key: &ManagedBuffer,
-        value: &BigUint
+        #[indexed] caller: &ManagedAddress,  // ✅ indexed
+        #[indexed] key: &ManagedBuffer,      // ✅ indexed
+        value: &BigUint                      // ⚠️ Only ONE non-indexed allowed!
     );
     
     // Storage definitions
@@ -436,6 +438,95 @@ pub trait MyContract {
       language: 'rust',
       contractType: 'template',
       relevanceScore: 0.95,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+
+  // CRITICAL Event Parameter Rule - READ FIRST
+  {
+    type: 'best_practice',
+    content: `# ⚠️ CRITICAL: Klever Event Parameter Rule - MUST READ FIRST
+
+## 🚨 THE #1 RULE FOR EVENTS IN KLEVER
+
+**Klever allows AT MOST ONE non-indexed parameter per event!**
+
+If you violate this rule, you'll get: \`"only 1 data argument allowed in event log"\`
+
+### 🔥 Quick Fix to Avoid Errors
+
+\`\`\`rust
+// ✅ ALWAYS SAFE - Make ALL parameters indexed:
+#[event("anyEvent")]
+fn any_event(
+    &self,
+    #[indexed] param1: &ManagedAddress,  // ✅ indexed
+    #[indexed] param2: &BigUint,         // ✅ indexed
+    #[indexed] param3: &u8,              // ✅ indexed
+);
+\`\`\`
+
+### ❌ What Causes the Error
+
+\`\`\`rust
+// ❌ THIS WILL FAIL - Multiple non-indexed parameters
+#[event("gamePlayed")]
+fn game_played_event(
+    &self,
+    #[indexed] player: &ManagedAddress,
+    bet_amount: &BigUint,    // ❌ non-indexed
+    result: &u8,              // ❌ non-indexed - ERROR HERE!
+    payout: &BigUint,         // ❌ non-indexed - ERROR HERE TOO!
+);
+// Compilation error: "only 1 data argument allowed in event log"
+\`\`\`
+
+### ✅ Valid Options
+
+**Option 1: All Indexed (Recommended)**
+\`\`\`rust
+#[event("gamePlayed")]
+fn game_played_event(
+    &self,
+    #[indexed] player: &ManagedAddress,
+    #[indexed] bet_amount: &BigUint,
+    #[indexed] result: &u8,
+    #[indexed] payout: &BigUint,
+);
+\`\`\`
+
+**Option 2: Exactly One Non-Indexed**
+\`\`\`rust
+#[event("gamePlayed")]
+fn game_played_event(
+    &self,
+    #[indexed] player: &ManagedAddress,
+    #[indexed] bet_amount: &BigUint,
+    #[indexed] result: &u8,
+    payout: &BigUint,  // Only ONE non-indexed is OK
+);
+\`\`\`
+
+### Why This Is Different
+
+| Platform | Non-Indexed Parameters Allowed |
+|----------|--------------------------------|
+| Ethereum | Multiple ✅ |
+| Klever   | Maximum ONE ⚠️ |
+
+### Best Practice
+
+**Just use #[indexed] on EVERYTHING** - It's simpler and avoids errors!`,
+    metadata: {
+      title: 'CRITICAL: Event Parameter One-Data Rule',
+      description: 'The most important rule about Klever events - prevents "only 1 data argument allowed" error',
+      tags: ['critical', 'events', 'indexed', 'error-prevention', 'must-read', 'common-error'],
+      language: 'rust',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
