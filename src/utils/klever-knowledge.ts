@@ -4650,6 +4650,161 @@ pub struct UserData {
     },
     relatedContextIds: [],
   },
+  // CRITICAL: Understanding Token Types in Klever
+  {
+    type: 'best_practice',
+    content: `# 🎯 CRITICAL: KlvTokenPayment vs KdaTokenPayment vs TokenIdentifier
+
+## ⚠️ Common Confusion Points
+
+Many developers get confused between these three. Here's the definitive guide:
+
+### Quick Reference Table
+
+| Type | What It Is | When to Use | Import Needed |
+|------|------------|-------------|---------------|
+| **TokenIdentifier::klv()** | Identifier for KLV token | Getting balances, checking token types | Already imported with \`klever_sc::imports::*\` |
+| **KdaTokenPayment** | Structure for ANY token payment | Sending tokens, processing payments | Already imported with \`klever_sc::imports::*\` |
+| **KlvTokenPayment** | ❌ DOES NOT EXIST | Never - use KdaTokenPayment | N/A |
+
+## 🚨 THE MOST IMPORTANT THING TO KNOW
+
+**There is NO \`KlvTokenPayment\` type!** Use \`KdaTokenPayment\` for ALL tokens including KLV.
+
+## Common Operations with Examples
+
+### 1️⃣ Getting KLV Balance
+\`\`\`rust
+#[endpoint]
+fn get_contract_klv_balance(&self) -> BigUint {
+    // ✅ CORRECT - Use TokenIdentifier::klv()
+    self.blockchain().get_sc_balance(&TokenIdentifier::klv(), 0)
+}
+
+#[endpoint]
+fn get_user_klv_balance(&self, address: ManagedAddress) -> BigUint {
+    // ✅ CORRECT - Use TokenIdentifier::klv()
+    self.blockchain().get_balance(&address, &TokenIdentifier::klv())
+}
+\`\`\`
+
+### 2️⃣ Sending KLV - Three Ways
+\`\`\`rust
+#[endpoint]
+fn send_klv_three_ways(&self, recipient: ManagedAddress, amount: BigUint) {
+    // Method 1: Direct KLV (simplest for KLV only)
+    self.send().direct_klv(&recipient, &amount);
+    
+    // Method 2: Using KdaTokenPayment (flexible, works for any token)
+    let payment = KdaTokenPayment::new(
+        TokenIdentifier::klv(),  // ✅ Use TokenIdentifier::klv()
+        0,                        // nonce is 0 for fungible tokens
+        amount
+    );
+    self.send().direct_payment(&recipient, &payment);
+    
+    // Method 3: Using direct_kda (also works)
+    self.send().direct_kda(
+        &recipient,
+        &TokenIdentifier::klv(),
+        0,
+        &amount
+    );
+}
+\`\`\`
+
+### 3️⃣ Complete Withdraw Pattern
+\`\`\`rust
+#[only_owner]
+#[endpoint]
+fn withdraw_all(&self) {
+    let owner = self.blockchain().get_owner_address();
+    
+    // Get KLV balance using TokenIdentifier::klv()
+    let balance = self.blockchain()
+        .get_sc_balance(&TokenIdentifier::klv(), 0);
+    
+    require!(balance > 0, "No KLV to withdraw");
+    
+    // Send using direct_klv (simplest for KLV)
+    self.send().direct_klv(&owner, &balance);
+    
+    // Emit event
+    self.withdraw_event(&owner, &balance);
+}
+
+#[event("withdraw")]
+fn withdraw_event(
+    &self,
+    #[indexed] recipient: &ManagedAddress,
+    #[indexed] amount: &BigUint,
+);
+\`\`\`
+
+### 4️⃣ Processing Incoming Payments
+\`\`\`rust
+#[payable("*")]
+#[endpoint]
+fn process_payment(&self) {
+    // Get the payment as KdaTokenPayment (works for ALL tokens)
+    let payment: KdaTokenPayment<Self::Api> = self.call_value().any_payment();
+    
+    // Check if it's KLV
+    if payment.token_identifier == TokenIdentifier::klv() {
+        // Handle KLV payment
+        self.handle_klv_payment(payment.amount);
+    } else {
+        // Handle other tokens
+        self.handle_token_payment(payment);
+    }
+}
+
+fn handle_klv_payment(&self, amount: BigUint) {
+    // KLV-specific logic
+    require!(amount >= BigUint::from(1_000_000u32), "Min 1 KLV required");
+}
+
+fn handle_token_payment(&self, payment: KdaTokenPayment<Self::Api>) {
+    // Generic token logic
+    self.store_payment(&payment);
+}
+\`\`\`
+
+## ❌ Common Mistakes to Avoid
+
+\`\`\`rust
+// ❌ WRONG - KlvTokenPayment doesn't exist
+let payment = KlvTokenPayment::new(...);  // Compilation error!
+
+// ❌ WRONG - KlvTokenIdentifier doesn't exist  
+let id = KlvTokenIdentifier::klv();  // Compilation error!
+
+// ❌ WRONG - Wrong type in function signature
+fn process(&self, payment: KlvTokenPayment) {  // Compilation error!
+    // ...
+}
+\`\`\`
+
+## ✅ Always Remember
+
+1. **TokenIdentifier::klv()** - For identifying KLV token
+2. **KdaTokenPayment** - For ALL token payments (including KLV)
+3. **direct_klv()** - Convenience method specifically for KLV
+4. There is NO KlvTokenPayment type - always use KdaTokenPayment`,
+    metadata: {
+      title: 'CRITICAL: Token Types Clarification - KLV vs KDA',
+      description: 'Complete guide clarifying KlvTokenPayment vs KdaTokenPayment vs TokenIdentifier confusion',
+      tags: ['critical', 'tokens', 'klv', 'kda', 'payment', 'common-confusion', 'must-read'],
+      language: 'rust',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+
   // KLV Token Identifier Usage
   {
     type: 'code_example',
@@ -4890,6 +5045,169 @@ This demonstrates how multiple patterns work together to create a complete dApp!
       language: 'rust',
       relevanceScore: 0.95,
       contractType: 'gaming',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+
+  // Practical Token Operations Examples
+  {
+    type: 'code_example',
+    content: `# Practical Token Operations - Complete Examples
+
+## Example 1: Fee Collection Contract
+\`\`\`rust
+#![no_std]
+
+use klever_sc::imports::*;
+
+#[klever_sc::contract]
+pub trait FeeCollector {
+    #[init]
+    fn init(&self, fee_amount: BigUint) {
+        self.fee_amount().set(fee_amount);
+    }
+    
+    // Collect fee in KLV
+    #[payable("KLV")]
+    #[endpoint]
+    fn pay_fee(&self) {
+        let payment = self.call_value().klv_value();
+        let required_fee = self.fee_amount().get();
+        
+        require!(payment >= required_fee, "Insufficient fee");
+        
+        // Store user as paid
+        let caller = self.blockchain().get_caller();
+        self.has_paid(&caller).set(true);
+        
+        // Return excess if any
+        if payment > required_fee {
+            let excess = payment - required_fee;
+            self.send().direct_klv(&caller, &excess);
+        }
+    }
+    
+    // Withdraw collected fees
+    #[only_owner]
+    #[endpoint]
+    fn withdraw_fees(&self) {
+        let owner = self.blockchain().get_owner_address();
+        let balance = self.blockchain()
+            .get_sc_balance(&TokenIdentifier::klv(), 0);
+        
+        self.send().direct_klv(&owner, &balance);
+    }
+    
+    #[storage_mapper("fee_amount")]
+    fn fee_amount(&self) -> SingleValueMapper<BigUint>;
+    
+    #[storage_mapper("has_paid")]
+    fn has_paid(&self, user: &ManagedAddress) -> SingleValueMapper<bool>;
+}
+\`\`\`
+
+## Example 2: Token Swap Contract
+\`\`\`rust
+#[klever_sc::contract]
+pub trait TokenSwap {
+    // Swap any token for KLV
+    #[payable("*")]
+    #[endpoint]
+    fn swap_for_klv(&self) {
+        let payment: KdaTokenPayment<Self::Api> = self.call_value().any_payment();
+        
+        // Don't accept KLV (no point swapping KLV for KLV)
+        require!(
+            payment.token_identifier != TokenIdentifier::klv(),
+            "Cannot swap KLV for KLV"
+        );
+        
+        // Calculate KLV amount based on rates
+        let klv_amount = self.calculate_klv_amount(&payment);
+        
+        // Check we have enough KLV
+        let klv_balance = self.blockchain()
+            .get_sc_balance(&TokenIdentifier::klv(), 0);
+        require!(klv_balance >= klv_amount, "Insufficient KLV liquidity");
+        
+        // Send KLV to user
+        let caller = self.blockchain().get_caller();
+        self.send().direct_klv(&caller, &klv_amount);
+        
+        // Store the received token
+        self.store_token_payment(payment);
+    }
+    
+    fn calculate_klv_amount(&self, payment: &KdaTokenPayment<Self::Api>) -> BigUint {
+        // Your rate calculation logic here
+        payment.amount.clone() // Simplified 1:1 for example
+    }
+    
+    fn store_token_payment(&self, payment: KdaTokenPayment<Self::Api>) {
+        // Store received tokens for later withdrawal
+    }
+}
+\`\`\`
+
+## Example 3: Mixed Token Treasury
+\`\`\`rust
+#[klever_sc::contract]
+pub trait Treasury {
+    // Accept any token deposit
+    #[payable("*")]
+    #[endpoint]
+    fn deposit(&self) {
+        let payment: KdaTokenPayment<Self::Api> = self.call_value().any_payment();
+        let caller = self.blockchain().get_caller();
+        
+        // Track different token types differently
+        if payment.token_identifier == TokenIdentifier::klv() {
+            // Track KLV deposits
+            self.klv_deposits(&caller)
+                .update(|balance| *balance += payment.amount);
+        } else {
+            // Track other token deposits
+            self.token_deposits(&caller)
+                .push(&payment);
+        }
+    }
+    
+    // Withdraw specific token
+    #[endpoint]
+    fn withdraw(&self, token: TokenIdentifier, amount: BigUint) {
+        let caller = self.blockchain().get_caller();
+        
+        if token == TokenIdentifier::klv() {
+            // Withdraw KLV
+            let balance = self.klv_deposits(&caller).get();
+            require!(balance >= amount, "Insufficient KLV balance");
+            
+            self.klv_deposits(&caller)
+                .update(|b| *b -= &amount);
+            self.send().direct_klv(&caller, &amount);
+        } else {
+            // Withdraw other tokens
+            // Implementation for other tokens...
+        }
+    }
+    
+    #[storage_mapper("klv_deposits")]
+    fn klv_deposits(&self, user: &ManagedAddress) -> SingleValueMapper<BigUint>;
+    
+    #[storage_mapper("token_deposits")]
+    fn token_deposits(&self, user: &ManagedAddress) -> VecMapper<KdaTokenPayment<Self::Api>>;
+}
+\`\`\``,
+    metadata: {
+      title: 'Practical Token Operations Examples',
+      description: 'Complete examples showing KLV and token operations in real contracts',
+      tags: ['examples', 'tokens', 'klv', 'practical', 'treasury', 'swap', 'fee'],
+      language: 'rust',
+      relevanceScore: 0.95,
+      contractType: 'defi',
       author: 'klever-mcp',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
