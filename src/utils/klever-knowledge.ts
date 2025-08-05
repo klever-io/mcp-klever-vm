@@ -1,6 +1,79 @@
 import { ContextPayload } from '../types/index.js';
 
 export const kleverKnowledgeBase: ContextPayload[] = [
+  // CRITICAL: Klever vs MultiversX Differences
+  {
+    type: 'best_practice',
+    content: `# CRITICAL: Klever vs MultiversX Differences
+
+## ⚠️ WARNING: Never Mix MultiversX and Klever
+
+Klever blockchain is similar to MultiversX in some aspects but has MANY important differences:
+
+### Key Differences:
+1. **Local Node Port**: Klever uses port 8080 (not 7950)
+2. **SDK Location**: \`~/klever-sdk/\` (not multiversx-sdk)
+3. **Binary Names**: \`koperator\`, \`ksc\` (not mxpy, erdpy, etc.)
+4. **Libraries**: NEVER use MultiversX libs in Klever KVM contracts
+5. **API Endpoints**: Different API structure and endpoints
+
+### Common Mistakes to Avoid:
+\`\`\`rust
+// ❌ WRONG - MultiversX import
+use multiversx_sc::api::ManagedTypeApi;
+
+// ✅ CORRECT - Klever import
+use klever_sc::api::ManagedTypeApi;
+\`\`\`
+
+### Node Configuration:
+\`\`\`bash
+# ❌ WRONG - MultiversX port
+export PROXY="http://localhost:7950"
+
+# ✅ CORRECT - Klever port and variable
+export KLEVER_NODE="http://localhost:8080"
+\`\`\`
+
+### CLI Tools:
+\`\`\`bash
+# ❌ WRONG - MultiversX tools
+mxpy contract deploy
+erdpy contract call
+sc-meta all build
+
+# ✅ CORRECT - Klever tools
+~/klever-sdk/koperator sc create
+~/klever-sdk/koperator sc invoke
+~/klever-sdk/ksc all build
+\`\`\`
+
+## Important Rules:
+1. ALWAYS check Klever documentation first
+2. If you find MultiversX examples, they need adjustments
+3. Library names are different (klever-sc vs multiversx-sc)
+4. Node interaction patterns are different
+5. Default ports and endpoints are different
+
+## When Converting MultiversX Code:
+- Replace all \`multiversx\` imports with \`klever\`
+- Change port 7950 to 8080 for local development
+- Use \`KLEVER_NODE\` instead of \`PROXY\`
+- Use Klever-specific CLI tools`,
+    metadata: {
+      title: 'Critical: Klever vs MultiversX Differences',
+      description: 'Important differences between Klever and MultiversX blockchains',
+      tags: ['critical', 'differences', 'multiversx', 'warning', 'important'],
+      language: 'mixed',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    relatedContextIds: []
+  },
+
   // Import Patterns
   {
     type: 'best_practice',
@@ -1631,7 +1704,7 @@ let klv_payment = KdaTokenPayment::new(
 
 // For KDA token (using byte slice)
 let kda_payment = KdaTokenPayment::new(
-    TokenIdentifier::from(&b"MYTOKEN-1234"[..]), 
+    TokenIdentifier::from(&b"DVK-34ZH"[..]), 
     0u64, 
     BigUint::from(500u128)
 );
@@ -1705,7 +1778,7 @@ fn send_fee(&self, recipient: ManagedAddress, fee_amount: BigUint) {
     // Or create and send in one operation
     self.send().direct_kda(
         &recipient,
-        &TokenIdentifier::from(&b"MYTOKEN-ABCD"[..]),
+        &TokenIdentifier::from(&b"BTC-F3E4"[..]),
         0u64,
         &BigUint::from(100u32)
     );
@@ -2853,6 +2926,750 @@ fn deploy_child_contract(&self, code: ManagedBuffer, initial_value: BigUint) {
       updatedAt: new Date().toISOString()
     },
     relatedContextIds: []
+  },
+
+  // Deployment Tool Context - Correct patterns for using koperator
+  {
+    type: 'deployment_tool',
+    content: `# Klever Smart Contract Operations - Correct Patterns
+
+## IMPORTANT: Koperator Location and Usage
+
+The Klever SDK provides \`koperator\` at: \`~/klever-sdk/koperator\`
+
+## Node Configuration Options
+
+You can specify the node in two ways:
+
+### Option 1: Environment Variable
+\`\`\`bash
+export KLEVER_NODE="http://localhost:8080"  # Local node (default port 8080)
+# export KLEVER_NODE="https://node.testnet.klever.org"  # Testnet
+\`\`\`
+
+### Option 2: --node Parameter
+\`\`\`bash
+# Use --node parameter directly in the command
+~/klever-sdk/koperator --node="http://localhost:8080" ...
+\`\`\`
+
+## Contract Deployment (sc create)
+\`\`\`bash
+# Build first
+~/klever-sdk/ksc all build
+
+# Deploy a new contract
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc create \\
+    --upgradeable --readable --payable --payableBySC \\
+    --wasm="$(pwd)/output/contract.wasm" \\
+    --await --sign --result-only
+\`\`\`
+
+## Contract Upgrade (sc upgrade)
+\`\`\`bash
+# Build first
+~/klever-sdk/ksc all build
+
+# Upgrade existing contract
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc upgrade "$CONTRACT_ADDRESS" \\
+    --wasm="$(pwd)/output/contract.wasm" \\
+    --payable --payableBySC --readable --upgradeable \\
+    --await --sign --result-only
+\`\`\`
+
+## Contract Execution (sc invoke)
+\`\`\`bash
+# Call contract function
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke "$CONTRACT_ADDRESS" "$FUNCTION_NAME" \\
+    --args "arg1" --args "arg2" \\
+    --await --sign --result-only
+
+# With token transfer
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke "$CONTRACT_ADDRESS" "deposit" \\
+    --values "KLV=1000000000" \\
+    --await --sign --result-only
+\`\`\`
+
+## Contract Query (via API, NOT koperator)
+\`\`\`bash
+# Query uses the Klever API
+curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \\
+    --data-raw '{
+        "ScAddress":"'$CONTRACT_ADDRESS'",
+        "FuncName":"'$ENDPOINT'",
+        "Arguments":["'$(echo -n "$ARG" | base64)'"]
+    }'
+\`\`\`
+
+## Key Differences from Other Blockchain CLIs:
+- Use \`sc create\` (NOT \`deploy\`)
+- Use \`sc invoke\` (NOT \`call\` or \`execute\`)
+- Use \`sc upgrade\` (NOT \`update\`)
+- Use \`--key-file\` (NOT \`--pem\`)
+- Use \`KLEVER_NODE\` env var (NOT \`--proxy\`)
+- Wallet files named \`walletKey.pem\` (NOT \`wallet.pem\`)
+- Arguments use \`--args\` flag (can be repeated)
+- Query endpoints use API, not koperator`,
+    metadata: {
+      title: 'Koperator Tool - Correct Usage Patterns',
+      description: 'Proper command-line usage patterns for Klever Operator (koperator) tool',
+      tags: ['koperator', 'deployment', 'upgrade', 'query', 'execute', 'cli', 'tool'],
+      language: 'bash',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    relatedContextIds: []
+  },
+
+  // Best Practice Context - Common mistakes when using Klever tools
+  {
+    type: 'best_practice',
+    content: `# Common Mistakes When Using Klever Tools
+
+## ❌ WRONG Commands (from other blockchains)
+\`\`\`bash
+# These commands DO NOT work on Klever!
+klever-sdk deploy --wasm contract.wasm --pem wallet.pem --proxy http://localhost:7950
+koperator --deploy --ksc-file contract.ksc --user-private-key key.pem
+sc-meta all build  # This is NOT Klever!
+\`\`\`
+
+## ✅ CORRECT Klever Commands
+\`\`\`bash
+# This is how Klever actually works
+KLEVER_NODE=http://localhost:8080 \\
+    ~/klever-sdk/koperator \\
+    --key-file="walletKey.pem" \\
+    sc create \\
+    --wasm="contract.wasm" \\
+    --upgradeable --readable --payable \\
+    --await --sign --result-only
+\`\`\`
+
+## Key Points to Remember:
+1. Binary is \`~/klever-sdk/koperator\` (not \`klever-sdk\` or \`koperator\` alone)
+2. Use \`KLEVER_NODE\` environment variable (not --proxy)
+3. Use \`--key-file\` parameter (not --pem)
+4. Commands are \`sc create\`, \`sc invoke\`, \`sc upgrade\` (not deploy/call/execute)
+5. Build with \`~/klever-sdk/ksc all build\` (not sc-meta)
+
+## Common Incorrect Patterns:
+
+### ❌ Wrong Command Names
+\`\`\`bash
+# WRONG - These don't exist
+koperator --deploy
+koperator --execute  
+koperator --call
+koperator deploy
+\`\`\`
+
+### ✅ Correct Command Names
+\`\`\`bash
+# CORRECT
+~/klever-sdk/koperator sc create     # Deploy new contract
+~/klever-sdk/koperator sc invoke     # Call contract function
+~/klever-sdk/koperator sc upgrade    # Upgrade contract
+\`\`\`
+
+### ❌ Wrong Parameter Names
+\`\`\`bash
+# WRONG
+--pem wallet.pem
+--proxy http://localhost:7950
+--wasm-file contract.wasm
+\`\`\`
+
+### ✅ Correct Parameter Names
+\`\`\`bash
+# CORRECT
+--key-file="walletKey.pem"
+KLEVER_NODE=http://localhost:8080
+--wasm="contract.wasm"
+\`\`\`
+
+### ❌ Wrong Build Command
+\`\`\`bash
+# WRONG - Not Klever commands
+sc-meta all build
+cargo build --release
+mxpy contract build
+\`\`\`
+
+### ✅ Correct Build Command
+\`\`\`bash
+# CORRECT
+~/klever-sdk/ksc all build
+\`\`\`
+
+### ❌ Wrong Query Method
+\`\`\`bash
+# WRONG - koperator doesn't do queries
+~/klever-sdk/koperator sc query
+\`\`\`
+
+### ✅ Correct Query Method
+\`\`\`bash
+# CORRECT - Use API for queries
+curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \\
+    --data-raw '{"ScAddress":"...", "FuncName":"...", "Arguments":[...]}'
+\`\`\``,
+    metadata: {
+      title: 'Common Mistakes When Using Klever Tools',
+      description: 'Frequent mistakes developers make with Klever CLI tools and how to avoid them',
+      tags: ['mistakes', 'best-practice', 'koperator', 'cli', 'errors', 'debugging'],
+      language: 'bash',
+      relevanceScore: 0.9,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    relatedContextIds: []
+  },
+
+  // Code Example Context - Bash script functions for Klever smart contracts
+  {
+    type: 'code_example',
+    content: `# Bash Script Functions for Klever Smart Contracts
+
+## Build Script
+\`\`\`bash
+#!/bin/bash
+# Build script for Klever contracts
+
+echo "Building smart contract..."
+~/klever-sdk/ksc all build
+
+if [ $? -eq 0 ]; then
+    echo -e "\\033[32m✅ Build successful!\\033[0m"
+    echo "WASM files:"
+    find output -name "*.wasm" -exec ls -lh {} \\;
+else
+    echo -e "\\033[31m❌ Build failed!\\033[0m"
+    exit 1
+fi
+\`\`\`
+
+## Deploy Script
+\`\`\`bash
+#!/bin/bash
+# Deploy script for Klever contracts
+
+set -e
+
+# Build first
+echo "Building smart contract..."
+~/klever-sdk/ksc all build || { echo "Build failed"; exit 1; }
+
+# Get contract name from output directory
+CONTRACT_WASM=$(find output -name "*.wasm" | head -1)
+if [ -z "$CONTRACT_WASM" ]; then
+    echo "Error: No WASM file found in output directory"
+    exit 1
+fi
+
+echo "Deploying contract..."
+DEPLOY_OUTPUT=$(KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc create \\
+    --upgradeable --readable --payable --payableBySC \\
+    --wasm="$CONTRACT_WASM" \\
+    --await --sign --result-only)
+
+echo "Contract deployment complete!"
+
+# Extract transaction hash and contract address
+TX_HASH=$(echo "$DEPLOY_OUTPUT" | grep -o '"hash": "[^"]*"' | head -1 | cut -d'"' -f4)
+
+# Try to extract contract address
+CONTRACT_ADDRESS=$(echo "$DEPLOY_OUTPUT" | python3 -c "
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    if 'logs' in data and 'events' in data['logs']:
+        for event in data['logs']['events']:
+            if event.get('identifier') == 'SCDeploy':
+                print(event.get('address', ''))
+                break
+except: pass
+" 2>/dev/null)
+
+# Create history file
+mkdir -p output
+HISTORY_FILE="output/history.json"
+[ ! -f "$HISTORY_FILE" ] && echo "[]" > "$HISTORY_FILE"
+
+if [ -n "$TX_HASH" ] && [ -n "$CONTRACT_ADDRESS" ]; then
+    # Add to history
+    jq --arg tx "$TX_HASH" --arg addr "$CONTRACT_ADDRESS" \\
+       '. + [{"hash": $tx, "contractAddress": $addr, "timestamp": now | strftime("%Y-%m-%d %H:%M:%S")}]' \\
+       "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"
+    
+    echo "Transaction: $TX_HASH"
+    echo "Contract: $CONTRACT_ADDRESS"
+else
+    echo "Warning: Could not extract deployment information"
+fi
+\`\`\`
+
+## Upgrade Script
+\`\`\`bash
+#!/bin/bash
+# Upgrade script for Klever contracts
+
+set -e
+
+# Get contract address
+if [ $# -eq 1 ]; then
+    CONTRACT_ADDRESS=$1
+else
+    echo "Getting latest contract from history.json..."
+    CONTRACT_ADDRESS=$(jq -r '.[-1].contractAddress' output/history.json 2>/dev/null)
+    
+    if [ -z "$CONTRACT_ADDRESS" ] || [ "$CONTRACT_ADDRESS" = "null" ]; then
+        echo "Error: No contract address found"
+        echo "Usage: $0 [contract-address]"
+        exit 1
+    fi
+fi
+
+echo "Contract address: $CONTRACT_ADDRESS"
+
+# Build first
+echo "Building smart contract..."
+~/klever-sdk/ksc all build || { echo "Build failed"; exit 1; }
+
+# Get contract WASM
+CONTRACT_WASM=$(find output -name "*.wasm" | head -1)
+if [ -z "$CONTRACT_WASM" ]; then
+    echo "Error: No WASM file found"
+    exit 1
+fi
+
+# Upgrade contract
+echo "Upgrading contract..."
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc upgrade "$CONTRACT_ADDRESS" \\
+    --wasm="$CONTRACT_WASM" \\
+    --payable --payableBySC --readable --upgradeable \\
+    --await --sign --result-only
+
+echo "Contract upgrade complete!"
+\`\`\`
+
+## Query Script (via API)
+\`\`\`bash
+#!/bin/bash
+# Query script for Klever contracts
+
+set -e
+
+# Parse arguments
+ENDPOINT=""
+CONTRACT_ADDRESS=""
+ARGUMENTS=()
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --endpoint) ENDPOINT="$2"; shift 2 ;;
+        --contract) CONTRACT_ADDRESS="$2"; shift 2 ;;
+        --arg) ARGUMENTS+=("$2"); shift 2 ;;
+        *) echo "Unknown argument: $1"; exit 1 ;;
+    esac
+done
+
+if [ -z "$ENDPOINT" ]; then
+    echo "Error: --endpoint is required"
+    exit 1
+fi
+
+# Get contract from history if not provided
+if [ -z "$CONTRACT_ADDRESS" ]; then
+    CONTRACT_ADDRESS=$(jq -r '.[-1].contractAddress' output/history.json 2>/dev/null)
+    if [ -z "$CONTRACT_ADDRESS" ] || [ "$CONTRACT_ADDRESS" = "null" ]; then
+        echo "Error: No contract address found"
+        exit 1
+    fi
+fi
+
+# Encode arguments
+JSON_ARGS="["
+for ((i=0; i<\${#ARGUMENTS[@]}; i++)); do
+    ARG="\${ARGUMENTS[$i]}"
+    
+    if [[ "$ARG" == 0x* ]]; then
+        HEX_VALUE="\${ARG#0x}"
+        ENCODED=$(echo -n "$HEX_VALUE" | xxd -r -p | base64)
+    else
+        ENCODED=$(echo -n "$ARG" | base64)
+    fi
+    
+    [[ $i -gt 0 ]] && JSON_ARGS="$JSON_ARGS,"
+    JSON_ARGS="$JSON_ARGS\\"$ENCODED\\""
+done
+JSON_ARGS="$JSON_ARGS]"
+
+# Build request
+JSON_REQUEST="{\\"ScAddress\\":\\"$CONTRACT_ADDRESS\\",\\"FuncName\\":\\"$ENDPOINT\\",\\"Arguments\\":$JSON_ARGS}"
+
+echo -e "\\033[1m\\033[34mQuerying $ENDPOINT...\\033[0m"
+RESPONSE=$(curl -s 'https://api.testnet.klever.org/v1.0/sc/query' --data-raw "$JSON_REQUEST")
+
+# Display response
+echo "$RESPONSE" | jq -C .
+
+# Decode return data if present
+RETURN_DATA=$(echo "$RESPONSE" | jq -r '.data.returnData[]? // empty')
+if [ -n "$RETURN_DATA" ]; then
+    echo -e "\\n\\033[1m\\033[33mDecoded Data:\\033[0m"
+    for data in $RETURN_DATA; do
+        echo "Base64: $data"
+        echo "Hex: $(echo "$data" | base64 -d | xxd -p)"
+        echo "---"
+    done
+fi
+\`\`\``,
+    metadata: {
+      title: 'Bash Script Functions for Klever Smart Contracts',
+      description: 'Reusable bash functions for Klever contract development, deployment, and testing',
+      tags: ['bash', 'scripts', 'automation', 'deployment', 'testing', 'functions'],
+      language: 'bash',
+      relevanceScore: 0.9,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    relatedContextIds: []
+  },
+
+  // Documentation Context - Klever argument types for Koperator
+  {
+    type: 'documentation',
+    content: `# Klever Argument Types for Koperator
+
+## IMPORTANT: Always use type prefixes for arguments
+
+When using koperator with sc invoke, ALL arguments must have type prefixes:
+
+## Type Prefixes for --args
+Based on koperator's encode function, use these type prefixes:
+
+### Wrapper Types
+- \`List:\` - List of values
+- \`Option:\` - Optional value (can also use \`option\` prefix)
+- \`tuple:\` - Tuple of values
+- \`variadic:\` - Variable number of arguments
+
+### Integer Types
+- \`i8:\`, \`I8:\` - Signed 8-bit integer
+- \`i16:\`, \`I16:\` - Signed 16-bit integer
+- \`i32:\`, \`I32:\`, \`isize:\`, \`ISIZE:\` - Signed 32-bit integer
+- \`i64:\`, \`I64:\` - Signed 64-bit integer
+- \`u8:\`, \`U8:\` - Unsigned 8-bit integer
+- \`u16:\`, \`U16:\` - Unsigned 16-bit integer
+- \`u32:\`, \`U32:\`, \`usize:\`, \`USIZE:\` - Unsigned 32-bit integer
+- \`u64:\`, \`U64:\` - Unsigned 64-bit integer
+
+### Big Number Types
+- \`BigInt:\`, \`bigint:\`, \`bi:\`, \`n:\`, \`BI:\`, \`N:\` - Big integers
+- \`BigUint:\`, \`biguint:\` - Big unsigned integers (same as BigInt)
+- \`BigFloat:\`, \`bigfloat:\`, \`bf:\`, \`BF:\`, \`f:\`, \`F:\` - Big float numbers
+
+### Other Types
+- \`Address:\`, \`address:\`, \`a:\`, \`A:\` - Klever address
+- \`ManagedBuffer:\`, \`managedbuffer:\` - String/buffer
+- \`TokenIdentifier:\`, \`tokenidentifier:\` - Token ID
+- \`bytes:\` - Byte array
+- \`BoxedBytes:\`, \`boxedbytes:\` - Boxed bytes
+- \`String:\`, \`string:\` - String value
+- \`Vec<u8>:\` - Vector of bytes
+- \`&str:\` - String reference
+- \`&[u8]:\` - Slice of bytes
+- \`bool:\`, \`boolean:\`, \`b:\`, \`B:\` - Boolean
+- \`empty\`, \`0\`, \`e\`, \`E\` - Empty/null value
+- \`file:\`, \`code:\`, \`wasm:\` - File path
+- \`hex:\` - Raw hex value
+
+### Option Types
+- Prefix any type with \`option\` for optional values
+- Example: \`optionbi:1000\` or \`optionAddress:klv1...\`
+
+## Examples with sc invoke
+
+### Basic Types
+\`\`\`bash
+# BigUint amounts (multiple aliases work)
+~/klever-sdk/koperator sc invoke CONTRACT_ADDRESS transfer \\
+    --args Address:klv1... --args bi:1000000
+# Also valid: --args a:klv1... --args BigUint:1000000
+
+# Unsigned integers
+~/klever-sdk/koperator sc invoke CONTRACT_ADDRESS setLimit \\
+    --args u64:42
+
+# Boolean values (multiple aliases)
+~/klever-sdk/koperator sc invoke CONTRACT_ADDRESS setPaused \\
+    --args bool:true
+# Also valid: --args b:true or --args boolean:true
+
+# String values (multiple types work)
+~/klever-sdk/koperator sc invoke CONTRACT_ADDRESS setName \\
+    --args String:"My Contract"
+# Also valid: --args ManagedBuffer:"My Contract"
+\`\`\`
+
+## Complex Types
+
+### Optional Values
+\`\`\`bash
+# Optional BigUint
+--args optionbi:1000
+
+# Optional Address (with value)
+--args optionAddress:klv1...
+
+# Empty optional (None)
+--args empty
+\`\`\`
+
+### Multiple Arguments
+\`\`\`bash
+# Transfer with amount and recipient
+~/klever-sdk/koperator sc invoke CONTRACT transfer \\
+    --args Address:klv1recipient... \\
+    --args bi:1000000
+
+# Complex function with multiple types
+~/klever-sdk/koperator sc invoke CONTRACT configure \\
+    --args u32:100 \\
+    --args String:"Config Name" \\
+    --args bool:true \\
+    --args Address:klv1admin...
+\`\`\`
+
+### Wrapper Types
+\`\`\`bash
+# List of addresses
+--args List:Address:klv1addr1,klv1addr2,klv1addr3
+
+# Optional value (using Option wrapper)
+--args Option:bi:1000
+
+# Tuple of mixed types
+--args tuple:u32:100,String:hello,bool:true
+
+# Variadic arguments
+--args variadic:bi:100,bi:200,bi:300
+\`\`\`
+
+### File and Hex Arguments
+\`\`\`bash
+# Deploy with WASM file
+--args file:/path/to/contract.wasm
+
+# Raw hex data
+--args hex:48656c6c6f20576f726c64
+
+# Bytes from hex
+--args bytes:0x48656c6c6f
+\`\`\`
+
+### Token Identifiers
+\`\`\`bash
+# Native tokens (no random identifier)
+--args TokenIdentifier:KLV
+--args TokenIdentifier:KFI
+
+# KDA tokens (4 random characters)
+--args TokenIdentifier:DVK-34ZH
+--args TokenIdentifier:USDT-A1B2
+--args TokenIdentifier:BTC-F3E4
+\`\`\`
+
+## Token Transfers
+
+### Token Transfers with --values
+\`\`\`bash
+# Single token transfer
+--values "KLV=1000000000"
+
+# Multiple tokens (comma-separated)
+--values "KLV=1000000000,KFI=500000,DVK-34ZH=250000"
+
+# KDA transfers (custom tokens)
+--values "USDT-A1B2=1000000"
+
+# Complete example with sc invoke
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke CONTRACT_ADDRESS deposit \\
+    --values "KLV=1000000000" \\
+    --await --sign --result-only
+
+# Multiple token values in same transaction
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke CONTRACT_ADDRESS multiDeposit \\
+    --values "KLV=1000,KFI=2000,DVK-34ZH=3000" \\
+    --await --sign --result-only
+\`\`\`
+
+### Important: --values Format
+- Format: \\\`KDA_ID=AMOUNT\\\` (note the equals sign, not colon)
+- Multiple values: comma-separated
+- Native tokens: \\\`KLV\\\` and \\\`KFI\\\` (no random identifier)
+- Custom KDAs: 4 random characters after hyphen (e.g., \\\`DVK-34ZH\\\`, \\\`USDT-A1B2\\\`)
+- Examples:
+  - Native: \\\`--values "KLV=1000000"\\\`
+  - KDA: \\\`--values "DVK-34ZH=500000"\\\`
+  - Multiple: \\\`--values "KLV=1000,KFI=2000,USDT-A1B2=3000"\\\`
+
+## Advanced Examples
+
+### Wrong vs Right
+\`\`\`bash
+# ❌ WRONG - No type prefixes
+~/klever-sdk/koperator sc invoke CONTRACT transfer --args klv1... --args 1000
+
+# ✅ CORRECT - With type prefixes
+~/klever-sdk/koperator sc invoke CONTRACT transfer --args Address:klv1... --args bi:1000
+\`\`\`
+
+### Complex Data Structures
+\`\`\`bash
+# Struct-like data (represented as tuple with types)
+--args tuple:u64:123,String:"John Doe",bool:true,Address:klv1addr123...
+
+# For nested structures, each value needs its type
+# This would typically be multiple separate --args calls
+\`\`\`
+
+### Option and Result Types
+\`\`\`bash
+# Some(value)
+--args "some:500"
+
+# None
+--args "none"
+
+# For Result types, typically return values, not input args
+\`\`\`
+
+## Initialization Arguments
+
+### Contract Init
+\`\`\`bash
+# Simple init with owner
+--init-args "klv1owner123..."
+
+# Multiple init parameters
+--init-args "klv1owner123...,1000000,\\"Token Name\\""
+
+# Complex initialization
+--init-args "klv1owner123...,1000000,[\\"admin1\\",\\"admin2\\"],true"
+\`\`\`
+
+### Contract Upgrade
+\`\`\`bash
+# Simple upgrade
+--upgrade-args "2"  # version number
+
+# Complex upgrade with data migration
+--upgrade-args "2,true,\\"migration_data\\""
+\`\`\`
+
+## Type Conversion Examples
+
+### From Rust Contract to Koperator Args
+
+\`\`\`rust
+// Rust endpoint signature
+fn transfer(&self, to: ManagedAddress, amount: BigUint, data: OptionalValue<ManagedBuffer>)
+\`\`\`
+
+\`\`\`bash
+# Koperator call - each argument needs its own --args with type
+~/klever-sdk/koperator sc invoke CONTRACT transfer \\
+    --args Address:klv1recipient123... \\
+    --args bi:1000000 \\
+    --args optionString:"transfer_memo"
+
+# Or with empty for None
+~/klever-sdk/koperator sc invoke CONTRACT transfer \\
+    --args Address:klv1recipient123... \\
+    --args bi:1000000 \\
+    --args empty
+\`\`\`
+
+### Custom Types
+\`\`\`rust
+// Rust custom struct
+pub struct UserData {
+    pub id: u64,
+    pub name: ManagedBuffer,
+    pub active: bool,
+}
+\`\`\`
+
+\`\`\`bash
+# Koperator representation as tuple (with types)
+--args tuple:u64:123,String:"John",bool:true
+\`\`\`
+
+## Common Encoding Issues
+
+### Special Characters
+\`\`\`bash
+# Escape quotes properly in strings
+--args String:"String with \\\\\\"quotes\\\\\\""
+
+# Handle spaces
+--args String:"String with spaces"
+\`\`\`
+
+### Large Numbers
+\`\`\`bash
+# For very large numbers, use BigUint
+--args bi:999999999999999999999
+
+# Or hex format with BigUint
+--args bi:0xde0b6b3a7640000
+
+# Or as a string if needed by the contract
+--args String:"999999999999999999999"
+\`\`\``,
+    metadata: {
+      title: 'Klever Argument Types for Koperator',
+      description: 'Complete reference for argument types and formatting when using Koperator CLI tool',
+      tags: ['koperator', 'arguments', 'types', 'documentation', 'cli', 'reference'],
+      language: 'bash',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    relatedContextIds: []
   }
 ];
 
@@ -2995,7 +3812,7 @@ If Klever VSCode extension is installed, koperator is located at:
 
 Invoke contract function with arguments:
 \`\`\`bash
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1qqqqqqqqqqqqqpgqxwklx9kjsraqctl36kqekhyh95u5cf8qgz5q33zltk add \\
@@ -3116,7 +3933,7 @@ When sending multiple tokens in a single transaction, use the \`--values\` param
     content: `# Koperator Smart Contract Operations Examples
 
 # 1. Deploy a new contract
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc create \\
@@ -3125,7 +3942,7 @@ KLEVER_NODE=https://node.testnet.klever.finance \\
     --await --sign --result-only
 
 # 2. Invoke contract with BigUint argument
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address_here add \\
@@ -3133,7 +3950,7 @@ KLEVER_NODE=https://node.testnet.klever.finance \\
     --await --sign --result-only
 
 # 3. Invoke with multiple arguments - use separate --args for each argument
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address_here transfer \\
@@ -3141,7 +3958,7 @@ KLEVER_NODE=https://node.testnet.klever.finance \\
     --await --sign --result-only
 
 # 4. Invoke payable endpoint with KLV
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address_here deposit \\
@@ -3149,7 +3966,7 @@ KLEVER_NODE=https://node.testnet.klever.finance \\
     --await --sign --result-only
 
 # 5. Invoke with KDA token payment
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address_here depositToken \\
@@ -3157,7 +3974,7 @@ KLEVER_NODE=https://node.testnet.klever.finance \\
     --await --sign --result-only
 
 # 5b. Invoke with multiple token values in the same transaction
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address_here depositMultiple \\
@@ -3165,13 +3982,13 @@ KLEVER_NODE=https://node.testnet.klever.finance \\
     --await --sign --result-only
 
 # 6. Query view endpoint (no transaction)
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     sc query klv1contract_address_here getBalance \\
     --args Address:klv1user_address
 
 # 7. Upgrade existing contract
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc upgrade klv1contract_address_here \\
@@ -3228,7 +4045,7 @@ When you need to modify contract state, use koperator. It will:
 **Example - Invoke a state-changing endpoint:**
 \`\`\`bash
 # This creates, signs, and broadcasts a transaction
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address transfer \\
@@ -3281,7 +4098,7 @@ The koperator query command exists but the API is the recommended approach for p
 # Wallet address:  klv1graf3wqa8eefzmp3g95wrnmayzacsje2a6c6y7z6zmu9m8z8gz5qlrctat
 
 # 2. Check KLV balance
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     account balance
@@ -3293,7 +4110,7 @@ KLEVER_NODE=https://node.testnet.klever.finance \\
 # INFO [2025-06-10 17:28:30.292]   klv1graf3wqa8eefzmp3g95wrnmayzacsje2a6c6y7z6zmu9m8z8gz5qlrctat balance = 29672.397284
 
 # 3. Check detailed account information (nonce, allowance, staking, etc.)
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     account info
@@ -3618,7 +4435,7 @@ echo "Building smart contract..."
 
 # Deploy contract
 echo "Deploying contract..."
-DEPLOY_OUTPUT=$(KLEVER_NODE=https://node.testnet.klever.finance \\
+DEPLOY_OUTPUT=$(KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc create \\
@@ -3691,7 +4508,7 @@ echo "Building smart contract..."
 
 # Upgrade contract
 echo "Upgrading contract..."
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc upgrade "$CONTRACT_ADDRESS" \\

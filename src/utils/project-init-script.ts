@@ -144,7 +144,7 @@ if [ -z "$CONTRACT_WASM" ]; then
 fi
 
 echo "Deploying contract..."
-DEPLOY_OUTPUT=$(KLEVER_NODE=https://node.testnet.klever.finance \\
+DEPLOY_OUTPUT=$(KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc create \\
@@ -226,7 +226,7 @@ fi
 
 # Upgrade contract
 echo "Upgrading contract..."
-KLEVER_NODE=https://node.testnet.klever.finance \\
+KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc upgrade "$CONTRACT_ADDRESS" \\
