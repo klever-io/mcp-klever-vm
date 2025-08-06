@@ -104,6 +104,24 @@ REDIS_URL=redis://localhost:6379
 NODE_ENV=development
 ```
 
+## MCP Client Integration
+
+The Klever MCP Server can be integrated with different MCP-compatible clients. We provide detailed setup guides for:
+
+### Visual Studio Code
+Follow the [VS Code Installation Guide](docs/install-vscode.md) to:
+- Configure the MCP server in VS Code with GitHub Copilot Chat
+- Set up the `.vscode/mcp.json` configuration file
+- Use Klever blockchain knowledge in your development workflow
+
+### Claude Desktop
+Follow the [Claude Desktop Installation Guide](docs/install-claude.md) to:
+- Configure the MCP server with Claude Desktop application
+- Set up the `mcp.json` configuration file
+- Access Klever development context through Claude's interface
+
+Both guides include troubleshooting tips and verification steps to ensure the MCP server is working correctly with your chosen client.
+
 ## Usage
 
 ### Knowledge Base Loading
@@ -330,6 +348,11 @@ Provide examples and explanations for developers learning Klever development.
 
 ### 4. Documentation Generator
 Extract and organize contract documentation automatically.
+
+## Project Specifications and Examples
+
+For complete project implementation examples and specifications, see:
+- [Project Specification Template](docs/project-specification-template.md) - A comprehensive template/prompt for implementing smart contracts using the MCP knowledge base. This includes the discovery process, implementation gates, and step-by-step guidance for using MCP queries throughout development.
 
 ## Project Initialization
 
