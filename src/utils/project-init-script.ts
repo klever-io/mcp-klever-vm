@@ -17,6 +17,7 @@ RESET="\\x1b[0m"
 TEMPLATE="empty"
 CONTRACT_NAME=""
 MOVE_TO_CURRENT=true
+NO_MOVE_SPECIFIED=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -31,6 +32,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --no-move)
             MOVE_TO_CURRENT=false
+            NO_MOVE_SPECIFIED=true
             shift
             ;;
         *)
@@ -64,57 +66,140 @@ if [ ! -f ~/klever-sdk/ksc ]; then
 fi
 
 # Run ksc new command
+echo -e "\${YELLOW}Running: ~/klever-sdk/ksc new --template \"$TEMPLATE\" --name \"$CONTRACT_NAME\" --path \"$TEMP_DIR\"\${RESET}"
 ~/klever-sdk/ksc new --template "$TEMPLATE" --name "$CONTRACT_NAME" --path "$TEMP_DIR" || {
     echo -e "\${RED}Error: Failed to create contract\${RESET}"
+    echo -e "\${RED}ksc exit code: $?\${RESET}"
     exit 1
 }
 
 # Check what was created
-echo -e "\${YELLOW}Checking created files...\${RESET}"
+echo -e "\${YELLOW}Checking created files in $TEMP_DIR...\${RESET}"
 ls -la "$TEMP_DIR/"
+
+# Also check if ksc created the project in current directory instead
+echo -e "\${YELLOW}Checking if ksc created files in current directory...\${RESET}"
+if [ -d "./$CONTRACT_NAME" ]; then
+    echo -e "\${YELLOW}Found project in current directory: ./$CONTRACT_NAME\${RESET}"
+    ls -la "./$CONTRACT_NAME"
+fi
 
 # Find the actual project directory (ksc might create it differently)
 PROJECT_DIR=""
 if [ -d "$TEMP_DIR/$CONTRACT_NAME" ]; then
     PROJECT_DIR="$TEMP_DIR/$CONTRACT_NAME"
+    echo -e "\${GREEN}Found project in: $PROJECT_DIR\${RESET}"
+elif [ -d "./$CONTRACT_NAME" ]; then
+    # ksc might have created it in current directory despite --path
+    PROJECT_DIR="./$CONTRACT_NAME"
+    echo -e "\${YELLOW}Project created in current directory instead of temp\${RESET}"
+    # Only skip move if user didn't explicitly specify --no-move
+    if [ "$NO_MOVE_SPECIFIED" = false ]; then
+        MOVE_TO_CURRENT=false
+    fi
 elif [ -d "$TEMP_DIR" ] && [ "$(ls -A $TEMP_DIR)" ]; then
     # If CONTRACT_NAME dir doesn't exist, check if files were created directly in TEMP_DIR
     PROJECT_DIR="$TEMP_DIR"
+    echo -e "\${YELLOW}Files created directly in temp directory\${RESET}"
 else
     echo -e "\${RED}Error: Project was not created as expected\${RESET}"
+    echo -e "\${RED}Neither $TEMP_DIR/$CONTRACT_NAME nor ./$CONTRACT_NAME exists\${RESET}"
     exit 1
 fi
 
 # Move to current directory if requested
 if [ "$MOVE_TO_CURRENT" = true ]; then
     echo -e "\${YELLOW}Moving project to current directory...\${RESET}"
+    echo -e "\${YELLOW}PROJECT_DIR: $PROJECT_DIR\${RESET}"
+    echo -e "\${YELLOW}Current directory: $(pwd)\${RESET}"
+    
+    # List what we're about to move
+    echo -e "\${YELLOW}Files to move:\${RESET}"
+    ls -la "$PROJECT_DIR"
     
     # If project is in a subdirectory
     if [ "$PROJECT_DIR" = "$TEMP_DIR/$CONTRACT_NAME" ]; then
-        # Move all files including hidden ones
+        echo -e "\${YELLOW}Moving contents from subdirectory to current directory...\${RESET}"
+        # Move all files including hidden ones from inside the project directory
         if [ -n "$(ls -A $PROJECT_DIR)" ]; then
-            cp -r "$PROJECT_DIR"/* . 2>/dev/null || true
-            cp -r "$PROJECT_DIR"/.[^.]* . 2>/dev/null || true
+            # Move contents, not the directory itself
+            echo -e "\${YELLOW}Moving all files from $PROJECT_DIR/ to current directory\${RESET}"
+            
+            # First try with rsync (moves contents, not directory)
+            if command -v rsync >/dev/null 2>&1; then
+                rsync -av "$PROJECT_DIR/" . || {
+                    echo -e "\${RED}rsync failed, trying cp...\${RESET}"
+                    # Copy all files including hidden ones
+                    find "$PROJECT_DIR" -maxdepth 1 -mindepth 1 -exec cp -r {} . \; 2>&1 || echo -e "\${RED}Failed to copy files\${RESET}"
+                }
+            else
+                # No rsync, use cp
+                echo -e "\${YELLOW}Using cp to move files...\${RESET}"
+                # Copy all files including hidden ones
+                find "$PROJECT_DIR" -maxdepth 1 -mindepth 1 -exec cp -r {} . \; 2>&1 || echo -e "\${RED}Failed to copy files\${RESET}"
+            fi
         fi
     else
-        # Files are directly in TEMP_DIR
-        if [ -n "$(ls -A $PROJECT_DIR)" ]; then
-            cp -r "$PROJECT_DIR"/* . 2>/dev/null || true
-            cp -r "$PROJECT_DIR"/.[^.]* . 2>/dev/null || true
+        echo -e "\${YELLOW}Moving from temp directory directly...\${RESET}"
+        # Files are directly in TEMP_DIR, but we need to check if there's a subdirectory
+        if [ -d "$TEMP_DIR/klever-dice" ] || [ -d "$TEMP_DIR/$CONTRACT_NAME" ]; then
+            # There's a subdirectory, move its contents
+            ACTUAL_DIR=$(find "$TEMP_DIR" -maxdepth 1 -type d ! -path "$TEMP_DIR" | head -1)
+            if [ -n "$ACTUAL_DIR" ]; then
+                echo -e "\${YELLOW}Found project in $ACTUAL_DIR, moving contents...\${RESET}"
+                if command -v rsync >/dev/null 2>&1; then
+                    rsync -av "$ACTUAL_DIR/" . || {
+                        echo -e "\${RED}rsync failed, trying cp...\${RESET}"
+                        find "$ACTUAL_DIR" -maxdepth 1 -mindepth 1 -exec cp -r {} . \; 2>&1 || echo -e "\${RED}Failed to copy files\${RESET}"
+                    }
+                else
+                    find "$ACTUAL_DIR" -maxdepth 1 -mindepth 1 -exec cp -r {} . \; 2>&1 || echo -e "\${RED}Failed to copy files\${RESET}"
+                fi
+            fi
+        else
+            # Files truly are directly in TEMP_DIR
+            if [ -n "$(ls -A $PROJECT_DIR)" ]; then
+                if command -v rsync >/dev/null 2>&1; then
+                    rsync -av "$PROJECT_DIR/" . || {
+                        echo -e "\${RED}rsync failed, trying cp...\${RESET}"
+                        cp -r "$PROJECT_DIR"/* . 2>&1 || echo -e "\${RED}Failed to copy regular files\${RESET}"
+                        cp -r "$PROJECT_DIR"/.[^.]* . 2>&1 || echo -e "\${RED}Failed to copy hidden files\${RESET}"
+                    }
+                else
+                    cp -r "$PROJECT_DIR"/* . 2>&1 || echo -e "\${RED}Failed to copy regular files\${RESET}"
+                    cp -r "$PROJECT_DIR"/.[^.]* . 2>&1 || echo -e "\${RED}Failed to copy hidden files\${RESET}"
+                fi
+            fi
         fi
     fi
+    
+    echo -e "\${GREEN}Files after move:\${RESET}"
+    ls -la .
 else
-    # Move the entire project directory
-    if [ "$PROJECT_DIR" = "$TEMP_DIR/$CONTRACT_NAME" ]; then
-        mv "$PROJECT_DIR" .
-    else
-        # Create project directory and move files
-        mkdir -p "$CONTRACT_NAME"
-        if [ -n "$(ls -A $PROJECT_DIR)" ]; then
-            cp -r "$PROJECT_DIR"/* "$CONTRACT_NAME"/ 2>/dev/null || true
-            cp -r "$PROJECT_DIR"/.[^.]* "$CONTRACT_NAME"/ 2>/dev/null || true
+    echo -e "\${YELLOW}--no-move specified: Using current directory as project root...\${RESET}"
+    # When noMove is specified, we want to place files directly in current directory
+    
+    if [ -d "$PROJECT_DIR" ] && [ -n "$(ls -A $PROJECT_DIR)" ]; then
+        echo -e "\${YELLOW}Moving project files to current directory...\${RESET}"
+        
+        # Move contents directly to current directory (not in a subdirectory)
+        if command -v rsync >/dev/null 2>&1; then
+            rsync -av "$PROJECT_DIR/" . || {
+                echo -e "\${RED}rsync failed, trying cp...\${RESET}"
+                find "$PROJECT_DIR" -maxdepth 1 -mindepth 1 -exec cp -r {} . \; 2>&1 || echo -e "\${RED}Failed to copy files\${RESET}"
+            }
+        else
+            find "$PROJECT_DIR" -maxdepth 1 -mindepth 1 -exec cp -r {} . \; 2>&1 || echo -e "\${RED}Failed to copy files\${RESET}"
+        fi
+        
+        # If PROJECT_DIR was ./$CONTRACT_NAME created by ksc, remove the now-empty directory
+        if [ "$PROJECT_DIR" = "./$CONTRACT_NAME" ]; then
+            rmdir "./$CONTRACT_NAME" 2>/dev/null || true
         fi
     fi
+    
+    echo -e "\${GREEN}Files in current directory:\${RESET}"
+    ls -la .
 fi
 
 # Clean up temp directory
@@ -132,6 +217,49 @@ cat > scripts/deploy.sh << 'EOF'
 
 set -e
 
+# Colors
+RED="\\x1b[31m"
+GREEN="\\x1b[32m"
+YELLOW="\\x1b[33m"
+CYAN="\\x1b[36m"
+RESET="\\x1b[0m"
+
+# Configuration
+CONFIG_FILE=".env"
+DEFAULT_NETWORK="testnet"
+
+# Load configuration
+if [ -f "$CONFIG_FILE" ]; then
+    export $(cat "$CONFIG_FILE" | grep -v '^#' | xargs)
+fi
+
+# Set defaults
+NETWORK="\${NETWORK:-\$DEFAULT_NETWORK}"
+KEY_FILE="\${KEY_FILE:-\$HOME/klever-sdk/walletKey.pem}"
+
+# Set network endpoint
+case "$NETWORK" in
+    mainnet)
+        KLEVER_NODE="https://node.klever.org"
+        ;;
+    testnet)
+        KLEVER_NODE="https://node.testnet.klever.org"
+        ;;
+    devnet)
+        KLEVER_NODE="https://node.devnet.klever.org"
+        ;;
+    local)
+        KLEVER_NODE="http://localhost:8080"
+        ;;
+    *)
+        echo -e "\${YELLOW}Unknown network: \$NETWORK, using testnet\${RESET}"
+        NETWORK="testnet"
+        KLEVER_NODE="https://node.testnet.klever.org"
+        ;;
+esac
+
+echo -e "\${CYAN}Deploying to: \${NETWORK}\${RESET}"
+
 # Build first
 echo "Building smart contract..."
 ~/klever-sdk/ksc all build || { echo "Build failed"; exit 1; }
@@ -144,9 +272,9 @@ if [ -z "$CONTRACT_WASM" ]; then
 fi
 
 echo "Deploying contract..."
-DEPLOY_OUTPUT=$(KLEVER_NODE=https://node.testnet.klever.finance \\
+DEPLOY_OUTPUT=$(KLEVER_NODE=$KLEVER_NODE \\
     ~/klever-sdk/koperator \\
-    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    --key-file="$KEY_FILE" \\
     sc create \\
     --upgradeable --readable --payable --payableBySC \\
     --wasm="$CONTRACT_WASM" \\
@@ -176,15 +304,16 @@ HISTORY_FILE="output/history.json"
 [ ! -f "$HISTORY_FILE" ] && echo "[]" > "$HISTORY_FILE"
 
 if [ -n "$TX_HASH" ] && [ -n "$CONTRACT_ADDRESS" ]; then
-    # Add to history
-    jq --arg tx "$TX_HASH" --arg addr "$CONTRACT_ADDRESS" \\
-       '. + [{"hash": $tx, "contractAddress": $addr, "timestamp": now | strftime("%Y-%m-%d %H:%M:%S")}]' \\
+    # Add to history with network
+    jq --arg tx "$TX_HASH" --arg addr "$CONTRACT_ADDRESS" --arg net "$NETWORK" \\
+       '. + [{"hash": $tx, "contractAddress": $addr, "network": $net, "timestamp": now | strftime("%Y-%m-%d %H:%M:%S")}]' \\
        "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"
     
-    echo "Transaction: $TX_HASH"
-    echo "Contract: $CONTRACT_ADDRESS"
+    echo -e "\${GREEN}Transaction: $TX_HASH\${RESET}"
+    echo -e "\${GREEN}Contract: $CONTRACT_ADDRESS\${RESET}"
+    echo -e "\${GREEN}Network: $NETWORK\${RESET}"
 else
-    echo "Warning: Could not extract deployment information"
+    echo -e "\${RED}Warning: Could not extract deployment information\${RESET}"
 fi
 EOF
 
@@ -197,21 +326,75 @@ cat > scripts/upgrade.sh << 'EOF'
 
 set -e
 
+# Colors
+RED="\\x1b[31m"
+GREEN="\\x1b[32m"
+YELLOW="\\x1b[33m"
+CYAN="\\x1b[36m"
+RESET="\\x1b[0m"
+
+# Configuration
+CONFIG_FILE=".env"
+HISTORY_FILE="output/history.json"
+DEFAULT_NETWORK="testnet"
+
+# Load configuration
+if [ -f "$CONFIG_FILE" ]; then
+    export $(cat "$CONFIG_FILE" | grep -v '^#' | xargs)
+fi
+
+# Set defaults
+NETWORK="\${NETWORK:-\$DEFAULT_NETWORK}"
+KEY_FILE="\${KEY_FILE:-\$HOME/klever-sdk/walletKey.pem}"
+
+# Set network endpoint
+case "$NETWORK" in
+    mainnet)
+        KLEVER_NODE="https://node.klever.org"
+        ;;
+    testnet)
+        KLEVER_NODE="https://node.testnet.klever.org"
+        ;;
+    devnet)
+        KLEVER_NODE="https://node.devnet.klever.org"
+        ;;
+    local)
+        KLEVER_NODE="http://localhost:8080"
+        ;;
+    *)
+        echo -e "\${YELLOW}Unknown network: \$NETWORK, using testnet\${RESET}"
+        NETWORK="testnet"
+        KLEVER_NODE="https://node.testnet.klever.org"
+        ;;
+esac
+
+echo -e "\${CYAN}Network: \${NETWORK}\${RESET}"
+
 # Get contract address
 if [ $# -eq 1 ]; then
     CONTRACT_ADDRESS=$1
 else
-    echo "Getting latest contract from history.json..."
-    CONTRACT_ADDRESS=$(jq -r '.[-1].contractAddress' output/history.json 2>/dev/null)
+    echo "Getting contract from history for $NETWORK..."
+    # Try to get address for current network
+    CONTRACT_ADDRESS=$(jq -r ".[] | select(.network == \\"\$NETWORK\\") | .contractAddress" "$HISTORY_FILE" 2>/dev/null | tail -1)
+    
+    # Fallback to last deployed contract if no network match
+    if [ -z "$CONTRACT_ADDRESS" ] || [ "$CONTRACT_ADDRESS" = "null" ]; then
+        CONTRACT_ADDRESS=$(jq -r '.[-1].contractAddress' "$HISTORY_FILE" 2>/dev/null)
+        if [ -n "$CONTRACT_ADDRESS" ] && [ "$CONTRACT_ADDRESS" != "null" ]; then
+            LAST_NETWORK=$(jq -r '.[-1].network // "unknown"' "$HISTORY_FILE" 2>/dev/null)
+            echo -e "\${YELLOW}No contract found for \$NETWORK, using last deployment from \$LAST_NETWORK\${RESET}"
+        fi
+    fi
     
     if [ -z "$CONTRACT_ADDRESS" ] || [ "$CONTRACT_ADDRESS" = "null" ]; then
-        echo "Error: No contract address found"
+        echo -e "\${RED}Error: No contract address found\${RESET}"
         echo "Usage: $0 [contract-address]"
         exit 1
     fi
 fi
 
-echo "Contract address: $CONTRACT_ADDRESS"
+echo -e "\${CYAN}Contract address: $CONTRACT_ADDRESS\${RESET}"
 
 # Build first
 echo "Building smart contract..."
@@ -226,15 +409,27 @@ fi
 
 # Upgrade contract
 echo "Upgrading contract..."
-KLEVER_NODE=https://node.testnet.klever.finance \\
+UPGRADE_OUTPUT=$(KLEVER_NODE=$KLEVER_NODE \\
     ~/klever-sdk/koperator \\
-    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    --key-file="$KEY_FILE" \\
     sc upgrade "$CONTRACT_ADDRESS" \\
     --wasm="$CONTRACT_WASM" \\
     --payable --payableBySC --readable --upgradeable \\
-    --await --sign --result-only
+    --await --sign --result-only)
 
-echo "Contract upgrade complete!"
+echo -e "\${GREEN}Contract upgrade complete!\${RESET}"
+
+# Extract transaction hash  
+TX_HASH=$(echo "$UPGRADE_OUTPUT" | grep -o '"hash": "[^"]*"' | head -1 | cut -d'"' -f4)
+
+if [ -n "$TX_HASH" ]; then
+    # Add upgrade to history
+    jq --arg tx "$TX_HASH" --arg addr "$CONTRACT_ADDRESS" --arg net "$NETWORK" \\
+       '. + [{"hash": $tx, "contractAddress": $addr, "network": $net, "type": "upgrade", "timestamp": now | strftime("%Y-%m-%d %H:%M:%S")}]' \\
+       "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"
+    
+    echo -e "\${GREEN}Transaction: $TX_HASH\${RESET}"
+fi
 EOF
 
 # Create query.sh
@@ -364,18 +559,314 @@ cat > scripts/interact.sh << 'EOF'
 
 # Interactive script for $CONTRACT_NAME
 
-echo "Common commands:"
-echo "  ./scripts/build.sh         - Build the contract"
-echo "  ./scripts/deploy.sh        - Deploy to testnet"
-echo "  ./scripts/upgrade.sh       - Upgrade existing contract"
-echo "  ./scripts/query.sh         - Query contract endpoints"
-echo "  ./scripts/test.sh          - Run tests"
-echo ""
-echo "Examples:"
-echo "  ./scripts/query.sh --endpoint getSum"
-echo "  ./scripts/query.sh --endpoint getValue --arg myKey"
-echo ""
-echo "Contract history: output/history.json"
+set -e
+
+# Colors
+RED="\\x1b[31m"
+GREEN="\\x1b[32m"
+YELLOW="\\x1b[33m"
+BLUE="\\x1b[34m"
+CYAN="\\x1b[36m"
+BOLD="\\x1b[1m"
+RESET="\\x1b[0m"
+
+# Configuration
+CONFIG_FILE=".env"
+HISTORY_FILE="output/history.json"
+DEFAULT_NETWORK="testnet"
+
+# Load configuration
+load_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        export $(cat "$CONFIG_FILE" | grep -v '^#' | xargs)
+    fi
+    
+    # Set defaults if not in config
+    NETWORK="\${NETWORK:-\$DEFAULT_NETWORK}"
+    KEY_FILE="\${KEY_FILE:-\$HOME/klever-sdk/walletKey.pem}"
+}
+
+# Set network endpoint
+set_network() {
+    case "$NETWORK" in
+        mainnet)
+            KLEVER_NODE="https://node.klever.org"
+            ;;
+        testnet)
+            KLEVER_NODE="https://node.testnet.klever.org"
+            ;;
+        devnet)
+            KLEVER_NODE="https://node.devnet.klever.org"
+            ;;
+        local)
+            KLEVER_NODE="http://localhost:8080"
+            ;;
+        *)
+            echo -e "\${YELLOW}Unknown network: \$NETWORK, using testnet\${RESET}"
+            NETWORK="testnet"
+            KLEVER_NODE="https://node.testnet.klever.org"
+            ;;
+    esac
+    
+    export KLEVER_NODE
+    echo -e "\${CYAN}Network: \${BOLD}\$NETWORK\${RESET} (\${KLEVER_NODE})"
+}
+
+# Get contract address from history
+get_contract_address() {
+    if [ -z "$CONTRACT_ADDRESS" ]; then
+        if [ -f "$HISTORY_FILE" ]; then
+            # Try to get address for current network
+            CONTRACT_ADDRESS=$(jq -r ".[] | select(.network == \\"\$NETWORK\\") | .contractAddress" "$HISTORY_FILE" 2>/dev/null | tail -1)
+            
+            # Fallback to last deployed contract if no network match
+            if [ -z "$CONTRACT_ADDRESS" ] || [ "$CONTRACT_ADDRESS" = "null" ]; then
+                CONTRACT_ADDRESS=$(jq -r '.[-1].contractAddress' "$HISTORY_FILE" 2>/dev/null)
+            fi
+        fi
+        
+        if [ -z "$CONTRACT_ADDRESS" ] || [ "$CONTRACT_ADDRESS" = "null" ]; then
+            echo -e "\${RED}No contract found for \$NETWORK. Deploy first!\${RESET}"
+            echo -e "\${YELLOW}Run: ./scripts/deploy.sh\${RESET}"
+            return 1
+        fi
+    fi
+    
+    echo -e "\${CYAN}Contract: \${BOLD}\$CONTRACT_ADDRESS\${RESET}"
+    return 0
+}
+
+# Generic function to invoke contract methods
+invoke_contract() {
+    local method=$1
+    shift
+    local args=("$@")
+    
+    echo -e "\${YELLOW}Invoking \${BOLD}\$method\${RESET}..."
+    
+    # Build koperator command
+    local cmd="KLEVER_NODE=\$KLEVER_NODE ~/klever-sdk/koperator"
+    cmd="\$cmd --key-file=\\"\$KEY_FILE\\""
+    cmd="\$cmd sc invoke \\"\$CONTRACT_ADDRESS\\" \$method"
+    
+    # Add arguments
+    for arg in "\${args[@]}"; do
+        cmd="\$cmd \$arg"
+    done
+    
+    # Add common flags
+    cmd="\$cmd --await --sign --result-only"
+    
+    echo -e "\${CYAN}Command: \$cmd\${RESET}"
+    
+    # Execute
+    eval "\$cmd"
+}
+
+# Query contract view
+query_contract() {
+    local endpoint=$1
+    shift
+    local args=("$@")
+    
+    echo -e "\${YELLOW}Querying \${BOLD}\$endpoint\${RESET}..."
+    
+    # Use the query.sh script
+    local cmd="./scripts/query.sh --endpoint \$endpoint --contract \$CONTRACT_ADDRESS"
+    
+    # Add arguments
+    for arg in "\${args[@]}"; do
+        cmd="\$cmd --arg \\"\$arg\\""
+    done
+    
+    eval "\$cmd"
+}
+
+# Build arguments for koperator
+build_arg() {
+    local type=$1
+    local value=$2
+    
+    case "$type" in
+        String)
+            echo "--args String:\\"\$value\\""
+            ;;
+        u64)
+            echo "--args u64:\$value"
+            ;;
+        u32)
+            echo "--args u32:\$value"
+            ;;
+        u16)
+            echo "--args u16:\$value"
+            ;;
+        u8)
+            echo "--args u8:\$value"
+            ;;
+        Address)
+            echo "--args Address:\\"\$value\\""
+            ;;
+        Bool)
+            echo "--args Bool:\$value"
+            ;;
+        Hex)
+            echo "--args Hex:\\"\$value\\""
+            ;;
+        *)
+            echo "--args \\"\$value\\""
+            ;;
+    esac
+}
+
+# Interactive menu
+show_menu() {
+    echo -e "\\n\${BOLD}\${BLUE}=== $CONTRACT_NAME Interactive Menu ===\${RESET}"
+    echo -e "\${GREEN}1.\${RESET} Build contract"
+    echo -e "\${GREEN}2.\${RESET} Deploy contract"
+    echo -e "\${GREEN}3.\${RESET} Upgrade contract"
+    echo -e "\${GREEN}4.\${RESET} Query contract"
+    echo -e "\${GREEN}5.\${RESET} Invoke contract method"
+    echo -e "\${GREEN}6.\${RESET} Show contract info"
+    echo -e "\${GREEN}7.\${RESET} Change network (current: \$NETWORK)"
+    echo -e "\${GREEN}8.\${RESET} Show examples"
+    echo -e "\${GREEN}0.\${RESET} Exit"
+    echo
+}
+
+# Show examples
+show_examples() {
+    echo -e "\\n\${BOLD}\${YELLOW}=== Examples ===\${RESET}"
+    echo -e "\${CYAN}Query examples:\${RESET}"
+    echo "  ./scripts/query.sh --endpoint getSum"
+    echo "  ./scripts/query.sh --endpoint getValue --arg myKey"
+    echo ""
+    echo -e "\${CYAN}Invoke examples:\${RESET}"
+    echo '  invoke_contract "add" $(build_arg Number 42)'
+    echo '  invoke_contract "transfer" $(build_arg Address "klv1abc...") $(build_arg Number 1000)'
+    echo ""
+    echo -e "\${CYAN}Direct koperator usage:\${RESET}"
+    echo "  KLEVER_NODE=\$KLEVER_NODE ~/klever-sdk/koperator --key-file=\$KEY_FILE sc invoke \$CONTRACT_ADDRESS myMethod --await --sign"
+}
+
+# Main execution
+main() {
+    load_config
+    set_network
+    
+    # If arguments provided, execute and exit
+    if [ $# -gt 0 ]; then
+        case "$1" in
+            query)
+                shift
+                get_contract_address && query_contract "$@"
+                ;;
+            invoke)
+                shift
+                get_contract_address && invoke_contract "$@"
+                ;;
+            --help|-h)
+                show_examples
+                ;;
+            *)
+                echo -e "\${RED}Unknown command: $1\${RESET}"
+                echo "Usage: $0 [query|invoke|--help]"
+                exit 1
+                ;;
+        esac
+        exit 0
+    fi
+    
+    # Interactive mode
+    while true; do
+        show_menu
+        read -p "Select option: " choice
+        
+        case "$choice" in
+            1)
+                ./scripts/build.sh
+                ;;
+            2)
+                ./scripts/deploy.sh
+                ;;
+            3)
+                get_contract_address && ./scripts/upgrade.sh "$CONTRACT_ADDRESS"
+                ;;
+            4)
+                if get_contract_address; then
+                    read -p "Enter endpoint name: " endpoint
+                    read -p "Enter arguments (space-separated, optional): " -a args
+                    query_contract "\$endpoint" "\${args[@]}"
+                fi
+                ;;
+            5)
+                if get_contract_address; then
+                    read -p "Enter method name: " method
+                    echo "Enter arguments (format: type:value, e.g., String:hello u64:42 bi:1000000000000)"
+                    echo "Press Enter with empty line when done"
+                    args=()
+                    while true; do
+                        read -p "Arg: " arg_input
+                        [ -z "\$arg_input" ] && break
+                        
+                        # Parse type:value
+                        if [[ "\$arg_input" =~ ^([^:]+):(.+)$ ]]; then
+                            arg_type="\${BASH_REMATCH[1]}"
+                            arg_value="\${BASH_REMATCH[2]}"
+                            args+=("$(build_arg "\$arg_type" "\$arg_value")")
+                        else
+                            echo -e "\${RED}Invalid format. Use type:value\${RESET}"
+                        fi
+                    done
+                    invoke_contract "\$method" "\${args[@]}"
+                fi
+                ;;
+            6)
+                echo -e "\\n\${BOLD}Contract Info:\${RESET}"
+                get_contract_address || true
+                echo -e "Network: \$NETWORK"
+                echo -e "Node: \$KLEVER_NODE"
+                echo -e "Key file: \$KEY_FILE"
+                if [ -f "$HISTORY_FILE" ]; then
+                    echo -e "\\n\${BOLD}Deployment History:\${RESET}"
+                    jq -r '.[] | "\\(.timestamp) - \\(.network // "testnet") - \\(.contractAddress)"' "$HISTORY_FILE" 2>/dev/null || echo "No history"
+                fi
+                ;;
+            7)
+                echo "Select network:"
+                echo "1. Mainnet"
+                echo "2. Testnet"
+                echo "3. Devnet"
+                echo "4. Local"
+                read -p "Choice: " net_choice
+                case "$net_choice" in
+                    1) NETWORK="mainnet" ;;
+                    2) NETWORK="testnet" ;;
+                    3) NETWORK="devnet" ;;
+                    4) NETWORK="local" ;;
+                    *) echo -e "\${RED}Invalid choice\${RESET}" ;;
+                esac
+                set_network
+                unset CONTRACT_ADDRESS  # Clear cached address
+                ;;
+            8)
+                show_examples
+                ;;
+            0)
+                echo -e "\${GREEN}Goodbye!\${RESET}"
+                exit 0
+                ;;
+            *)
+                echo -e "\${RED}Invalid option\${RESET}"
+                ;;
+        esac
+        
+        echo
+        read -p "Press Enter to continue..."
+    done
+}
+
+# Run main
+main "$@"
 EOF
 
 # Make all scripts executable
@@ -484,7 +975,12 @@ echo "  2. Run ./scripts/build.sh to build"
 echo "  3. Run ./scripts/deploy.sh to deploy"
 echo ""
 echo -e "\${CYAN}Helper scripts:\${RESET}"
-./scripts/interact.sh
+echo "  ./scripts/build.sh       - Build the contract"
+echo "  ./scripts/deploy.sh      - Deploy to blockchain"
+echo "  ./scripts/upgrade.sh     - Upgrade existing contract"
+echo "  ./scripts/query.sh       - Query contract views"
+echo "  ./scripts/test.sh        - Run tests"
+echo "  ./scripts/interact.sh    - Interactive menu"
 `;
 
 export const createProjectInitScript = () => {
@@ -500,19 +996,19 @@ export const projectInitToolDefinition = {
     properties: {
       name: {
         type: 'string',
-        description: 'The name of the contract'
+        description: 'The name of the contract',
       },
       template: {
         type: 'string',
         description: 'Template to use (default: empty)',
-        default: 'empty'
+        default: 'empty',
       },
       noMove: {
         type: 'boolean',
         description: 'Do not move project files to current directory',
-        default: false
-      }
+        default: false,
+      },
     },
-    required: ['name']
-  }
+    required: ['name'],
+  },
 };

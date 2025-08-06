@@ -5,23 +5,25 @@ import { z } from 'zod';
 // Response schemas
 const QueryContextResponseSchema = z.object({
   success: z.boolean(),
-  results: z.array(z.object({
-    id: z.string(),
-    type: z.string(),
-    content: z.string(),
-    metadata: z.object({
-      title: z.string(),
-      description: z.string().optional(),
-      tags: z.array(z.string()),
-      relevanceScore: z.number()
-    }),
-    score: z.number().optional()
-  })),
+  results: z.array(
+    z.object({
+      id: z.string(),
+      type: z.string(),
+      content: z.string(),
+      metadata: z.object({
+        title: z.string(),
+        description: z.string().optional(),
+        tags: z.array(z.string()),
+        relevanceScore: z.number(),
+      }),
+      score: z.number().optional(),
+    })
+  ),
   total: z.number(),
   pagination: z.object({
     offset: z.number(),
-    limit: z.number()
-  })
+    limit: z.number(),
+  }),
 });
 
 export class KleverContextClient {
@@ -35,7 +37,7 @@ export class KleverContextClient {
         version: '1.0.0',
       },
       {
-        capabilities: {}
+        capabilities: {},
       }
     );
   }
@@ -43,26 +45,26 @@ export class KleverContextClient {
   async connect() {
     const transport = new StdioClientTransport({
       command: 'node',
-      args: [
-        '--experimental-vm-modules',
-        './dist/index.js'
-      ],
+      args: ['--experimental-vm-modules', './dist/index.js'],
       env: {
         ...process.env,
         MODE: 'mcp',
-        STORAGE_TYPE: 'memory'
-      }
+        STORAGE_TYPE: 'memory',
+      },
     });
 
     await this.client.connect(transport);
     this.connected = true;
   }
 
-  async queryContext(query: string, options?: {
-    types?: string[];
-    tags?: string[];
-    limit?: number;
-  }) {
+  async queryContext(
+    query: string,
+    options?: {
+      types?: string[];
+      tags?: string[];
+      limit?: number;
+    }
+  ) {
     if (!this.connected) {
       await this.connect();
     }
@@ -75,8 +77,8 @@ export class KleverContextClient {
           types: options?.types,
           tags: options?.tags,
           limit: options?.limit || 5,
-          offset: 0
-        }
+          offset: 0,
+        },
       });
 
       // Parse the response
@@ -85,7 +87,7 @@ export class KleverContextClient {
         const parsed = JSON.parse(content.text);
         return QueryContextResponseSchema.parse(parsed);
       }
-      
+
       throw new Error('Unexpected response format');
     } catch (error) {
       console.error('Error querying context:', error);
@@ -96,10 +98,10 @@ export class KleverContextClient {
   async getRelevantContext(userMessage: string): Promise<string> {
     // Extract key terms from the message
     const keywords = this.extractKeywords(userMessage);
-    
+
     // Query for relevant contexts
     const contexts = await this.queryContext(keywords.join(' '), {
-      limit: 3
+      limit: 3,
     });
 
     if (!contexts || contexts.results.length === 0) {
@@ -113,10 +115,25 @@ export class KleverContextClient {
   private extractKeywords(message: string): string[] {
     // Simple keyword extraction - can be improved with NLP
     const kleverKeywords = [
-      'klever', 'smart contract', 'kvm', 'storage', 'mapper',
-      'endpoint', 'payable', 'deploy', 'upgrade', 'query',
-      'annotation', 'event', 'managed', 'bigint', 'biguint',
-      'token', 'transfer', 'koperator', 'ksc'
+      'klever',
+      'smart contract',
+      'kvm',
+      'storage',
+      'mapper',
+      'endpoint',
+      'payable',
+      'deploy',
+      'upgrade',
+      'query',
+      'annotation',
+      'event',
+      'managed',
+      'bigint',
+      'biguint',
+      'token',
+      'transfer',
+      'koperator',
+      'ksc',
     ];
 
     const words = message.toLowerCase().split(/\s+/);
@@ -129,9 +146,10 @@ export class KleverContextClient {
     }
 
     // Also include any words that might be relevant
-    const additionalWords = words.filter(w => 
-      w.length > 3 && 
-      !['what', 'how', 'when', 'where', 'why', 'can', 'could', 'would', 'should'].includes(w)
+    const additionalWords = words.filter(
+      w =>
+        w.length > 3 &&
+        !['what', 'how', 'when', 'where', 'why', 'can', 'could', 'would', 'should'].includes(w)
     );
 
     return [...new Set([...found, ...additionalWords.slice(0, 3)])];
@@ -139,7 +157,7 @@ export class KleverContextClient {
 
   private formatContexts(contexts: any[]): string {
     let formatted = '\n## Relevant Klever VM Context:\n\n';
-    
+
     for (const ctx of contexts) {
       formatted += `### ${ctx.metadata.title}\n`;
       if (ctx.metadata.description) {
@@ -165,11 +183,11 @@ export async function withKleverContext(
   handler: (message: string, context: string) => Promise<string>
 ): Promise<string> {
   const client = new KleverContextClient();
-  
+
   try {
     // Get relevant context
     const context = await client.getRelevantContext(userMessage);
-    
+
     // Call the handler with the original message and context
     return await handler(userMessage, context);
   } finally {

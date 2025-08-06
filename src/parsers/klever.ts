@@ -33,22 +33,22 @@ export class KleverParser {
       hasUpgrade: false,
       usesMultiValue: false,
       usesOptionalValue: false,
-      proxyContracts: []
+      proxyContracts: [],
     };
-    
+
     // Extract contract name
     const contractMatch = content.match(/#\[klever_sc::contract\]\s*(?:pub\s+)?trait\s+(\w+)/);
     if (contractMatch) {
       info.name = contractMatch[1];
     }
-    
+
     // Extract imports
     const importRegex = /use\s+([^;]+);/g;
     let importMatch;
     while ((importMatch = importRegex.exec(content)) !== null) {
       info.imports.push(importMatch[1].trim());
     }
-    
+
     // Extract entrypoints
     const entrypointRegex = /#\[endpoint(?:\(([^)]*)\))?\]\s*(?:async\s+)?fn\s+(\w+)/g;
     let entrypointMatch;
@@ -56,7 +56,7 @@ export class KleverParser {
       const endpointName = entrypointMatch[1] || entrypointMatch[2];
       info.entrypoints.push(endpointName);
     }
-    
+
     // Extract views
     const viewRegex = /#\[view(?:\(([^)]*)\))?\]\s*(?:async\s+)?fn\s+(\w+)/g;
     let viewMatch;
@@ -64,45 +64,47 @@ export class KleverParser {
       const viewName = viewMatch[1] || viewMatch[2];
       info.views.push(viewName);
     }
-    
+
     // Extract events
     const eventRegex = /#\[event\("([^"]+)"\)\]\s*fn\s+(\w+)/g;
     let eventMatch;
     while ((eventMatch = eventRegex.exec(content)) !== null) {
       info.events.push(eventMatch[1]);
     }
-    
+
     // Extract storage mappers
     const storageRegex = /#\[storage_mapper\("([^"]+)"\)\]\s*fn\s+(\w+)/g;
     let storageMatch;
     while ((storageMatch = storageRegex.exec(content)) !== null) {
       info.storageMappers.push(storageMatch[1]);
     }
-    
+
     // Check for init
     if (content.includes('#[init]')) {
       info.hasInit = true;
     }
-    
+
     // Check for upgrade
     if (content.includes('#[upgrade]')) {
       info.hasUpgrade = true;
     }
-    
+
     // Extract structs
     const structRegex = /#\[derive\([^)]*\)\]\s*(?:pub\s+)?struct\s+(\w+)/g;
     let structMatch;
     while ((structMatch = structRegex.exec(content)) !== null) {
       info.structs.push(structMatch[1]);
     }
-    
+
     // Determine contract type
     if (content.includes('klever_sc::imports')) {
       if (info.entrypoints.some(ep => ['mint', 'burn', 'transfer'].includes(ep))) {
         info.contractType = 'token';
       } else if (info.entrypoints.some(ep => ['stake', 'unstake', 'claim'].includes(ep))) {
         info.contractType = 'staking';
-      } else if (info.entrypoints.some(ep => ['swap', 'addLiquidity', 'removeLiquidity'].includes(ep))) {
+      } else if (
+        info.entrypoints.some(ep => ['swap', 'addLiquidity', 'removeLiquidity'].includes(ep))
+      ) {
         info.contractType = 'dex';
       } else if (info.entrypoints.some(ep => ['propose', 'vote', 'execute'].includes(ep))) {
         info.contractType = 'governance';
@@ -110,33 +112,33 @@ export class KleverParser {
         info.contractType = 'custom';
       }
     }
-    
+
     // Check for MultiValue usage
     if (content.includes('MultiValueEncoded') || content.includes('MultiValueManagedVec')) {
       info.usesMultiValue = true;
     }
-    
+
     // Check for OptionalValue usage
     if (content.includes('OptionalValue')) {
       info.usesOptionalValue = true;
     }
-    
+
     // Extract proxy contracts
     const proxyRegex = /#\[klever_sc::proxy\]\s*(?:pub\s+)?trait\s+(\w+)/g;
     let proxyMatch;
     while ((proxyMatch = proxyRegex.exec(content)) !== null) {
       info.proxyContracts.push(proxyMatch[1]);
     }
-    
+
     return info;
   }
-  
+
   /**
    * Extract examples from contract code
    */
   static extractExamples(content: string, contractInfo: KleverContractInfo): ContextPayload[] {
     const examples: ContextPayload[] = [];
-    
+
     // Extract init function example
     if (contractInfo.hasInit) {
       const initMatch = content.match(/#\[init\]\s*((?:async\s+)?fn\s+\w+[^{]*{[^}]+})/s);
@@ -152,13 +154,13 @@ export class KleverParser {
             contractType: contractInfo.contractType,
             relevanceScore: 0.8,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
           },
-          relatedContextIds: []
+          relatedContextIds: [],
         });
       }
     }
-    
+
     // Extract endpoint examples
     for (const endpoint of contractInfo.entrypoints) {
       const endpointRegex = new RegExp(
@@ -178,22 +180,22 @@ export class KleverParser {
             contractType: contractInfo.contractType,
             relevanceScore: 0.7,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
           },
-          relatedContextIds: []
+          relatedContextIds: [],
         });
       }
     }
-    
+
     return examples;
   }
-  
+
   /**
    * Extract patterns and best practices from contract
    */
   static extractPatterns(content: string, contractInfo: KleverContractInfo): ContextPayload[] {
     const patterns: ContextPayload[] = [];
-    
+
     // Check for require! pattern
     if (content.includes('require!(')) {
       const requireExamples = content.match(/require!\([^)]+\);/g);
@@ -209,17 +211,21 @@ export class KleverParser {
             contractType: contractInfo.contractType,
             relevanceScore: 0.9,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
           },
-          relatedContextIds: []
+          relatedContextIds: [],
         });
       }
     }
-    
+
     // Check for storage patterns
-    if (content.includes('SingleValueMapper') || content.includes('VecMapper') || content.includes('SetMapper')) {
+    if (
+      content.includes('SingleValueMapper') ||
+      content.includes('VecMapper') ||
+      content.includes('SetMapper')
+    ) {
       const storagePatterns: string[] = [];
-      
+
       if (content.includes('SingleValueMapper')) {
         storagePatterns.push('SingleValueMapper - For storing single values');
       }
@@ -229,7 +235,7 @@ export class KleverParser {
       if (content.includes('SetMapper')) {
         storagePatterns.push('SetMapper - For storing unique collections');
       }
-      
+
       patterns.push({
         type: 'best_practice',
         content: `Storage patterns used in ${contractInfo.name}:\n${storagePatterns.join('\n')}`,
@@ -241,12 +247,12 @@ export class KleverParser {
           contractType: contractInfo.contractType,
           relevanceScore: 0.8,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     // Check for event patterns
     if (content.includes('#[event')) {
       patterns.push({
@@ -260,23 +266,26 @@ export class KleverParser {
           contractType: contractInfo.contractType,
           relevanceScore: 0.7,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     return patterns;
   }
-  
+
   /**
    * Extract security considerations
    */
   static extractSecurityTips(content: string, contractInfo: KleverContractInfo): ContextPayload[] {
     const tips: ContextPayload[] = [];
-    
+
     // Check for owner-only patterns
-    if (content.includes('only_owner') || content.includes('require!(self.blockchain().get_caller() == self.owner().get())')) {
+    if (
+      content.includes('only_owner') ||
+      content.includes('require!(self.blockchain().get_caller() == self.owner().get())')
+    ) {
       tips.push({
         type: 'security_tip',
         content: 'Contract implements owner-only access control for sensitive functions',
@@ -288,12 +297,12 @@ export class KleverParser {
           contractType: contractInfo.contractType,
           relevanceScore: 0.9,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     // Check for reentrancy protection
     if (content.includes('ReentrancyGuard') || content.includes('nonReentrant')) {
       tips.push({
@@ -307,22 +316,22 @@ export class KleverParser {
           contractType: contractInfo.contractType,
           relevanceScore: 0.95,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         },
-        relatedContextIds: []
+        relatedContextIds: [],
       });
     }
-    
+
     return tips;
   }
-  
+
   /**
    * Parse contract and extract all relevant contexts
    */
   static parseAndExtractContexts(content: string): ContextPayload[] {
     const contractInfo = this.parseContract(content);
     const contexts: ContextPayload[] = [];
-    
+
     // Add contract overview
     contexts.push({
       type: 'documentation',
@@ -335,16 +344,16 @@ export class KleverParser {
         contractType: contractInfo.contractType,
         relevanceScore: 0.6,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       },
-      relatedContextIds: []
+      relatedContextIds: [],
     });
-    
+
     // Extract various context types
     contexts.push(...this.extractExamples(content, contractInfo));
     contexts.push(...this.extractPatterns(content, contractInfo));
     contexts.push(...this.extractSecurityTips(content, contractInfo));
-    
+
     return contexts;
   }
 }

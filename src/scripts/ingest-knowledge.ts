@@ -11,28 +11,28 @@ dotenv.config();
 
 async function ingestKleverKnowledge() {
   console.log('🚀 Starting Klever knowledge ingestion...\n');
-  
+
   // Create storage and context service
   const storageType = (process.env.STORAGE_TYPE as any) || 'memory';
   const storage = StorageFactory.create(storageType, {
     redis: {
-      url: process.env.REDIS_URL
-    }
+      url: process.env.REDIS_URL,
+    },
   });
-  
+
   const contextService = new ContextService(storage);
   const ingester = new ContractIngester(contextService);
-  
+
   try {
     // First, ingest common patterns
     console.log('📚 Ingesting common Klever patterns...');
     await ingester.ingestCommonPatterns();
-    
+
     // Then, ingest all the comprehensive knowledge
     console.log('\n📖 Ingesting comprehensive Klever knowledge base...');
     let successCount = 0;
     let errorCount = 0;
-    
+
     for (const context of allKleverContexts) {
       try {
         const id = await contextService.ingest(context);
@@ -43,50 +43,49 @@ async function ingestKleverKnowledge() {
         errorCount++;
       }
     }
-    
+
     console.log(`\n📊 Ingestion Summary:`);
     console.log(`   ✅ Successfully ingested: ${successCount} contexts`);
     console.log(`   ❌ Failed: ${errorCount} contexts`);
     console.log(`   📁 Total contexts in knowledge base: ${allKleverContexts.length}`);
-    
+
     // Query some examples to verify
     console.log('\n🔍 Verifying ingestion with sample queries...\n');
-    
+
     // Query 1: Storage patterns
     const storageResults = await contextService.query({
       query: 'storage mapper',
       types: ['best_practice', 'documentation'],
       limit: 3,
-      offset: 0
+      offset: 0,
     });
     console.log(`Found ${storageResults.results.length} storage mapper contexts:`);
     storageResults.results.forEach(r => console.log(`  - ${r.metadata.title}`));
-    
+
     // Query 2: Deployment scripts
     const deployResults = await contextService.query({
       tags: ['deployment', 'script'],
       limit: 3,
-      offset: 0
+      offset: 0,
     });
     console.log(`\nFound ${deployResults.results.length} deployment script contexts:`);
     deployResults.results.forEach(r => console.log(`  - ${r.metadata.title}`));
-    
+
     // Query 3: Error patterns
     const errorResults = await contextService.query({
       types: ['error_pattern'],
       limit: 5,
-      offset: 0
+      offset: 0,
     });
     console.log(`\nFound ${errorResults.results.length} error pattern contexts:`);
     errorResults.results.forEach(r => console.log(`  - ${r.metadata.title}`));
-    
+
     console.log('\n✨ Knowledge ingestion completed successfully!');
-    
   } catch (error) {
     console.error('💥 Fatal error during ingestion:', error);
     process.exit(1);
   }
-  
+
   // Cleanup
   if ('disconnect' in storage && typeof storage.disconnect === 'function') {
     await storage.disconnect();
