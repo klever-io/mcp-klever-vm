@@ -3,7 +3,8 @@
 import { StorageFactory } from '../storage/index.js';
 import { ContextService } from '../context/service.js';
 import { ContractIngester } from '../utils/ingest.js';
-import { allKleverContexts } from '../utils/klever-knowledge.js';
+import { kleverKnowledge } from '../knowledge/index.js';
+import { ContextPayload } from '../types/index.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -27,6 +28,14 @@ async function ingestKleverKnowledge() {
     // First, ingest common patterns
     console.log('📚 Ingesting common Klever patterns...');
     await ingester.ingestCommonPatterns();
+
+    // Convert new knowledge format to ContextPayload format
+    const allKleverContexts: ContextPayload[] = kleverKnowledge.map(entry => ({
+      type: entry.type,
+      content: entry.content,
+      metadata: entry.metadata,
+      relatedContextIds: entry.relatedContextIds || [],
+    }));
 
     // Then, ingest all the comprehensive knowledge
     console.log('\n📖 Ingesting comprehensive Klever knowledge base...');

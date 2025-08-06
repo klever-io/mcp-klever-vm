@@ -1,9 +1,17 @@
 #!/usr/bin/env tsx
 
-import { allKleverContexts } from '../utils/klever-knowledge.js';
-import { ContextType } from '../types/index.js';
+import { kleverKnowledge } from '../knowledge/index.js';
+import { ContextType, ContextPayload } from '../types/index.js';
 
 console.log('🔍 Klever Knowledge Base Context Analysis\n');
+
+// Convert new knowledge format to ContextPayload format
+const allKleverContexts: ContextPayload[] = kleverKnowledge.map(entry => ({
+  type: entry.type,
+  content: entry.content,
+  metadata: entry.metadata,
+  relatedContextIds: entry.relatedContextIds || [],
+}));
 
 // Count contexts by type
 const typeCounts = new Map<ContextType, number>();
