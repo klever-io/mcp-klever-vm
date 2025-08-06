@@ -350,6 +350,9 @@ export class KleverMCPServer {
 
             console.error(`[MCP] Enhancing query with context: "${query}"`);
 
+            // check if query mentions KLV or KFI tokens and add precision info
+            const needsPrecisionInfo = this.checkForTokenPrecision(query);
+
             // Extract keywords for better matching
             const keywords = this.extractKeywords(query);
             console.error(`[MCP] Extracted keywords: ${keywords.join(', ')}`);
@@ -366,6 +369,11 @@ export class KleverMCPServer {
 
             // Format the enhanced response
             let enhancedResponse = `Query: "${query}"\n\n`;
+
+            // add precision info if KLV or KFI tokens are mentioned
+            if (needsPrecisionInfo) {
+              enhancedResponse += this.getPrecisionInfo();
+            }
 
             if (result.results.length > 0 && autoInclude) {
               enhancedResponse += '## Relevant Klever VM Context:\n\n';
@@ -449,7 +457,7 @@ export class KleverMCPServer {
 
             try {
               console.error(`[MCP] Current working directory: ${process.cwd()}`);
-              
+
               // Check if script exists
               try {
                 await access(scriptPath);
@@ -457,7 +465,7 @@ export class KleverMCPServer {
               } catch {
                 console.error(`[MCP] Script path exists: false`);
               }
-              
+
               // Execute the script
               const { stdout, stderr } = await execAsync(cmd, {
                 cwd: process.cwd(),
@@ -578,6 +586,12 @@ export class KleverMCPServer {
       'klever',
       'smart contract',
       'kvm',
+      'klv',
+      'kfi',
+      'precision',
+      'decimal',
+      'amount',
+      'balance',
       'storage',
       'mapper',
       'endpoint',
@@ -652,5 +666,55 @@ export class KleverMCPServer {
     );
 
     return [...new Set([...found, ...additionalWords.slice(0, 3)])];
+  }
+
+  /**
+   * check if the query mentions KLV or KFI tokens that need precision information
+   */
+  private checkForTokenPrecision(query: string): boolean {
+    const tokenKeywords = ['klv', 'kfi', 'token', 'amount', 'balance', 'transfer', 'precision', 'decimal'];
+    const queryLower = query.toLowerCase();
+    const hasKlvOrKfi = queryLower.includes('klv') || queryLower.includes('kfi');
+
+    const hasAmountOperation = tokenKeywords.some(keyword => queryLower.includes(keyword));
+
+    return hasKlvOrKfi || hasAmountOperation;
+  }
+
+  /**
+   * get precision information for KLV and KFI tokens
+   * TODO: probably should be moved to a separate file for better organization
+   */
+  private getPrecisionInfo(): string {
+    return `## 💡 Token Precision Information
+
+**Important**: KLV and KFI tokens both use **6 decimal places** precision.
+
+### Key Points:
+- **1 KLV = 1_000_000 (1e6) smallest units**
+- **1 KFI = 1_000_000 (1e6) smallest units**
+- Always use \`u64\` values in contracts (smallest units)
+- Convert to human-readable amounts by dividing by 1_000_000
+
+### Example Conversions:
+\`\`\`rust
+// Converting from KLV/KFI to contract units
+const ONE_KLV: u64 = 1_000_000;        // 1 KLV
+const HALF_KLV: u64 = 500_000;         // 0.5 KLV
+const TEN_KLV: u64 = 10_000_000;       // 10 KLV
+const HUNDRED_KLV: u64 = 100_000_000;  // 100 KLV
+
+// In contract functions
+#[payable("KLV")]
+#[endpoint(deposit)]
+fn deposit(&self) {
+    let amount = self.call_value().klv_value(); // Already in smallest units (u64)
+    // amount is already multiplied by 1_000_000
+}
+\`\`\`
+
+---
+
+`;
   }
 }
