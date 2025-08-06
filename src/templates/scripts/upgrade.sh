@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Upgrade script for $CONTRACT_NAME
+# Upgrade script for$ CONTRACT_NAME
 
 set -e
 
@@ -15,7 +15,7 @@ DEFAULT_NETWORK="testnet"
 
 # Show usage
 show_usage() {
-    echo -e "${BOLD}${CYAN}KleverDice Contract Upgrade Tool${RESET}"
+    echo -e "${BOLD}${CYAN}Klever Contract Upgrade Tool${RESET}"
     echo ""
     echo -e "${YELLOW}Usage:${RESET}"
     echo "  $0 [contract-address]"
