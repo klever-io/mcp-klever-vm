@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r src/templates dist/",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
