@@ -25,7 +25,7 @@ Create a `.vscode/mcp.json` file at the root of your project. This file defines 
       "command": "node",
       "args": [
         "--experimental-vm-modules",
-        "./dist/index.js" // use your relative path to index.js
+        "./dist/index.js" // use your full path to the mcp-klever-vm dist/index.js
       ],
       "env": {
         "MODE": "mcp",
@@ -47,17 +47,11 @@ Alternatively, restart VS Code to auto-discover and start your MCP server.
 ## 4. Using the Server in Copilot Chat
 
 1. Open the **GitHub Copilot Chat** pane.
-2. Make sure **Agent Mode** is enabled.
-3. Click the *Tools* icon next to the input box → your `klever-vm` tools should appear.
-4. Run a test prompt like:
-
-```bash
-/klever-vm help
+2. You can confirm the server is running by typing "Do you have Klever Blockchain Knowledge?" in the chat.
 
 ## 5. Troubleshooting ⚠️
 
 - **Tools don't appear?**
-  - Double check `mcp.json` formatting and correct file path to `index.js`.
 
 - **See errors in the MCP output channel?**
   - Check logs in **Output → MCP** inside VS Code.

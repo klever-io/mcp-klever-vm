@@ -47,5 +47,4 @@ This tells the Claude Code CLI to use your MCP server configuration.
 
 ## 4. Verifying the Server
 
-- Once running, you should see logs indicating the MCP server has started.
-- You can now connect to Claude Code.
+You can type /mcp status in the Claude Code CLI to check if the MCP server is running correctly.
