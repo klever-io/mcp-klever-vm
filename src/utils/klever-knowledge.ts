@@ -11,8 +11,9 @@ export const kleverKnowledgeBase: ContextPayload[] = [
 ### VERY IMPORTANT !!!!!!:
 - **1 KLV = 1_000_000 (1e6) smallest units**
 - **1 KFI = 1_000_000 (1e6) smallest units**
-- Always use \`ManagedRef<BigUint>\` values in contracts (smallest units)
-- Convert to human-readable amounts by dividing by 1_000_000
+- Always use smallest units values in contracts
+    - FOR KLV - Always use 6 decimals (1 KLV = 1_000_000 units)
+    - FOR KFI - Always use 6 decimals (1 KFI = 1_000_000 units)
 ### Example Conversions:
 \`\`\`rust
 // Converting from KLV/KFI to contract units
@@ -24,8 +25,7 @@ const HUNDRED_KLV: u64 = 100_000_000;  // 100 KLV
 #[payable("KLV")]
 #[endpoint(deposit)]
 fn deposit(&self) {
-    let amount = self.call_value().klv_value();
-    // amount is already multiplied by 1_000_000
+    let amount = self.call_value().klv_value(); // amount is already in smallest units (6 decimals)
 }
 \`\`\`
 ---
@@ -2577,8 +2577,9 @@ fn stake_kfi(&self) {
 ### VERY IMPORTANT !!!!!!:
 - **1 KLV = 1_000_000 (1e6) smallest units**
 - **1 KFI = 1_000_000 (1e6) smallest units**
-- Always use \`ManagedRef<BigUint>\` values in contracts (smallest units)
-- Convert to human-readable amounts by dividing by 1_000_000
+- Always use smallest units values in contracts
+    - FOR KLV - Always use 6 decimals (1 KLV = 1_000_000 units)
+    - FOR KFI - Always use 6 decimals (1 KFI = 1_000_000 units)
 ### Example Conversions:
 \`\`\`rust
 // Converting from KLV/KFI to contract units
@@ -4540,6 +4541,53 @@ fi
     relatedContextIds: [],
   },
 
+  // Official Klever Documentation Reference
+  {
+    type: 'documentation',
+    content: `# Official Klever Documentation
+
+## Main Documentation Site
+**URL**: https://docs.klever.org/
+
+The official Klever documentation provides comprehensive guides for:
+- Blockchain fundamentals and architecture
+- Smart contract development with Klever VM
+- SDK installation and setup
+- API reference and endpoints
+- Network configurations
+- Token standards (KDA, NFT, SFT)
+- Transaction types and formats
+- Wallet integration
+- Node operation
+
+## Key Documentation Sections:
+- **Getting Started**: Basic concepts and setup
+- **Smart Contracts**: Klever VM development guide
+- **SDK Reference**: Complete SDK documentation
+- **API Documentation**: REST API endpoints and usage
+- **Network Info**: Testnet and mainnet configurations
+- **Token Standards**: KDA, NFT, and SFT specifications
+
+## When to Reference:
+- For detailed specifications not covered in MCP
+- For latest updates and changes
+- For complete API method listings
+- For network-specific configurations
+- For troubleshooting uncommon issues
+
+Always check the official documentation for the most up-to-date information when MCP knowledge needs verification or expansion.`,
+    metadata: {
+      title: 'Official Klever Documentation Reference',
+      description: 'Reference to the official Klever documentation site for comprehensive guides and specifications',
+      tags: ['documentation', 'reference', 'official', 'klever', 'guides', 'sdk'],
+      author: 'system',
+      language: 'markdown',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      relevanceScore: 0.95
+    },
+    relatedContextIds: []
+  },
   // Documentation Context - Klever argument types for Koperator
   {
     type: 'documentation',
@@ -5515,7 +5563,10 @@ error[E0277]: can't compare \`BigUint<Self::Api>\` with \`&BigUint<Self::Api>\`
 
 ## ⚠️ IMPORTANT: ManagedRef<BigUint> from call_value()
 
-The \`call_value().klv_value()\` and similar methods return \`ManagedRef<BigUint>\`, not \`BigUint\`!
+The \`call_value().klv_value()\` and similar methods return \`ManagedRef<BigUint>\`, not \`BigUint\`! You must dereference or clone it to use in comparisons or arithmetic.
+\`\`\`rust
+    let payment = self.call_value().klv_value().clone(); // This is BigUint
+\`\`\`
 
 ### Handling ManagedRef<BigUint>
 \`\`\`rust
