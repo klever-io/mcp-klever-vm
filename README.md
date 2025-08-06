@@ -28,7 +28,19 @@ mcp-klever-vm/
 │   │   ├── memory.ts # In-memory storage with size limits
 │   │   └── redis.ts  # Redis storage with optimized queries
 │   ├── types/        # TypeScript type definitions
-│   └── utils/        # Utilities and knowledge base
+│   ├── utils/        # Utilities and ingestion tools
+│   └── knowledge/    # Modular knowledge base (95+ entries)
+│       ├── core/     # Core concepts and imports
+│       ├── storage/  # Storage patterns and mappers
+│       ├── events/   # Event handling and rules
+│       ├── tokens/   # Token operations and decimals
+│       ├── modules/  # Built-in modules (admin, pause)
+│       ├── tools/    # CLI tools (koperator, ksc)
+│       ├── scripts/  # Helper scripts
+│       ├── examples/ # Complete contract examples
+│       ├── errors/   # Error patterns
+│       ├── best-practices/ # Optimization and validation
+│       └── documentation/  # API reference
 ├── tests/            # Test files
 └── docs/             # Documentation
 ```
@@ -245,35 +257,44 @@ When running as MCP server, the following tools are available:
 - `deployment_tool`: Deployment scripts and utilities (bash scripts, tools)
 - `runtime_behavior`: Runtime behavior explanations
 
-## Pre-loaded Knowledge
+## Pre-loaded Knowledge Base
 
-The MCP server comes with extensive Klever VM knowledge including:
+The MCP server includes a comprehensive knowledge base with 95+ entries organized into 11 categories:
 
-### Contract Patterns
+### Critical Patterns
+- Payment handling and token operations
+- Decimal conversions and calculations
+- Event emission and parameter rules
+- CLI tool usage and best practices
+
+### Contract Patterns & Examples
 - Basic contract structure templates
-- Event annotation best practices
-- Storage mapper selection guide
+- Complete lottery game implementation
+- Staking contract with rewards
 - Cross-contract communication patterns
 - Remote storage access patterns
+- Token mapper helper modules
 
 ### Development Tools
-- Contract deployment scripts
-- Contract upgrade scripts
-- Endpoint query scripts with argument encoding
-- Testing patterns (unit and scenario tests)
+- **Koperator**: Complete CLI reference with argument encoding
+- **KSC**: Build commands and project setup
+- Deployment, upgrade, and query scripts
+- Interactive contract management tools
+- Common utilities library (bech32, network management)
 
-### Best Practices
-- Input validation with `require!`
-- OptionalValue vs Option optimization
-- MultiValueEncoded vs ManagedVec patterns
-- Storage mapper performance comparisons
-- Module and trait naming conventions
+### Storage & Optimization
+- Storage mapper selection guide with performance comparisons
+- Namespace organization patterns
+- View endpoints for efficient queries
+- Gas optimization techniques
+- OptionalValue vs Option patterns
 
-### Common APIs
-- BlockchainApi functions
-- CallValueApi functions
-- CryptoApi functions
-- SendApi functions
+### Best Practices & Security
+- Input validation patterns
+- Error handling strategies
+- Admin and pause module usage
+- Access control patterns
+- Common mistakes and solutions
 
 ## Ingesting Contracts
 

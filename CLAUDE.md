@@ -74,11 +74,12 @@ pnpm run format
    - Identifies contract structure, endpoints, events, storage mappers
    - `KleverValidator`: Validates contracts and detects common issues
 
-6. **Knowledge Base** (`src/utils/klever-knowledge.ts`)
-   - Pre-defined Klever VM patterns and best practices
-   - Deployment and utility scripts
-   - Common errors and solutions
-   - API reference documentation
+6. **Knowledge Base** (`src/knowledge/`)
+   - Modular structure with 95+ entries across 11 categories
+   - Core concepts, storage patterns, event handling
+   - Complete examples (lottery, staking, cross-contract)
+   - Development tools documentation (koperator, ksc)
+   - Best practices and error patterns
 
 ### Key Design Patterns
 
@@ -94,13 +95,16 @@ pnpm run format
 1. Update the `ContextTypeSchema` in `src/types/index.ts`
 2. Update relevance scoring logic in `ContextService`
 3. Add corresponding parser logic if needed
-4. Add new contexts to `src/utils/klever-knowledge.ts` if they're Klever-specific
+4. Add new contexts to appropriate category in `src/knowledge/` if they're Klever-specific
 
 ### Updating Klever Knowledge
 
-1. Edit `src/utils/klever-knowledge.ts` to add new patterns
-2. Run `pnpm run ingest` to reload the knowledge base
-3. The ingestion script will report success/failure for each context
+1. Add new entries to the appropriate category in `src/knowledge/`
+   - Choose the right folder (tokens, storage, events, etc.)
+   - Use `createKnowledgeEntry` helper function
+   - Export from the category's index.ts
+2. Run `pnpm run ingest` to reload the knowledge base (for Redis storage)
+3. For memory storage, knowledge is auto-loaded on server start
 
 ### Storage Backend
 
