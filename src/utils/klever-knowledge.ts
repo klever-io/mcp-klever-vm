@@ -360,10 +360,7 @@ To find code examples for your use case:
 #![no_std]
 use klever_sc::imports::*;
 
-// 2. Add random number generation
-use klever_sc::api::RandomnessSource;
-
-// 3. Add storage for game state
+// 2. Add storage for game state
 #[klever_sc::contract]
 pub trait GameContract {
     #[storage_mapper("players")]
@@ -372,7 +369,7 @@ pub trait GameContract {
     #[storage_mapper("scores")]
     fn scores(&self) -> MapMapper<ManagedAddress, BigUint>;
 
-    // 4. Game logic using randomness
+    // 3. Game logic using randomness
     #[endpoint]
     fn play(&self) -> u8 {
         let mut rand_source = RandomnessSource::new();
@@ -6199,6 +6196,68 @@ pub trait Treasury {
     relatedContextIds: [],
   },
 
+  // Import clarification for RandomnessSource
+  {
+    type: 'documentation',
+    content: `# RandomnessSource Import Clarification
+
+## Important: No Separate Import Needed
+
+The \`RandomnessSource\` type is **already included** in the standard \`klever_sc::imports::*\` module. You do NOT need to import it separately.
+
+### ✅ Correct Usage
+
+\`\`\`rust
+#![no_std]
+use klever_sc::imports::*;  // This already includes RandomnessSource
+
+#[klever_sc::contract]
+pub trait MyContract {
+    #[endpoint]
+    fn use_randomness(&self) -> u8 {
+        // RandomnessSource is available directly
+        let mut rand_source = RandomnessSource::new();
+        rand_source.next_u8()
+    }
+}
+\`\`\`
+
+### ❌ Common Mistake - Redundant Import
+
+\`\`\`rust
+use klever_sc::imports::*;
+use klever_sc::api::RandomnessSource;  // ❌ REDUNDANT - Don't do this!
+\`\`\`
+
+This extra import is unnecessary and can cause confusion. The \`RandomnessSource\` is already available through \`imports::*\`.
+
+## What's Included in imports::*
+
+The \`klever_sc::imports::*\` module provides all commonly used types:
+
+- **API Types**: \`RandomnessSource\`, blockchain API functions
+- **Managed Types**: \`ManagedAddress\`, \`ManagedBuffer\`, \`ManagedVec\`
+- **Numeric Types**: \`BigUint\`, \`BigInt\`
+- **Storage Mappers**: \`SingleValueMapper\`, \`MapMapper\`, \`SetMapper\`, \`VecMapper\`, \`OptionMapper\`
+- **Utility Types**: \`OptionalValue\`, \`MultiValueEncoded\`
+- **Token Types**: \`KdaTokenPayment\`, \`KdaTokenType\`
+
+## Best Practice
+
+Always rely on \`klever_sc::imports::*\` for standard types. Only add specific imports when you need something that's not in the common imports module, such as specific modules or less common API functions.`,
+    metadata: {
+      title: 'RandomnessSource Import - No Separate Import Needed',
+      description: 'RandomnessSource is already included in klever_sc::imports::* - no separate import statement required',
+      tags: ['randomness', 'imports', 'RandomnessSource', 'best-practice', 'common-mistake', 'api'],
+      language: 'rust',
+      author: 'Klever',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      relevanceScore: 0.95,
+    },
+    relatedContextIds: [],
+  },
+
   // Random Number Generation
   {
     type: 'code_example',
@@ -6245,7 +6304,8 @@ func (context *managedTypesContext) initRandomizer() {
 
 ## Method 1: Using RandomnessSource (Recommended)
 \`\`\`rust
-use klever_sc::api::RandomnessSource;
+// RandomnessSource is already available via klever_sc::imports::*
+// No separate import needed
 
 fn generate_random_u8(&self) -> u8 {
     // This internally calls SetRandom blockchain function
