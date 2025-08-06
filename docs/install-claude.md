@@ -18,13 +18,12 @@ The Claude Code repository already includes a sample `mcp.json` file defining th
 
 ```json
 {
-  "servers": {
-    "Claude": {
-      "type": "stdio",
+  "mcpServers": {
+    "klever-vm": {
       "command": "node",
       "args": [
         "--experimental-vm-modules",
-        "./dist/index.js"
+        "dist/index.js" // use your full path to the mcp-klever-vm dist/index.js
       ],
       "env": {
         "MODE": "mcp",
