@@ -2,7 +2,7 @@
  * Shared types for knowledge entries
  */
 
-export type KnowledgeEntryType = 
+export type KnowledgeEntryType =
   | 'code_example'
   | 'best_practice'
   | 'security_tip'

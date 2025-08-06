@@ -18,18 +18,18 @@ const readTemplate = (relativePath: string): string => {
   const possiblePaths = [
     // Production: dist/templates
     join(__dirname, '..', 'templates', relativePath),
-    // Development: src/templates  
+    // Development: src/templates
     join(process.cwd(), 'src', 'templates', relativePath),
     // Alternative production path
     join(process.cwd(), 'dist', 'templates', relativePath),
   ];
-  
+
   for (const fullPath of possiblePaths) {
     if (existsSync(fullPath)) {
       return readFileSync(fullPath, 'utf8');
     }
   }
-  
+
   throw new Error(`Template file not found in any of: ${possiblePaths.join(', ')}`);
 };
 
@@ -44,7 +44,7 @@ export const createProjectInitScript = (): string => {
   try {
     // Read main project init script
     let projectInitScript = readTemplate('project-init.sh');
-    
+
     // Read individual script templates
     const commonScript = readTemplate('scripts/common.sh');
     const deployScript = readTemplate('scripts/deploy.sh');
@@ -54,7 +54,7 @@ export const createProjectInitScript = (): string => {
     const testScript = readTemplate('scripts/test.sh');
     const interactScript = readTemplate('scripts/interact.sh');
     const gitignoreContent = readTemplate('.gitignore');
-    
+
     // Replace placeholders in the main script
     projectInitScript = projectInitScript
       .replace('{{COMMON_SCRIPT}}', commonScript)
@@ -65,10 +65,10 @@ export const createProjectInitScript = (): string => {
       .replace('{{TEST_SCRIPT}}', testScript)
       .replace('{{INTERACT_SCRIPT}}', interactScript)
       .replace('{{GITIGNORE_CONTENT}}', gitignoreContent);
-    
+
     // Cache the result
     cachedProjectInitScript = projectInitScript;
-    
+
     return projectInitScript;
   } catch (error) {
     console.error('Error reading template files:', error);
@@ -117,7 +117,7 @@ export const createHelperScriptsScript = (): string => {
     const interactScript = readTemplate('scripts/interact.sh');
     const commonScript = readTemplate('scripts/common.sh');
     const gitignoreContent = readTemplate('.gitignore');
-    
+
     // Create a script that generates just the helper scripts
     return `#!/bin/bash
 # Klever Helper Scripts Generator
@@ -266,7 +266,8 @@ export const helperScriptsScript = createHelperScriptsScript();
 // Tool definition for MCP - Full project initialization
 export const projectInitToolDefinition = {
   name: 'init_klever_project',
-  description: 'Initialize a new Klever smart contract project with helper scripts (build, deploy, upgrade, query with returnData parsing, test, and interactive management)',
+  description:
+    'Initialize a new Klever smart contract project with helper scripts (build, deploy, upgrade, query with returnData parsing, test, and interactive management)',
   inputSchema: {
     type: 'object',
     properties: {
@@ -292,7 +293,8 @@ export const projectInitToolDefinition = {
 // Tool definition for MCP - Add helper scripts only
 export const addHelperScriptsToolDefinition = {
   name: 'add_helper_scripts',
-  description: 'Add helper scripts to an existing Klever smart contract project (build, deploy, upgrade, query, test, interact)',
+  description:
+    'Add helper scripts to an existing Klever smart contract project (build, deploy, upgrade, query, test, interact)',
   inputSchema: {
     type: 'object',
     properties: {

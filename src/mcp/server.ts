@@ -438,21 +438,23 @@ export class KleverMCPServer {
             }
 
             // Properly escape arguments for shell
-            const escapedArgs = cmdArgs.map((arg, index) => {
-              // Don't quote flags (arguments starting with --)
-              if (index % 2 === 0 || arg.startsWith('--')) {
-                return arg;
-              }
-              // Quote values that might contain spaces
-              return `"${arg.replace(/"/g, '\\"')}"`;
-            }).join(' ');
+            const escapedArgs = cmdArgs
+              .map((arg, index) => {
+                // Don't quote flags (arguments starting with --)
+                if (index % 2 === 0 || arg.startsWith('--')) {
+                  return arg;
+                }
+                // Quote values that might contain spaces
+                return `"${arg.replace(/"/g, '\\"')}"`;
+              })
+              .join(' ');
 
             const cmd = `${scriptPath} ${escapedArgs}`;
             console.error(`[MCP] Running: ${cmd}`);
 
             try {
               console.error(`[MCP] Current working directory: ${process.cwd()}`);
-              
+
               // Check if script exists
               try {
                 await access(scriptPath);
@@ -460,7 +462,7 @@ export class KleverMCPServer {
               } catch {
                 console.error(`[MCP] Script path exists: false`);
               }
-              
+
               // Execute the script
               const { stdout, stderr } = await execAsync(cmd, {
                 cwd: process.cwd(),
@@ -549,45 +551,45 @@ export class KleverMCPServer {
 
           case 'add_helper_scripts': {
             const { contractName } = args as { contractName?: string };
-            
+
             console.error(`[MCP] Adding helper scripts to existing project`);
-            
+
             // Create the helper scripts generation script
             const scriptContent = createHelperScriptsScript();
             const scriptPath = join(tmpdir(), `add-helper-scripts-${Date.now()}.sh`);
-            
+
             // Write script to temp file
             await writeFile(scriptPath, scriptContent, 'utf8');
             await chmod(scriptPath, '755');
-            
+
             // Build command
             const cmd = scriptPath;
             console.error(`[MCP] Running: ${cmd}`);
-            
+
             try {
               console.error(`[MCP] Current working directory: ${process.cwd()}`);
-              
+
               // Execute the script
               const { stdout, stderr } = await execAsync(cmd, {
                 cwd: process.cwd(),
                 env: { ...process.env },
                 shell: '/bin/bash',
               });
-              
+
               console.error(`[MCP] Script stdout: ${stdout}`);
               if (stderr) {
                 console.error(`[MCP] Script stderr: ${stderr}`);
               }
-              
+
               // Clean up temp script
               await execAsync(`rm -f ${scriptPath}`);
-              
+
               // Check if scripts were created
               const checkResult = await execAsync(
                 'ls -la scripts/ 2>/dev/null || echo "No scripts directory"'
               );
               console.error(`[MCP] Scripts directory check: ${checkResult.stdout}`);
-              
+
               return {
                 content: [
                   {
@@ -623,10 +625,10 @@ export class KleverMCPServer {
             } catch (error: any) {
               // Clean up temp script on error
               await execAsync(`rm -f ${scriptPath}`).catch(() => {});
-              
+
               console.error(`[MCP] Add helper scripts error: ${error.message}`);
               console.error(`[MCP] Error details:`, error);
-              
+
               return {
                 content: [
                   {
@@ -638,7 +640,8 @@ export class KleverMCPServer {
                         stderr: error.stderr || '',
                         stdout: error.stdout || '',
                         command: cmd,
-                        suggestion: 'Please ensure you are in a Klever smart contract project directory',
+                        suggestion:
+                          'Please ensure you are in a Klever smart contract project directory',
                       },
                       null,
                       2
