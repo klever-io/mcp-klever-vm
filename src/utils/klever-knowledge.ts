@@ -1,6 +1,106 @@
 import { ContextPayload } from '../types/index.js';
 
 export const kleverKnowledgeBase: ContextPayload[] = [
+  // Helper Scripts with Common Utilities
+  {
+    type: 'deployment_tool',
+    content: `# Klever Helper Scripts with Common Utilities
+## common.sh - Shared Utilities Library
+All modern Klever helper scripts now source a common.sh file providing:
+
+### Color Definitions
+- RED, GREEN, YELLOW, BLUE, CYAN, MAGENTA, BOLD, RESET
+
+### KLV Conversion Functions (6 decimals)
+- klv_to_units(amount) - Convert KLV to smallest units
+- units_to_klv(units) - Convert units to KLV
+
+### Number Formatting
+- format_number(num) - Add underscore separators (1000000 → 1_000_000)
+- parse_number(num) - Remove underscores (1_000_000 → 1000000)
+
+### Bech32 Address Handling
+- decode_bech32_address(klv1...) - Decode Klever address to hex
+
+### Network Management
+- set_network_endpoint(network) - Get node URL for network
+- get_api_endpoint(network) - Get API URL for queries
+- Networks: mainnet, testnet, devnet, local
+
+### Contract History
+- get_contract_from_history(network, file) - Get deployed contract address
+
+### Query Helpers
+- encode_arg(value) - Encode arguments for API calls
+- query_contract(contract, endpoint, api_url, args...) - Make API query
+
+## Enhanced ReturnData Parsing in query.sh
+The query script now properly handles:
+- Empty strings ("") as zero values
+- Base64 to hex decoding
+- String value detection
+- Number parsing with formatting
+- KLV amount conversion (6 decimals)
+- Multiple output formats: json, raw, decoded
+
+### Empty Value Handling
+\`\`\`bash
+# Empty returnData often means zero
+if [ -z "$RETURN_DATA" ] || [ "$RETURN_DATA" = "" ]; then
+    echo "Value: 0 (empty result)"
+    echo "Note: Empty return data typically represents zero or an empty value"
+fi
+\`\`\`
+
+### Multiple Data Interpretations
+For each returnData value:
+1. Base64 decode to hex
+2. Try as printable string  
+3. Parse as number (up to 8 bytes)
+4. Format with underscores
+5. Convert to KLV if > 1,000,000 units
+
+## Usage Examples
+
+### Query with Enhanced Decoding
+\`\`\`bash
+# Query with enhanced decoding
+./scripts/query.sh --contract klv1... --endpoint getBalance --format decoded
+
+# Output shows:
+# Base64: AAAAAAAF3EA=
+# Hex: 0x00000000000F4240
+# Number: 1_000_000
+# Possible KLV: 1.000000 KLV (1_000_000 units)
+\`\`\`
+
+### Deploy with Network Selection
+\`\`\`bash
+# Deploy to specific network
+NETWORK=testnet ./scripts/deploy.sh
+NETWORK=mainnet ./scripts/deploy.sh
+NETWORK=local ./scripts/deploy.sh
+\`\`\`
+
+### Interactive Menu with Enhanced Features
+\`\`\`bash
+# Interactive script sources common.sh
+./scripts/interact.sh
+# Provides formatted numbers, KLV conversions, network switching
+\`\`\``,
+    metadata: {
+      title: 'Klever Helper Scripts with Common Utilities',
+      description: 'Modern helper scripts with shared utilities, advanced returnData parsing, and empty value handling',
+      tags: ['scripts', 'common.sh', 'utilities', 'returnData', 'parsing', 'KLV', 'conversion', 'network', 'bech32', 'formatting', 'helper', 'shared'],
+      language: 'bash',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
   // CRITICAL PAYMENT SYNTAX - MUST READ FIRST
   {
     type: 'error_pattern',
@@ -7301,53 +7401,42 @@ For complete API documentation with all endpoints, visit:
 
   {
     type: 'deployment_tool',
-    content: `#!/bin/bash
-# deploy.sh - Deploy a new Klever smart contract
+    content: `# deploy.sh - Smart Contract Deployment Script
 
-set -e
+## Features
+- Sources common.sh for shared utilities (colors, network management, KLV conversions)
+- Multi-network support (mainnet, testnet, devnet, local)
+- Automatic contract address extraction from deployment events
+- Deployment history tracking with network info and timestamps
+- Environment variable configuration via .env file
 
-# Build first
-echo "Building smart contract..."
-~/klever-sdk/ksc all build || { echo "Build failed"; exit 1; }
+## Usage
+\`\`\`bash
+# Deploy to default network (testnet)
+./scripts/deploy.sh
 
-# Deploy contract
-echo "Deploying contract..."
-DEPLOY_OUTPUT=$(KLEVER_NODE=https://node.testnet.klever.org \\
-    ~/klever-sdk/koperator \\
-    --key-file="$HOME/klever-sdk/walletKey.pem" \\
-    sc create \\
-    --upgradeable --readable --payable --payableBySC \\
-    --wasm="$(pwd)/output/contract.wasm" \\
-    --await --sign --result-only)
+# Deploy to specific network
+NETWORK=mainnet ./scripts/deploy.sh
+NETWORK=devnet ./scripts/deploy.sh
 
-# Extract transaction hash and contract address
-TX_HASH=$(echo "$DEPLOY_OUTPUT" | grep -o '"hash": "[^"]*"' | head -1 | cut -d'"' -f4)
-CONTRACT_ADDRESS=$(echo "$DEPLOY_OUTPUT" | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for event in data.get('logs', {}).get('events', []):
-    if event.get('identifier') == 'SCDeploy':
-        print(event.get('address', ''))
-        break
-")
+# Custom key file
+KEY_FILE=/path/to/key.pem ./scripts/deploy.sh
+\`\`\`
 
-# Update history.json
-echo "Updating deployment history..."
-HISTORY_FILE="$(pwd)/output/history.json"
-[[ ! -f "$HISTORY_FILE" ]] && echo "[]" > "$HISTORY_FILE"
+## Configuration (.env file)
+\`\`\`
+NETWORK=testnet
+KEY_FILE=$HOME/klever-sdk/walletKey.pem
+\`\`\`
 
-# Add new entry
-jq --arg tx "$TX_HASH" --arg addr "$CONTRACT_ADDRESS" \\
-   '. + [{"hash": $tx, "contractAddress": $addr}]' \\
-   "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"
-
-echo "Deployment complete!"
-echo "Transaction: $TX_HASH"
-echo "Contract: $CONTRACT_ADDRESS"`,
+## Output
+- Creates/updates output/history.json with deployment info
+- Shows transaction hash, contract address, and network
+- Colored output for better readability`,
     metadata: {
       title: 'Klever Contract Deployment Script',
-      description: 'Complete deployment script for Klever smart contracts with history tracking',
-      tags: ['deployment', 'script', 'bash', 'testnet'],
+      description: 'Multi-network deployment script with history tracking, environment config, and contract address extraction',
+      tags: ['deploy', 'deployment', 'script', 'bash', 'network', 'testnet', 'mainnet', 'devnet', 'history', 'contract', 'create', 'koperator', 'common.sh', 'env'],
       language: 'bash',
       relevanceScore: 0.9,
       createdAt: new Date().toISOString(),
@@ -7358,46 +7447,37 @@ echo "Contract: $CONTRACT_ADDRESS"`,
 
   {
     type: 'deployment_tool',
-    content: `#!/bin/bash
-# upgrade.sh - Upgrade an existing Klever smart contract
+    content: `# upgrade.sh - Smart Contract Upgrade Script
 
-set -e
+## Features
+- Sources common.sh for utilities
+- Auto-detects contract from history.json (network-aware)
+- Confirmation prompt before upgrade
+- Shows WASM file size
+- Updates history with upgrade transactions
+- Multi-network support
 
-# Get contract address from argument or history.json
-if [ $# -eq 1 ]; then
-    CONTRACT_ADDRESS=$1
-else
-    echo "Getting latest contract from history.json..."
-    CONTRACT_ADDRESS=$(grep -o '"contractAddress": "[^"]*"' output/history.json | tail -n 1 | cut -d'"' -f4)
+## Usage
+\`\`\`bash
+# Upgrade last deployed contract for current network
+./scripts/upgrade.sh
 
-    if [ -z "$CONTRACT_ADDRESS" ]; then
-        echo "Error: No contract address found"
-        echo "Usage: $0 [contract-address]"
-        exit 1
-    fi
-fi
+# Upgrade specific contract
+./scripts/upgrade.sh klv1qqq...
 
-echo "Contract address: $CONTRACT_ADDRESS"
+# Upgrade on specific network
+NETWORK=mainnet ./scripts/upgrade.sh
+\`\`\`
 
-# Build first
-echo "Building smart contract..."
-~/klever-sdk/ksc all build || { echo "Build failed"; exit 1; }
-
-# Upgrade contract
-echo "Upgrading contract..."
-KLEVER_NODE=https://node.testnet.klever.org \\
-    ~/klever-sdk/koperator \\
-    --key-file="$HOME/klever-sdk/walletKey.pem" \\
-    sc upgrade "$CONTRACT_ADDRESS" \\
-    --wasm="$(pwd)/output/contract.wasm" \\
-    --payable --payableBySC --readable --upgradeable \\
-    --await --sign --result-only
-
-echo "Contract upgrade complete!"`,
+## Smart Features
+- Retrieves contract from history.json based on current network
+- Falls back to last deployed if no network match
+- Adds upgrade entries to history with type: "upgrade"
+- Shows detailed upgrade summary`,
     metadata: {
       title: 'Klever Contract Upgrade Script',
-      description: 'Script for upgrading existing Klever smart contracts',
-      tags: ['upgrade', 'script', 'bash', 'deployment'],
+      description: 'Network-aware upgrade script with history tracking, confirmation prompts, and automatic contract detection',
+      tags: ['upgrade', 'script', 'bash', 'deployment', 'network', 'history', 'contract', 'koperator', 'common.sh', 'confirmation', 'wasm'],
       language: 'bash',
       relevanceScore: 0.85,
       createdAt: new Date().toISOString(),
@@ -7408,83 +7488,58 @@ echo "Contract upgrade complete!"`,
 
   {
     type: 'deployment_tool',
-    content: `#!/bin/bash
-# query.sh - Query Klever smart contract endpoints
+    content: `# query.sh - Smart Contract Query Script with ReturnData Parsing
 
-set -e
+## Key Features
+- Sources common.sh for utilities and API functions
+- **Advanced ReturnData parsing** - properly handles empty strings as zero
+- Multiple output formats: json, raw, decoded
+- Multi-network support via --network flag
+- Automatic argument encoding (addresses, hex, numbers, strings)
+- Smart data interpretation:
+  - Base64 to hex decoding
+  - String detection for printable data
+  - Number parsing with underscore formatting
+  - KLV amount detection (6 decimals)
+  - Empty value handling ("" = 0)
 
-# Color definitions for output
-RESET="\\033[0m"
-BOLD="\\033[1m"
-GREEN="\\033[32m"
-YELLOW="\\033[33m"
-BLUE="\\033[34m"
-CYAN="\\033[36m"
+## Usage
+\`\`\`bash
+# Basic query
+./scripts/query.sh --contract klv1... --endpoint getBalance
 
-# Parse command-line arguments
-ENDPOINT=""
-CONTRACT_ADDRESS=""
-ARGUMENTS=()
+# Query with arguments
+./scripts/query.sh --contract klv1... --endpoint getData --arg key1 --arg 42
 
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --endpoint) ENDPOINT="$2"; shift 2 ;;
-        --contract) CONTRACT_ADDRESS="$2"; shift 2 ;;
-        --arg) ARGUMENTS+=("$2"); shift 2 ;;
-        *) echo "Unknown argument: $1"; exit 1 ;;
-    esac
-done
+# Different networks
+./scripts/query.sh --contract klv1... --endpoint getValue --network mainnet
 
-# Validate endpoint
-if [ -z "$ENDPOINT" ]; then
-    echo "Error: --endpoint is required"
-    exit 1
-fi
+# Output formats
+./scripts/query.sh --contract klv1... --endpoint getInfo --format json
+./scripts/query.sh --contract klv1... --endpoint getBalance --format decoded
+\`\`\`
 
-# Get contract from history if not provided
-if [ -z "$CONTRACT_ADDRESS" ]; then
-    CONTRACT_ADDRESS=$(grep -o '"contractAddress": "[^"]*"' output/history.json | tail -n 1 | cut -d'"' -f4)
-fi
+## ReturnData Decoding Examples
+\`\`\`
+# Empty result
+Value: 0 (empty result)
+Note: Empty return data typically represents zero or an empty value
 
-# Encode arguments to base64
-JSON_ARGS="["
-for ((i=0; i<\${#ARGUMENTS[@]}; i++)); do
-    ARG="\${ARGUMENTS[$i]}"
+# Number result
+Base64: AAAAAAAF3EA=
+Hex: 0x00000000000F4240
+Number: 1_000_000
+Possible KLV: 1.000000 KLV (1_000_000 units)
 
-    if [[ "$ARG" == 0x* ]]; then
-        # Hex argument
-        HEX_VALUE="\${ARG#0x}"
-        ENCODED=$(echo -n "$HEX_VALUE" | xxd -r -p | base64)
-    else
-        # Text argument
-        ENCODED=$(echo -n "$ARG" | base64)
-    fi
-
-    [[ $i -gt 0 ]] && JSON_ARGS="$JSON_ARGS,"
-    JSON_ARGS="$JSON_ARGS\\"$ENCODED\\""
-done
-JSON_ARGS="$JSON_ARGS]"
-
-# Build request
-JSON_REQUEST="{\\"ScAddress\\":\\"$CONTRACT_ADDRESS\\",\\"FuncName\\":\\"$ENDPOINT\\",\\"Arguments\\":$JSON_ARGS}"
-
-# Query the contract
-echo -e "\${BOLD}\${BLUE}Querying $ENDPOINT...\${RESET}"
-RESPONSE=$(curl -s 'https://api.testnet.klever.org/v1.0/sc/query' --data-raw "$JSON_REQUEST")
-
-# Display response
-echo "$RESPONSE" | jq -C .
-
-# Decode return data if present
-RETURN_DATA=$(echo "$RESPONSE" | jq -r '.data.returnData[]? // empty')
-if [ -n "$RETURN_DATA" ]; then
-    echo -e "\\n\${BOLD}\${YELLOW}Decoded Data:\${RESET}"
-    echo "$RETURN_DATA" | base64 -d | xxd -p
-fi`,
+# String result
+Base64: SGVsbG8gV29ybGQ=
+Hex: 0x48656c6c6f20576f726c64
+String: Hello World
+\`\`\``,
     metadata: {
-      title: 'Klever Contract Query Script',
-      description: 'Script for querying Klever smart contract endpoints with argument encoding',
-      tags: ['query', 'script', 'bash', 'api'],
+      title: 'Klever Contract Query Script with ReturnData Parsing',
+      description: 'Advanced query script with multiple data interpretations, empty value handling, and KLV conversion',
+      tags: ['query', 'script', 'bash', 'api', 'returnData', 'parsing', 'decode', 'base64', 'hex', 'KLV', 'empty', 'zero', 'network', 'format', 'json', 'common.sh', 'view', 'read', 'endpoint'],
       language: 'bash',
       relevanceScore: 0.8,
       createdAt: new Date().toISOString(),
@@ -7949,6 +8004,176 @@ pub trait MyContract {
 
 // Project initialization patterns
 export const projectInitPatterns: ContextPayload[] = [
+  // Additional Helper Scripts
+  {
+    type: 'deployment_tool',
+    content: `# build.sh - Smart Contract Build Script
+
+## Features
+- Sources common.sh for colored output
+- Runs ~/klever-sdk/ksc all build
+- Shows WASM file sizes after successful build
+- Clear success/failure indicators with colors
+
+## Usage
+\`\`\`bash
+# Build the contract
+./scripts/build.sh
+\`\`\`
+
+## Output
+- Lists all generated WASM files with sizes
+- Green checkmark for success
+- Red X for failure`,
+    metadata: {
+      title: 'Klever Contract Build Script',
+      description: 'Simple build script with colored output and file size reporting',
+      tags: ['build', 'script', 'bash', 'ksc', 'wasm', 'compile', 'common.sh', 'output'],
+      language: 'bash',
+      relevanceScore: 0.85,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+  {
+    type: 'deployment_tool',
+    content: `# test.sh - Smart Contract Test Script
+
+## Features
+- Runs cargo test for Rust unit tests
+- Colored output for pass/fail status
+- Sources common.sh for colors
+
+## Usage
+\`\`\`bash
+# Run all tests
+./scripts/test.sh
+\`\`\`
+
+## Note
+Ensure your contract has tests in the tests/ directory or as #[test] modules`,
+    metadata: {
+      title: 'Klever Contract Test Script',
+      description: 'Test runner script for smart contract unit tests',
+      tags: ['test', 'script', 'bash', 'cargo', 'testing', 'unit-test', 'common.sh'],
+      language: 'bash',
+      relevanceScore: 0.8,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+  {
+    type: 'deployment_tool',
+    content: `# interact.sh - Interactive Contract Management Menu
+
+## Features
+- Sources common.sh for all utilities
+- Interactive menu-driven interface
+- Network switching on the fly
+- Contract address auto-detection from history
+- Build, deploy, upgrade, query, and invoke functions
+- Formatted number input/output with underscores
+- KLV conversion support
+- Command-line mode for scripting
+
+## Usage
+\`\`\`bash
+# Interactive menu mode
+./scripts/interact.sh
+
+# Command-line mode
+./scripts/interact.sh query getValue
+./scripts/interact.sh invoke transfer klv1abc... 1_000_000
+
+# With environment variables
+NETWORK=mainnet ./scripts/interact.sh
+\`\`\`
+
+## Menu Options
+1. 🔨 Build contract
+2. 🚀 Deploy contract  
+3. ⬆️  Upgrade contract
+4. 🔍 Query contract (view functions)
+5. 📝 Invoke contract method
+6. ℹ️  Show contract info
+7. 🌐 Change network
+8. 📚 Show examples
+
+## Argument Types Supported
+- String:hello - String values
+- u64:1_000_000 - Numbers with separators
+- bi:10_000_000_000 - BigInt values
+- Address:klv1... - Klever addresses
+- Bool:true - Boolean values
+- Hex:0x1234 - Hexadecimal values`,
+    metadata: {
+      title: 'Interactive Contract Management Script',
+      description: 'Comprehensive interactive menu for contract management with all operations in one place',
+      tags: ['interact', 'interactive', 'menu', 'script', 'bash', 'deploy', 'upgrade', 'query', 'invoke', 'build', 'network', 'common.sh', 'cli', 'management'],
+      language: 'bash',
+      relevanceScore: 0.95,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
+  {
+    type: 'deployment_tool',
+    content: `# Add Helper Scripts to Existing Project
+
+Use the MCP tool 'add_helper_scripts' to add helper scripts to an existing Klever smart contract:
+
+## Usage
+\`\`\`json
+{
+  "tool": "add_helper_scripts",
+  "contractName": "optional-name"
+}
+\`\`\`
+
+## Features
+- Detects if you're in a Klever project (checks for Cargo.toml or src/lib.rs)
+- Auto-detects contract name from Cargo.toml
+- Creates scripts/ directory with all helper scripts
+- Updates or creates .gitignore with necessary entries
+- Makes all scripts executable
+- Replaces $CONTRACT_NAME placeholder in scripts
+
+## Scripts Added
+- **common.sh** - Shared utilities (colors, KLV conversion, network management)
+- **build.sh** - Build the contract
+- **deploy.sh** - Deploy to blockchain (multi-network)
+- **upgrade.sh** - Upgrade existing contract
+- **query.sh** - Query with advanced returnData parsing
+- **test.sh** - Run unit tests
+- **interact.sh** - Interactive management menu
+
+## When to Use
+- You have an existing Klever smart contract project
+- You want to add helper scripts without recreating the project
+- You cloned a project that doesn't have helper scripts
+- You want to update to the latest script versions`,
+    metadata: {
+      title: 'Add Helper Scripts to Existing Project',
+      description: 'Tool to add helper scripts to an existing Klever smart contract project',
+      tags: ['scripts', 'helper', 'existing', 'project', 'add', 'tools', 'utilities', 'automation'],
+      language: 'bash',
+      relevanceScore: 0.9,
+      contractType: 'any',
+      author: 'klever-mcp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    relatedContextIds: [],
+  },
   {
     type: 'deployment_tool',
     content: `# Initialize new Klever smart contract project
