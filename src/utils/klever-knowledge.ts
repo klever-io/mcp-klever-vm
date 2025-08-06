@@ -8,6 +8,28 @@ export const kleverKnowledgeBase: ContextPayload[] = [
 
 ## ⛔ --value DOES NOT EXIST IN KOPERATOR!
 
+### VERY IMPORTANT !!!!!!:
+- **1 KLV = 1_000_000 (1e6) smallest units**
+- **1 KFI = 1_000_000 (1e6) smallest units**
+- Always use \`u64\` values in contracts (smallest units)
+- Convert to human-readable amounts by dividing by 1_000_000
+### Example Conversions:
+\`\`\`rust
+// Converting from KLV/KFI to contract units
+const ONE_KLV: u64 = 1_000_000;        // 1 KLV
+const HALF_KLV: u64 = 500_000;         // 0.5 KLV
+const TEN_KLV: u64 = 10_000_000;       // 10 KLV
+const HUNDRED_KLV: u64 = 100_000_000;  // 100 KLV
+// In contract functions
+#[payable("KLV")]
+#[endpoint(deposit)]
+fn deposit(&self) {
+    let amount = self.call_value().klv_value(); // Already in smallest units (u64)
+    // amount is already multiplied by 1_000_000
+}
+\`\`\`
+---
+
 ### ✅ CORRECT: Always use --values (with 's') for ALL payments:
 \`\`\`bash
 # For KLV payments - ALWAYS use --values
@@ -40,7 +62,7 @@ Using \`--value\` will result in an error. The ONLY correct parameter is \`--val
 ### Format Rules:
 1. **ALWAYS --values** not --value
 2. **TOKEN=AMOUNT** format (equals sign, not colon)
-3. **KLV uses 6 decimals** (1 KLV = 1,000,000 units)
+3. **KLV uses 6 decimals** (1 KLV = 1_000_000 units)
 4. **Multiple tokens**: comma-separated
 
 ### Examples of Common Mistakes:
@@ -54,7 +76,7 @@ koperator sc invoke CONTRACT deposit --values "KLV=1000000"
 # ❌ WRONG - Will fail
 koperator sc invoke CONTRACT swap --amount 500000
 
-# ✅ CORRECT  
+# ✅ CORRECT
 koperator sc invoke CONTRACT swap --values "KLV=500000"
 \`\`\``,
     metadata: {
@@ -65,9 +87,9 @@ koperator sc invoke CONTRACT swap --values "KLV=500000"
       language: 'bash',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      relevanceScore: 1.0
+      relevanceScore: 1.0,
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
   // CRITICAL KLV/KFI DECIMALS - MUST READ
   {
@@ -92,20 +114,6 @@ koperator sc invoke CONTRACT swap --values "KLV=500000"
 100 KFI = 100000000    # 8 zeros
 \`\`\`
 
-### ❌ WRONG - These are INCORRECT:
-\`\`\`bash
-# WRONG - Using 8 decimals
-1 KLV = 100000000      # ❌ NO! This would be 100 KLV!
-
-# WRONG - Using 9 decimals  
-1 KLV = 1000000000     # ❌ NO! This would be 1000 KLV!
-
-# WRONG - Using 10 decimals
-1 KLV = 10000000000    # ❌ NO! This would be 10000 KLV!
-
-# WRONG - Using 18 decimals (Ethereum style)
-1 KLV = 1000000000000000000  # ❌ NO! This would be 1,000,000,000,000 KLV!
-\`\`\`
 
 ### Why This Matters:
 Using wrong decimals will cause:
@@ -139,7 +147,7 @@ let ten_klv = BigUint::from(10u32) * KLV_DECIMALS; // 10,000,000
 # Send 1 KLV
 koperator sc invoke CONTRACT method --values "KLV=1000000"  # 6 zeros
 
-# Send 10 KLV  
+# Send 10 KLV
 koperator sc invoke CONTRACT method --values "KLV=10000000" # 7 zeros
 
 # Send 0.5 KLV
@@ -155,15 +163,16 @@ koperator sc invoke CONTRACT method --values "KLV=500000"   # 5 zeros + 5
 - **When in doubt**: 1 KLV = 1 followed by 6 zeros`,
     metadata: {
       title: 'CRITICAL: KLV/KFI Always 6 Decimals - NOT 8, 9, 10 or 18',
-      description: 'KLV and KFI ALWAYS use 6 decimal places. Using 8, 9, 10 or 18 decimals is WRONG and will cause massive overpayments!',
+      description:
+        'KLV and KFI ALWAYS use 6 decimal places. Using 8, 9, 10 or 18 decimals is WRONG and will cause massive overpayments!',
       tags: ['critical', 'decimals', 'KLV', 'KFI', 'error', 'must-read-first'],
       author: 'system',
       language: 'bash',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      relevanceScore: 1.0
+      relevanceScore: 1.0,
     },
-    relatedContextIds: []
+    relatedContextIds: [],
   },
   // CODE EXAMPLE DISCOVERY GUIDE
   {
@@ -183,7 +192,7 @@ This knowledge base contains extensive code examples for various smart contract 
 - **Admin Access Control** - Permission management for DeFi/gaming
 - **Pausable Contracts** - Emergency stop mechanisms
 
-#### Token & NFT Patterns  
+#### Token & NFT Patterns
 - **FungibleTokenMapper** - Create fungible tokens (for DeFi)
 - **NonFungibleTokenMapper** - NFT creation and management
 - **Token Payment Patterns** - Accept and process payments
@@ -220,7 +229,7 @@ Combine these patterns:
 5. **Cross-Contract Calls** - Interact with other DeFi protocols
 6. **Admin Access Control** - Protocol governance
 
-#### 🎨 NFT Contracts  
+#### 🎨 NFT Contracts
 Combine these patterns:
 1. **Basic Contract Structure** - Foundation
 2. **NonFungibleTokenMapper** - NFT creation
@@ -260,16 +269,16 @@ use klever_sc::api::RandomnessSource;
 pub trait GameContract {
     #[storage_mapper("players")]
     fn players(&self) -> SetMapper<ManagedAddress>;
-    
-    #[storage_mapper("scores")]  
+
+    #[storage_mapper("scores")]
     fn scores(&self) -> MapMapper<ManagedAddress, BigUint>;
-    
+
     // 4. Game logic using randomness
     #[endpoint]
     fn play(&self) -> u8 {
         let mut rand_source = RandomnessSource::new();
         let dice_roll = (rand_source.next_u8() % 6) + 1;
-        
+
         // Update scores...
         dice_roll
     }
@@ -495,7 +504,7 @@ Note: This is generated automatically, developers don't need to add it manually.
 
 ## Why #[allow(unused_imports)]?
 
-Since these imports bring in all submodules, you may not use every imported item in your contract. 
+Since these imports bring in all submodules, you may not use every imported item in your contract.
 Adding \`#[allow(unused_imports)]\` prevents compiler warnings like:
 \`warning: unused import: \`klever_sc::imports\`\`
 
@@ -539,7 +548,7 @@ use klever_sc::imports::*;
 
 #[klever_sc::contract]
 pub trait MyContract {
-    
+
     // Handles the contract initialization logic
     #[init]
     fn init(&self) {
@@ -551,7 +560,7 @@ pub trait MyContract {
     fn upgrade(&self) {
         // Upgrade logic
     }
-    
+
     // Endpoints
     #[endpoint(myEndpoint)]
     fn my_endpoint(
@@ -568,7 +577,7 @@ pub trait MyContract {
         );
         true
     }
-    
+
     // Views (read-only endpoints)
     #[view(getValueForKey)]
     fn get_value_for_key(
@@ -577,7 +586,7 @@ pub trait MyContract {
     ) -> ManagedBuffer {
         self.values(key).get()
     }
-    
+
     // Events
     // ⚠️ CRITICAL: Klever allows MAX ONE non-indexed parameter per event!
     // Best practice: Use #[indexed] on ALL parameters to avoid errors
@@ -588,7 +597,7 @@ pub trait MyContract {
         #[indexed] key: &ManagedBuffer,      // ✅ indexed
         value: &BigUint                      // ⚠️ Only ONE non-indexed allowed!
     );
-    
+
     // Storage definitions
     #[view(getValue)]
     #[storage_mapper("value")]
@@ -685,7 +694,8 @@ fn game_played_event(
 **Just use #[indexed] on EVERYTHING** - It's simpler and avoids errors!`,
     metadata: {
       title: 'CRITICAL: Event Parameter One-Data Rule',
-      description: 'The most important rule about Klever events - prevents "only 1 data argument allowed" error',
+      description:
+        'The most important rule about Klever events - prevents "only 1 data argument allowed" error',
       tags: ['critical', 'events', 'indexed', 'error-prevention', 'must-read', 'common-error'],
       language: 'rust',
       relevanceScore: 1.0,
@@ -917,7 +927,7 @@ Any struct that contains Klever managed types MUST have a generic parameter M wi
 ### Pattern 1: Using Where Clause (Explicit)
 \`\`\`rust
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode)]
-pub struct GameResult<M> 
+pub struct GameResult<M>
 where
     M: ManagedTypeApi,
 {
@@ -992,7 +1002,7 @@ pub trait GameContract {
         let payout = result.payout;
         // ...
     }
-    
+
     #[view]
     fn get_last_result(&self) -> GameResult<Self::Api> {
         // Return type uses Self::Api
@@ -1078,7 +1088,8 @@ fn player_games(&self, player: &ManagedAddress) -> VecMapper<GameResult<Self::Ap
 5. **Inside other generic types**: ManagedVec<T>, Option<T>, etc.`,
     metadata: {
       title: 'ManagedTypeApi Requirements for Structs',
-      description: 'Complete guide on using ManagedTypeApi with custom structs containing managed types',
+      description:
+        'Complete guide on using ManagedTypeApi with custom structs containing managed types',
       tags: ['managed-types', 'structs', 'generics', 'best-practice', 'patterns'],
       language: 'rust',
       relevanceScore: 0.95,
@@ -1214,42 +1225,42 @@ pub trait TokenContract {
     #[view(getTokenName)]
     #[storage_mapper("token:name")]
     fn token_name(&self) -> SingleValueMapper<ManagedBuffer>;
-    
+
     #[view(getTokenSymbol)]
     #[storage_mapper("token:symbol")]
     fn token_symbol(&self) -> SingleValueMapper<ManagedBuffer>;
-    
+
     #[view(getTotalSupply)]
     #[storage_mapper("token:total_supply")]
     fn total_supply(&self) -> SingleValueMapper<BigUint>;
-    
+
     // User module storage
     #[view(getBalance)]
     #[storage_mapper("user:balances")]
     fn balances(&self, address: &ManagedAddress) -> SingleValueMapper<BigUint>;
-    
+
     #[view(getAllowance)]
     #[storage_mapper("user:allowances")]
     fn allowances(&self, owner: &ManagedAddress, spender: &ManagedAddress) -> SingleValueMapper<BigUint>;
-    
+
     // Pause module
     #[view(isPaused)]
     #[storage_mapper("pause_module:paused")]
     fn paused(&self) -> SingleValueMapper<bool>;
-    
+
     #[view(getPauseAdmin)]
     #[storage_mapper("pause_module:admin")]
     fn pause_admin(&self) -> SingleValueMapper<ManagedAddress>;
-    
+
     // Staking module
     #[view(getStakedAmount)]
     #[storage_mapper("staking:user_stakes")]
     fn user_stakes(&self, user: &ManagedAddress) -> SingleValueMapper<BigUint>;
-    
+
     #[view(getRewardsPerShare)]
     #[storage_mapper("staking:rewards_per_share")]
     fn rewards_per_share(&self) -> SingleValueMapper<BigUint>;
-    
+
     #[view(getLastRewardBlock)]
     #[storage_mapper("staking:last_reward_block")]
     fn last_reward_block(&self) -> SingleValueMapper<u64>;
@@ -1259,14 +1270,14 @@ pub trait TokenContract {
 #[endpoint(transfer)]
 fn transfer(&self, to: ManagedAddress, amount: BigUint) -> SCResult<()> {
     require!(!self.paused().get(), "Contract is paused");
-    
+
     let caller = self.blockchain().get_caller();
     let balance = self.balances(&caller).get();
     require!(balance >= amount, "Insufficient balance");
-    
+
     self.balances(&caller).update(|b| *b -= &amount);
     self.balances(&to).update(|b| *b += &amount);
-    
+
     Ok(())
 }`,
     metadata: {
@@ -1307,7 +1318,7 @@ Use VecMapper when:
 ## Storage Requirements:
 - SingleValueMapper: 1 storage entry
 - VecMapper: N+1 entries
-- SetMapper: 3*N+1 entries  
+- SetMapper: 3*N+1 entries
 - UnorderedSetMapper: 2*N+1 entries
 - LinkedListMapper: 2*N+1 entries
 - MapMapper: 4*N+1 entries (most expensive)`,
@@ -1342,7 +1353,7 @@ pub trait AdminModule {
     fn add_admin(&self, address: ManagedAddress) {
         self.admin_whitelist().add(&address);
     }
-    
+
     #[storage_mapper("admin_whitelist")]
     fn admin_whitelist(&self) -> SetMapper<ManagedAddress>;
 }
@@ -1416,28 +1427,28 @@ use klever_sc_modules::only_admin;
 // Step 3: Extend contract with the module
 #[klever_sc::contract]
 pub trait MyContract: only_admin::OnlyAdminModule {
-    
+
     #[init]
     fn init(&self) {
         // Contract owner is automatically added as first admin
         let owner = self.blockchain().get_caller();
         self.admins().insert(owner);
     }
-    
+
     // Protected endpoint - only admins can call
     #[only_admin]
     #[endpoint(updateConfig)]
     fn update_config(&self, new_value: u64) {
         self.config_value().set(new_value);
     }
-    
+
     // Another admin-only endpoint
     #[only_admin]
     #[endpoint(pauseContract)]
     fn pause_contract(&self) {
         self.paused().set(true);
     }
-    
+
     // Inherited from OnlyAdminModule:
     // - addAdmin(address) - only owner can add admins
     // - removeAdmin(address) - only owner can remove admins
@@ -1445,10 +1456,10 @@ pub trait MyContract: only_admin::OnlyAdminModule {
     // - getAdmins() -> list of admins
     // - admins() -> UnorderedSetMapper<ManagedAddress> storage
     // - require_caller_is_admin() - manual validation method
-    
+
     #[storage_mapper("config_value")]
     fn config_value(&self) -> SingleValueMapper<u64>;
-    
+
     #[storage_mapper("paused")]
     fn paused(&self) -> SingleValueMapper<bool>;
 }`,
@@ -1530,11 +1541,11 @@ pub trait OnlyAdminModule {
             "Endpoint can only be called by admins"
         );
     }
-    
+
     // Events
     #[event("adminAdded")]
     fn admin_added_event(&self, #[indexed] admin: &ManagedAddress);
-    
+
     #[event("adminRemoved")]
     fn admin_removed_event(&self, #[indexed] admin: &ManagedAddress);
 }
@@ -1678,21 +1689,21 @@ pub trait KleverLabsHub:
         let owner = self.blockchain().get_caller();
         self.admins().insert(owner);
     }
-    
+
     // Using annotation for automatic check
     #[only_admin]
     #[endpoint(updateOracle)]
     fn update_oracle(&self, new_oracle: ManagedAddress) {
         self.oracle_address().set(&new_oracle);
     }
-    
+
     // Using manual check for custom logic
     #[endpoint(complexUpdate)]
     fn complex_update(&self, value: BigUint) {
         self.require_caller_is_admin(); // Built-in admin check
         // Custom logic here
     }
-    
+
     #[storage_mapper("oracle_address")]
     fn oracle_address(&self) -> SingleValueMapper<ManagedAddress>;
 }
@@ -1753,7 +1764,7 @@ fn custom_role_function(&self) {
 #[endpoint(complexAccess)]
 fn complex_access(&self) {
     let caller = self.blockchain().get_caller();
-    
+
     // Owner OR admin can proceed
     require!(
         caller == self.blockchain().get_owner() || self.is_admin(caller),
@@ -1801,23 +1812,23 @@ use klever_sc_modules::pause;
 // Step 3: Extend contract with the module
 #[klever_sc::contract]
 pub trait MyContract: pause::PauseModule {
-    
+
     #[init]
     fn init(&self) {
         // Contract starts unpaused by default
         self.set_paused(false);
     }
-    
+
     // Regular endpoint that checks pause status
     #[endpoint(transfer)]
     fn transfer(&self, to: ManagedAddress, amount: BigUint) {
         // Require contract is not paused
         self.require_not_paused();
-        
+
         // Transfer logic here
         self.send().direct_klv(&to, &amount);
     }
-    
+
     // Critical function that works even when paused
     #[only_owner]
     #[endpoint(emergencyWithdraw)]
@@ -1827,12 +1838,12 @@ pub trait MyContract: pause::PauseModule {
         let balance = self.blockchain().get_sc_balance(&TokenIdentifier::klv(), 0);
         self.send().direct_klv(&owner, &balance);
     }
-    
+
     // Inherited from PauseModule:
     // - pause() - owner can pause contract
-    // - unpause() - owner can unpause contract  
+    // - unpause() - owner can unpause contract
     // - isPaused() -> bool - check pause status
-    
+
     // Manual pause checks available:
     // - self.is_paused() -> bool
     // - self.not_paused() -> bool
@@ -1961,14 +1972,14 @@ use klever_sc_modules::pause;
 
 #[klever_sc::contract]
 pub trait SecureContract: pause::PauseModule {
-    
+
     // 1. Check pause status in public endpoints
     #[endpoint(deposit)]
     fn deposit(&self) {
         self.require_not_paused();
         // Deposit logic
     }
-    
+
     // 2. Allow withdrawals even when paused (user protection)
     #[endpoint(withdraw)]
     fn withdraw(&self, amount: BigUint) {
@@ -1976,14 +1987,14 @@ pub trait SecureContract: pause::PauseModule {
         let caller = self.blockchain().get_caller();
         let balance = self.user_balance(&caller).get();
         require!(balance >= amount, "Insufficient balance");
-        
+
         self.user_balance(&caller).update(|b| *b -= &amount);
         self.send().direct_klv(&caller, &amount);
     }
-    
+
     // 3. Combine with admin module for better control
     use klever_sc_modules::only_admin;
-    
+
     #[only_admin]
     #[endpoint(adminPause)]
     fn admin_pause(&self) {
@@ -1991,7 +2002,7 @@ pub trait SecureContract: pause::PauseModule {
         // Log who paused it
         self.pause_admin().set(self.blockchain().get_caller());
     }
-    
+
     // 4. Auto-pause on critical events
     #[endpoint(reportIssue)]
     fn report_issue(&self, issue_type: u8) {
@@ -2000,7 +2011,7 @@ pub trait SecureContract: pause::PauseModule {
             // Emit event
         }
     }
-    
+
     // 5. Time-based auto-unpause
     #[endpoint(pauseFor)]
     #[only_owner]
@@ -2009,26 +2020,26 @@ pub trait SecureContract: pause::PauseModule {
         let unpause_time = self.blockchain().get_block_timestamp() + seconds;
         self.auto_unpause_time().set(unpause_time);
     }
-    
+
     #[endpoint(checkAutoUnpause)]
     fn check_auto_unpause(&self) {
         if !self.auto_unpause_time().is_empty() {
             let current_time = self.blockchain().get_block_timestamp();
             let unpause_time = self.auto_unpause_time().get();
-            
+
             if current_time >= unpause_time {
                 self.set_paused(false);
                 self.auto_unpause_time().clear();
             }
         }
     }
-    
+
     #[storage_mapper("pause_admin")]
     fn pause_admin(&self) -> SingleValueMapper<ManagedAddress>;
-    
+
     #[storage_mapper("auto_unpause_time")]
     fn auto_unpause_time(&self) -> SingleValueMapper<u64>;
-    
+
     #[storage_mapper("user_balance")]
     fn user_balance(&self, user: &ManagedAddress) -> SingleValueMapper<BigUint>;
 }
@@ -2111,7 +2122,7 @@ TICKER-XXXX
 - Unique digital assets (similar to ERC-721/ERC-1155)
 - Each token has unique properties
 - Format: \`TICKER-XXXX/INDEX\`
-- Examples: 
+- Examples:
   - \`MYNFT-E5F6/1\` (first NFT in collection)
   - \`MYNFT-E5F6/2\` (second NFT in collection)
   - \`ART-G7H8/100\` (NFT #100 in ART collection)
@@ -2122,7 +2133,7 @@ TICKER-XXXX
 - But items within same ID are fungible
 - Format: \`TICKER-XXXX/INDEX\`
 - Useful for game items, tickets, etc.
-- Examples: 
+- Examples:
   - \`GAME-I9J0/1\` (SFT type 1 in GAME collection)
   - \`TICKET-K1L2/5\` (ticket type 5)
   - \`ITEM-M3N4/10\` (item type 10)
@@ -2239,7 +2250,7 @@ use klever_sc::imports::*;
 
 #[klever_sc::contract]
 pub trait TokenContract {
-    
+
     // Accept any token payment
     #[payable("*")]
     #[endpoint(deposit)]
@@ -2247,7 +2258,7 @@ pub trait TokenContract {
         let payment = self.call_value().any_payment();
         let token_id = payment.token_identifier;
         let amount = payment.amount;
-        
+
         if token_id == TokenIdentifier::from("KLV") {
             // Handle KLV deposit
             self.klv_deposits(&self.blockchain().get_caller())
@@ -2262,7 +2273,7 @@ pub trait TokenContract {
                 .update(|balance| *balance += amount);
         }
     }
-    
+
     // Accept only specific KDA token
     #[payable("USDT-A1B2")]
     #[endpoint(depositUsdt)]
@@ -2270,7 +2281,7 @@ pub trait TokenContract {
         let payment = self.call_value().kda_payment();
         // Payment is guaranteed to be USDT-A1B2
     }
-    
+
     // Working with NFTs
     #[endpoint(transferNft)]
     fn transfer_nft(&self, nft_id: TokenIdentifier, nft_index: u64, to: ManagedAddress) {
@@ -2279,7 +2290,7 @@ pub trait TokenContract {
             self.is_valid_nft(&nft_id),
             "Invalid NFT identifier"
         );
-        
+
         // The nft_index represents the /INDEX part
         // Full identifier would be MYNFT-E5F6/1 for nft_index = 1
         self.send().direct_kda(
@@ -2289,7 +2300,7 @@ pub trait TokenContract {
             &BigUint::from(1u32)
         );
     }
-    
+
     // Working with SFTs
     #[endpoint(transferSft)]
     fn transfer_sft(&self, sft_id: TokenIdentifier, sft_type: u64, amount: BigUint, to: ManagedAddress) {
@@ -2302,21 +2313,21 @@ pub trait TokenContract {
             &amount     // SFTs can have amounts > 1
         );
     }
-    
+
     // Check token type
     fn is_valid_nft(&self, token_id: &TokenIdentifier) -> bool {
         // Check if token follows KDA format (TICKER-XXXX)
         let token_str = token_id.as_managed_buffer();
         token_str.len() > 5 && token_str.try_get(token_str.len() - 5) == b'-'
     }
-    
+
     // Storage for different token types
     #[storage_mapper("klv_deposits")]
     fn klv_deposits(&self, user: &ManagedAddress) -> SingleValueMapper<BigUint>;
-    
+
     #[storage_mapper("kfi_deposits")]
     fn kfi_deposits(&self, user: &ManagedAddress) -> SingleValueMapper<BigUint>;
-    
+
     #[storage_mapper("kda_deposits")]
     fn kda_deposits(&self, user: &ManagedAddress, token: &TokenIdentifier) -> SingleValueMapper<BigUint>;
 }`,
@@ -2387,7 +2398,7 @@ Both KLV and KFI use 6 decimal places, so all amounts in smart contracts are in 
 // 1 KLV = 1,000,000 units
 let one_klv = BigUint::from(1_000_000u32);
 
-// 10 KLV = 10,000,000 units  
+// 10 KLV = 10,000,000 units
 let ten_klv = BigUint::from(10_000_000u32);
 
 // 0.5 KLV = 500,000 units
@@ -2411,56 +2422,56 @@ let million_klv = BigUint::from(1_000_000_000_000u128); // 1,000,000 KLV
 pub trait TokenContract {
     // Constant for decimal conversion
     const DECIMALS: u64 = 1_000_000; // 10^6 for 6 decimals
-    
+
     #[payable("KLV")]
     #[endpoint]
     fn deposit(&self) {
         let payment = self.call_value().klv_value();
         let caller = self.blockchain().get_caller();
-        
+
         // Check minimum deposit of 1 KLV
         require!(payment >= BigUint::from(Self::DECIMALS), "Minimum deposit is 1 KLV");
-        
+
         // Store the deposit
         self.user_balance(&caller).update(|balance| *balance += payment);
-        
+
         // Event showing both raw and human-readable amounts
         let klv_amount = &payment / Self::DECIMALS; // Integer division for display
         self.deposit_event(&caller, &payment, klv_amount.to_u64().unwrap_or(0));
     }
-    
+
     #[endpoint]
     fn withdraw_klv(&self, klv_amount: u64) {
         let caller = self.blockchain().get_caller();
-        
+
         // Convert KLV amount to smallest units
         let amount_in_units = BigUint::from(klv_amount) * Self::DECIMALS;
-        
+
         // Check balance
         let balance = self.user_balance(&caller).get();
         require!(balance >= amount_in_units, "Insufficient balance");
-        
+
         // Update balance and send
         self.user_balance(&caller).update(|b| *b -= &amount_in_units);
         self.send().direct_klv(&caller, &amount_in_units);
     }
-    
+
     // Helper function to convert units to KLV
     #[view]
     fn units_to_klv(&self, units: BigUint) -> u64 {
         (&units / Self::DECIMALS).to_u64().unwrap_or(0)
     }
-    
+
     // Helper function to convert KLV to units
     #[view]
     fn klv_to_units(&self, klv: u64) -> BigUint {
         BigUint::from(klv) * Self::DECIMALS
     }
-    
+
     // Storage
     #[storage_mapper("user_balance")]
     fn user_balance(&self, user: &ManagedAddress) -> SingleValueMapper<BigUint>;
-    
+
     // Events
     #[event("deposit")]
     fn deposit_event(
@@ -2483,7 +2494,7 @@ const HOUSE_FEE: u64 = 100_000;       // 0.1 KLV
 #[endpoint]
 fn place_bet(&self, bet_number: u8) {
     let bet_amount = self.call_value().klv_value();
-    
+
     // Validate bet amount
     require!(
         bet_amount >= BigUint::from(MIN_BET),
@@ -2493,11 +2504,11 @@ fn place_bet(&self, bet_number: u8) {
         bet_amount <= BigUint::from(MAX_BET),
         "Maximum bet is 1000 KLV"
     );
-    
+
     // Deduct house fee
     let fee = BigUint::from(HOUSE_FEE);
     let net_bet = &bet_amount - &fee;
-    
+
     // Process bet...
 }
 \`\`\`
@@ -2512,11 +2523,11 @@ const KFI_DECIMALS: u64 = 1_000_000;
 #[endpoint]
 fn stake_kfi(&self) {
     let kfi_amount = self.call_value().kda_value().amount;
-    
+
     // Minimum stake of 100 KFI
     let min_stake = BigUint::from(100u32) * KFI_DECIMALS;
     require!(kfi_amount >= min_stake, "Minimum stake is 100 KFI");
-    
+
     // Process staking...
 }
 \`\`\`
@@ -2550,6 +2561,9 @@ fn stake_kfi(&self) {
 
 ## KdaTokenPayment Structure
 
+
+
+
 \`KdaTokenPayment\` is imported automatically with \`use klever_sc::imports::*;\` and represents any token payment (KLV, KDA, NFT, or SFT).
 
 \`\`\`rust
@@ -2561,6 +2575,30 @@ fn stake_kfi(&self) {
 // }
 \`\`\`
 
+
+
+### VERY IMPORTANT !!!!!!:
+- **1 KLV = 1_000_000 (1e6) smallest units**
+- **1 KFI = 1_000_000 (1e6) smallest units**
+- Always use \`u64\` values in contracts (smallest units)
+- Convert to human-readable amounts by dividing by 1_000_000
+### Example Conversions:
+\`\`\`rust
+// Converting from KLV/KFI to contract units
+const ONE_KLV: u64 = 1_000_000;        // 1 KLV
+const HALF_KLV: u64 = 500_000;         // 0.5 KLV
+const TEN_KLV: u64 = 10_000_000;       // 10 KLV
+const HUNDRED_KLV: u64 = 100_000_000;  // 100 KLV
+// In contract functions
+#[payable("KLV")]
+#[endpoint(deposit)]
+fn deposit(&self) {
+    let amount = self.call_value().klv_value(); // Already in smallest units (u64)
+    // amount is already multiplied by 1_000_000
+}
+\`\`\`
+---
+
 ## Usage Examples
 
 ### Direct Payment Function
@@ -2569,10 +2607,10 @@ fn stake_kfi(&self) {
 fn send_payment(&self, recipient: ManagedAddress, payment: KdaTokenPayment<Self::Api>) {
     // Validate payment
     require!(payment.amount > 0, "Amount must be positive");
-    
+
     // Send using direct_payment
     self.send().direct_payment(&recipient, &payment);
-    
+
     // Log the transfer
     self.payment_sent_event(&recipient, &payment);
 }
@@ -2580,30 +2618,31 @@ fn send_payment(&self, recipient: ManagedAddress, payment: KdaTokenPayment<Self:
 
 ### Creating KdaTokenPayment
 \`\`\`rust
+
 // For KLV
 let klv_payment = KdaTokenPayment::new(
-    TokenIdentifier::klv(), 
-    0, 
+    TokenIdentifier::klv(),
+    0,
     BigUint::from(1000u32)
 );
 
 // For KDA token (using byte slice)
 let kda_payment = KdaTokenPayment::new(
-    TokenIdentifier::from(&b"DVK-34ZH"[..]), 
-    0u64, 
+    TokenIdentifier::from(&b"DVK-34ZH"[..]),
+    0u64,
     BigUint::from(500u128)
 );
 
 // For NFT
 let nft_payment = KdaTokenPayment::new(
-    TokenIdentifier::from(&b"MYNFT-5678"[..]), 
+    TokenIdentifier::from(&b"MYNFT-5678"[..]),
     42u64,  // The specific NFT index
     BigUint::from(1u32)  // NFTs always have amount 1
 );
 
 // For SFT
 let sft_payment = KdaTokenPayment::new(
-    TokenIdentifier::from(&b"MYSFT-9ABC"[..]), 
+    TokenIdentifier::from(&b"MYSFT-9ABC"[..]),
     5u64,   // The SFT type index
     BigUint::from(100u32)  // SFTs can have amounts > 1
 );
@@ -2611,8 +2650,8 @@ let sft_payment = KdaTokenPayment::new(
 // Using variables
 let fee_value = BigUint::from(50u32);
 let fee_payment = KdaTokenPayment::new(
-    TokenIdentifier::klv(), 
-    0, 
+    TokenIdentifier::klv(),
+    0,
     fee_value
 );
 \`\`\`
@@ -2624,7 +2663,7 @@ let fee_payment = KdaTokenPayment::new(
 fn receive_and_forward(&self, recipient: ManagedAddress) {
     // Get the payment sent to this endpoint
     let payment = self.call_value().kda_payment();
-    
+
     // Forward it to another address
     self.send().direct_payment(&recipient, &payment);
 }
@@ -2656,10 +2695,10 @@ fn send_fee(&self, recipient: ManagedAddress, fee_amount: BigUint) {
         0,
         fee_amount
     );
-    
+
     // Send it
     self.send().direct_payment(&recipient, &payment);
-    
+
     // Or create and send in one operation
     self.send().direct_kda(
         &recipient,
@@ -2707,14 +2746,14 @@ fn test_my_function() {
     let rust_zero = rust_biguint!(0u64);
     let mut blockchain_wrapper = BlockchainStateWrapper::new();
     let owner_address = blockchain_wrapper.create_user_account(&rust_zero);
-    
+
     let contract_wrapper = blockchain_wrapper.create_sc_account(
         &rust_zero,
         Some(&owner_address),
         contract_obj,
         WASM_PATH
     );
-    
+
     // Execute init function
     blockchain_wrapper.execute_tx(
         &owner_address,
@@ -2724,7 +2763,7 @@ fn test_my_function() {
             sc.init();
         }
     ).assert_ok();
-    
+
     // Test the function
     blockchain_wrapper.execute_tx(
         &owner_address,
@@ -2764,7 +2803,7 @@ fn my_value(&self) -> SingleValueMapper<BigUint<Self::Api>>;
 \`\`\`
 
 ## Struct Type Parameter Errors
-**Issue**: "missing type parameter" or "cannot find type \`Self\` in this scope" 
+**Issue**: "missing type parameter" or "cannot find type \`Self\` in this scope"
 **Solution**: Add ManagedTypeApi bound to structs containing managed types
 \`\`\`rust
 // ❌ Wrong - Missing type parameter
@@ -2779,7 +2818,7 @@ struct GameResult {
 }
 
 // ✅ Correct - With ManagedTypeApi bound
-pub struct GameResult<M> 
+pub struct GameResult<M>
 where
     M: ManagedTypeApi,
 {
@@ -2831,7 +2870,7 @@ sc invoke $CONTRACT_ADDRESS placeBet \\
     --await --sign --result-only
 \`\`\`
 
-**Solution**: 
+**Solution**:
 - CONTRACT_ADDRESS and FUNCTION_NAME are positional arguments
 - Use --values for token payments (not --value)
 - Use --args for function arguments with type prefixes
@@ -2921,7 +2960,7 @@ fn game_played_event(
 \`\`\`rust
 // ✅ CORRECT - Combine data into a single parameter
 #[derive(TopEncode)]
-pub struct GameResult<M> 
+pub struct GameResult<M>
 where
     M: ManagedTypeApi,
 {
@@ -2969,7 +3008,8 @@ fn game_result_event(
 This is different from other blockchains where multiple non-indexed parameters are allowed.`,
     metadata: {
       title: 'Event Parameter Limitation Error',
-      description: 'Common error when defining events with multiple non-indexed parameters in Klever',
+      description:
+        'Common error when defining events with multiple non-indexed parameters in Klever',
       tags: ['error', 'events', 'indexed', 'parameters', 'compilation'],
       language: 'rust',
       relevanceScore: 0.95,
@@ -2989,20 +3029,20 @@ This is different from other blockchains where multiple non-indexed parameters a
 fn transfer(&self, to: ManagedAddress, amount: BigUint) {
     // Validate address
     require!(!to.is_zero(), "Cannot transfer to zero address");
-    
+
     // Validate amount
     require!(amount > 0, "Amount must be positive");
-    
+
     // Validate caller permissions
     require!(
-        self.blockchain().get_caller() == self.owner().get(), 
+        self.blockchain().get_caller() == self.owner().get(),
         "Only owner can call this"
     );
-    
+
     // Validate sufficient balance
     let balance = self.balance(&self.blockchain().get_caller()).get();
     require!(balance >= amount, "Insufficient balance");
-    
+
     // Proceed with transfer...
 }
 
@@ -3099,7 +3139,7 @@ fn process_payment(&self, payment: KdaTokenPayment<Self::Api>) {
     let token = payment.token_identifier;
     let amount = payment.amount;
     let nonce = payment.token_nonce;
-    
+
     // Process the payment...
 }
 \`\`\`
@@ -3264,7 +3304,7 @@ fn transfer(&self, to: ManagedAddress, amount: BigUint) {
         self.balance(&self.blockchain().get_caller()).get() >= &amount,
         "Insufficient balance"
     );
-    
+
     // Continue with transfer logic...
 }
 \`\`\`
@@ -3274,7 +3314,7 @@ fn transfer(&self, to: ManagedAddress, amount: BigUint) {
 #[endpoint]
 fn critical_operation(&self) {
     let result = self.do_something();
-    
+
     if result.is_err() {
         // This should never happen in normal operation
         sc_panic!("Critical invariant violated!");
@@ -3299,12 +3339,12 @@ const ERR_ZERO_AMOUNT: &str = "Amount must be greater than zero";
 fn stake(&self, amount: BigUint) {
     require!(!self.is_paused(), ERR_CONTRACT_PAUSED);
     require!(amount > 0, ERR_ZERO_AMOUNT);
-    
+
     let caller = self.blockchain().get_caller();
     let balance = self.blockchain().get_balance(&caller, &TokenIdentifier::klv());
-    
+
     require!(balance >= amount, ERR_INSUFFICIENT_FUNDS);
-    
+
     // Staking logic...
 }
 \`\`\`
@@ -3320,18 +3360,18 @@ fn safe_transfer(&self, target: ManagedAddress, amount: BigUint) {
         self.blockchain().is_smart_contract(&target),
         "Invalid contract address"
     );
-    
+
     // Check balance before attempting transfer
     let balance = self.balance(&self.blockchain().get_caller()).get();
     require!(balance >= amount, "Insufficient balance");
-    
+
     // Contract calls panic on failure - no way to catch
     // Make sure target contract exists and endpoint is valid
     self.send()
         .contract_call::<()>(target, "receive")
         .with_klv_transfer(amount)
         .execute_on_dest_context();
-    
+
     // This only executes if call succeeded
     self.transfer_complete_event(&target, &amount);
 }
@@ -3343,18 +3383,18 @@ fn safe_transfer(&self, target: ManagedAddress, amount: BigUint) {
 \`\`\`rust
 fn validate_token_payment(&self) -> (TokenIdentifier, BigUint) {
     let (token, amount) = self.call_value().single_klever_token();
-    
+
     require!(
         self.accepted_tokens().contains(&token),
         "Token not accepted"
     );
-    
+
     let min_amount = self.min_deposit_amount(&token).get();
     require!(
         amount >= min_amount,
         "Amount below minimum deposit"
     );
-    
+
     (token, amount)
 }
 \`\`\``,
@@ -3613,11 +3653,11 @@ fn mapper_get_sft_attributes(&self, token_nonce: u64) -> RgbColor {
 #[endpoint]
 fn stake(&self) {
     let payment = self.call_value().single_kda();
-    
+
     // Ensure payment is our token
     self.fungible_token_mapper()
         .require_same_token(&payment.token_identifier);
-    
+
     // Process staking...
 }
 \`\`\``,
@@ -3680,13 +3720,13 @@ fn update_multiple_bad(&self, updates: ManagedVec<(ManagedAddress, BigUint)>) {
 fn update_multiple_good(&self, updates: ManagedVec<(ManagedAddress, BigUint)>) {
     let timestamp = self.blockchain().get_block_timestamp();
     let mut update_count = 0u32;
-    
+
     for (addr, value) in updates.iter() {
         self.balances(&addr).set(&value);
         self.last_update(&addr).set(timestamp);
         update_count += 1;
     }
-    
+
     self.total_updates().update(|x| *x += update_count);
 }
 \`\`\`
@@ -3715,7 +3755,7 @@ fn process_rewards_good(&self) {
     let current_timestamp = self.blockchain().get_block_timestamp();
     let mut total_distributed = BigUint::zero();
     let mut transfers = ManagedVec::new();
-    
+
     for user in self.users().iter() {
         let reward = self.calculate_reward(&user);
         if reward > 0 {
@@ -3724,12 +3764,12 @@ fn process_rewards_good(&self) {
             total_distributed += &reward;
         }
     }
-    
+
     // Batch transfers
     for (user, reward) in transfers.iter() {
         self.send().direct_klv(&user, &reward);
     }
-    
+
     self.total_distributed().update(|x| *x += &total_distributed);
 }
 \`\`\`
@@ -3840,7 +3880,7 @@ fn call_other_contract(&self, target_contract: ManagedAddress) {
     let result: BigUint = self.send()
         .contract_call::<BigUint>(target_contract, "getValue")
         .execute_on_dest_context();
-    
+
     // Result is immediately available
     self.stored_value().set(&result);
 }
@@ -3854,7 +3894,7 @@ fn call_other_contract(&self, target_contract: ManagedAddress) {
 #[payable("*")]
 fn forward_payment(&self, target_contract: ManagedAddress) {
     let payment = self.call_value().kda_payment();
-    
+
     // Forward tokens with synchronous contract call
     self.send()
         .contract_call::<()>(target_contract, "receivePayment")
@@ -3864,7 +3904,7 @@ fn forward_payment(&self, target_contract: ManagedAddress) {
             payment.amount
         )
         .execute_on_dest_context();
-    
+
     // Execution continues only after call completes
     self.payment_forwarded_event(&target_contract);
 }
@@ -3880,16 +3920,16 @@ fn multi_step_operation(&self, oracle: ManagedAddress, dex: ManagedAddress) {
     let price: BigUint = self.send()
         .contract_call::<BigUint>(oracle, "getPrice")
         .execute_on_dest_context();
-    
+
     // Step 2: Calculate amount based on price
     let amount = &price * 2u32;
-    
+
     // Step 3: Execute swap on DEX (synchronous)
     let output: BigUint = self.send()
         .contract_call::<BigUint>(dex, "swap")
         .with_klv_transfer(amount)
         .execute_on_dest_context();
-    
+
     // All steps complete - store results
     self.last_swap_output().set(&output);
 }
@@ -3906,15 +3946,15 @@ fn safe_contract_call(&self, target: ManagedAddress) -> SCResult<()> {
         self.blockchain().is_smart_contract(&target),
         "Target must be a smart contract"
     );
-    
+
     // Contract calls that fail will panic
     // You cannot catch panics - design accordingly
     let balance: BigUint = self.send()
         .contract_call::<BigUint>(target, "getBalance")
         .execute_on_dest_context();
-    
+
     require!(balance > 0, "Balance must be positive");
-    
+
     Ok(())
 }
 \`\`\`
@@ -3926,17 +3966,17 @@ fn safe_contract_call(&self, target: ManagedAddress) -> SCResult<()> {
 #[endpoint]
 fn coordinate_contracts(&self, contracts: ManagedVec<ManagedAddress>) {
     let mut total = BigUint::zero();
-    
+
     // Process each contract sequentially
     for contract in &contracts {
         // Each call is synchronous
         let value: BigUint = self.send()
             .contract_call::<BigUint>(contract, "getValue")
             .execute_on_dest_context();
-        
+
         total += value;
     }
-    
+
     // All calls complete - store total
     self.total_value().set(&total);
 }
@@ -3956,13 +3996,13 @@ fn deploy_child_contract(&self, code: ManagedBuffer, initial_value: BigUint) {
             &code,
             CodeMetadata::DEFAULT,
         );
-    
+
     // Initialize immediately (synchronous)
     self.send()
         .contract_call::<()>(new_address.clone(), "init")
         .add_argument(&initial_value)
         .execute_on_dest_context();
-    
+
     self.child_contracts().push(&new_address);
 }
 \`\`\`
@@ -4015,7 +4055,7 @@ fn deploy_child_contract(&self, code: ManagedBuffer, initial_value: BigUint) {
 
 ## ❌ NEVER USE These Wrong Patterns:
 - \`--contract="address"\` ❌ WRONG - use positional argument
-- \`--function="name"\` ❌ WRONG - use positional argument  
+- \`--function="name"\` ❌ WRONG - use positional argument
 - \`--value="amount"\` ❌ WRONG - use --values "KLV=amount"
 - \`--kdaFee="KLV"\` ❌ WRONG - does not exist
 - \`--token-transfers\` ❌ WRONG - use --values
@@ -4057,7 +4097,8 @@ KLEVER_NODE=https://node.testnet.klever.org \\
 - \`--result-only\`: Show only the transaction result (clean JSON output without logs)`,
     metadata: {
       title: 'CRITICAL: Correct Koperator Syntax - READ THIS FIRST',
-      description: 'The ONLY correct way to use koperator sc invoke - NEVER use --contract, --function, --value. Always include --result-only for clean output',
+      description:
+        'The ONLY correct way to use koperator sc invoke - NEVER use --contract, --function, --value. Always include --result-only for clean output',
       tags: ['koperator', 'critical', 'syntax', 'sc-invoke', 'commands'],
       language: 'bash',
       relevanceScore: 1.0,
@@ -4215,7 +4256,7 @@ KLEVER_NODE=http://localhost:8080 \\
 \`\`\`bash
 # WRONG - These don't exist
 koperator --deploy
-koperator --execute  
+koperator --execute
 koperator --call
 koperator deploy
 \`\`\`
@@ -4362,7 +4403,7 @@ if [ -n "$TX_HASH" ] && [ -n "$CONTRACT_ADDRESS" ]; then
     jq --arg tx "$TX_HASH" --arg addr "$CONTRACT_ADDRESS" \\
        '. + [{"hash": $tx, "contractAddress": $addr, "timestamp": now | strftime("%Y-%m-%d %H:%M:%S")}]' \\
        "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"
-    
+
     echo "Transaction: $TX_HASH"
     echo "Contract: $CONTRACT_ADDRESS"
 else
@@ -4383,7 +4424,7 @@ if [ $# -eq 1 ]; then
 else
     echo "Getting latest contract from history.json..."
     CONTRACT_ADDRESS=$(jq -r '.[-1].contractAddress' output/history.json 2>/dev/null)
-    
+
     if [ -z "$CONTRACT_ADDRESS" ] || [ "$CONTRACT_ADDRESS" = "null" ]; then
         echo "Error: No contract address found"
         echo "Usage: $0 [contract-address]"
@@ -4456,14 +4497,14 @@ fi
 JSON_ARGS="["
 for ((i=0; i<\${#ARGUMENTS[@]}; i++)); do
     ARG="\${ARGUMENTS[$i]}"
-    
+
     if [[ "$ARG" == 0x* ]]; then
         HEX_VALUE="\${ARG#0x}"
         ENCODED=$(echo -n "$HEX_VALUE" | xxd -r -p | base64)
     else
         ENCODED=$(echo -n "$ARG" | base64)
     fi
-    
+
     [[ $i -gt 0 ]] && JSON_ARGS="$JSON_ARGS,"
     JSON_ARGS="$JSON_ARGS\\"$ENCODED\\""
 done
@@ -4858,7 +4899,7 @@ fn get_user_klv_balance(&self, address: ManagedAddress) -> BigUint {
 fn send_klv_three_ways(&self, recipient: ManagedAddress, amount: BigUint) {
     // Method 1: Direct KLV (simplest for KLV only)
     self.send().direct_klv(&recipient, &amount);
-    
+
     // Method 2: Using KdaTokenPayment (flexible, works for any token)
     let payment = KdaTokenPayment::new(
         TokenIdentifier::klv(),  // ✅ Use TokenIdentifier::klv()
@@ -4866,7 +4907,7 @@ fn send_klv_three_ways(&self, recipient: ManagedAddress, amount: BigUint) {
         amount
     );
     self.send().direct_payment(&recipient, &payment);
-    
+
     // Method 3: Using direct_kda (also works)
     self.send().direct_kda(
         &recipient,
@@ -4883,16 +4924,16 @@ fn send_klv_three_ways(&self, recipient: ManagedAddress, amount: BigUint) {
 #[endpoint]
 fn withdraw_all(&self) {
     let owner = self.blockchain().get_owner_address();
-    
+
     // Get KLV balance using TokenIdentifier::klv()
     let balance = self.blockchain()
         .get_sc_balance(&TokenIdentifier::klv(), 0);
-    
+
     require!(balance > 0, "No KLV to withdraw");
-    
+
     // Send using direct_klv (simplest for KLV)
     self.send().direct_klv(&owner, &balance);
-    
+
     // Emit event
     self.withdraw_event(&owner, &balance);
 }
@@ -4912,7 +4953,7 @@ fn withdraw_event(
 fn process_payment(&self) {
     // Get the payment as KdaTokenPayment (works for ALL tokens)
     let payment: KdaTokenPayment<Self::Api> = self.call_value().any_payment();
-    
+
     // Check if it's KLV
     if payment.token_identifier == TokenIdentifier::klv() {
         // Handle KLV payment
@@ -4940,7 +4981,7 @@ fn handle_token_payment(&self, payment: KdaTokenPayment<Self::Api>) {
 // ❌ WRONG - KlvTokenPayment doesn't exist
 let payment = KlvTokenPayment::new(...);  // Compilation error!
 
-// ❌ WRONG - KlvTokenIdentifier doesn't exist  
+// ❌ WRONG - KlvTokenIdentifier doesn't exist
 let id = KlvTokenIdentifier::klv();  // Compilation error!
 
 // ❌ WRONG - Wrong type in function signature
@@ -4957,7 +4998,8 @@ fn process(&self, payment: KlvTokenPayment) {  // Compilation error!
 4. There is NO KlvTokenPayment type - always use KdaTokenPayment`,
     metadata: {
       title: 'CRITICAL: Token Types Clarification - KLV vs KDA',
-      description: 'Complete guide clarifying KlvTokenPayment vs KdaTokenPayment vs TokenIdentifier confusion',
+      description:
+        'Complete guide clarifying KlvTokenPayment vs KdaTokenPayment vs TokenIdentifier confusion',
       tags: ['critical', 'tokens', 'klv', 'kda', 'payment', 'common-confusion', 'must-read'],
       language: 'rust',
       relevanceScore: 1.0,
@@ -5257,7 +5299,8 @@ if payment.token_identifier == TokenIdentifier::klv() {
 \`\`\``,
     metadata: {
       title: 'Correct KLV Token Identifier Usage',
-      description: 'How to properly use TokenIdentifier for KLV and avoid common KlvTokenIdentifier error',
+      description:
+        'How to properly use TokenIdentifier for KLV and avoid common KlvTokenIdentifier error',
       tags: ['klv', 'token-identifier', 'balance', 'common-error'],
       language: 'rust',
       relevanceScore: 1.0,
@@ -5302,100 +5345,100 @@ pub trait Lottery:
     fn upgrade(&self, _new_ticket_price: BigUint) {
         // do nothing for now, can be extended later
     }
-    
+
     /// Buy lottery tickets - combines payable endpoint pattern
     #[payable("KLV")]
     #[endpoint(buyTickets)]
     fn buy_tickets(&self) {
         self.require_not_paused();
-        
+
         let payment = self.call_value().klv_value();
         let ticket_price = self.ticket_price().get();
-        
+
         require!(*payment >= ticket_price, "Insufficient payment");
-        
+
         let tickets_bought = &*payment / &ticket_price;
         let caller = self.blockchain().get_caller();
-        
+
         // Convert BigUint to u32 for ticket count
         let tickets_count = tickets_bought.to_u64().unwrap_or(0) as u32;
         require!(tickets_count > 0, "No tickets bought, payment too low");
-        
+
         // Storage pattern - track player tickets
         self.player_tickets(&caller).update(|tickets| *tickets += tickets_count);
-        
+
         // Add player to the set if not already present
         self.players().insert(caller.clone());
 
         self.total_tickets().update(|total| *total += tickets_count);
-        
+
         // Add to prize pool
         self.prize_pool().update(|pool| *pool += &*payment);
-        
+
         // Event pattern - notify ticket purchase
         self.ticket_purchased_event(&caller, tickets_count);
     }
-    
+
     /// Draw winner - combines random generation and cross-contract patterns
     #[endpoint(drawWinner)]
     fn draw_winner(&self) {
         self.require_not_paused();
         self.require_caller_is_admin();
-        
+
         let total = self.total_tickets().get();
         require!(total > 0u32, "No tickets sold");
-        
+
         // Random number generation pattern
         let mut rand_source = RandomnessSource::new();
         let winning_ticket = rand_source.next_u32() % total;
-        
+
         // Find winner by iterating through players
         let winner = self.find_winner_by_ticket(winning_ticket);
-        
+
         // Transfer prize
         let prize = self.prize_pool().take();
         self.send().direct_klv(&winner, &prize);
-        
+
         // Event pattern - announce winner
         self.winner_drawn_event(&winner, &prize, winning_ticket);
-        
+
         // Reset for next round
         self.reset_lottery();
     }
-    
+
     /// Admin function to set new ticket price
     #[endpoint(setTicketPrice)]
     fn set_ticket_price(&self, new_price: BigUint) {
         self.require_caller_is_admin();
         self.ticket_price().set(new_price);
     }
-    
+
     /// Emergency withdraw - admin only
     #[endpoint(emergencyWithdraw)]
     fn emergency_withdraw(&self) {
         self.require_caller_is_admin();
         self.set_paused(true);
-        
+
         let pool = self.prize_pool().take();
         let admin = self.blockchain().get_owner_address();
         self.send().direct_klv(&admin, &pool);
     }
-    
+
     fn find_winner_by_ticket(&self, winning_ticket: u32) -> ManagedAddress {
         let mut current_ticket = 0u32;
-        
+
         for player in self.players().iter() {
             let player_ticket_count = self.player_tickets(&player).get();
             current_ticket += player_ticket_count;
-            
+
             if current_ticket > winning_ticket {
                 return player;
             }
         }
-        
+
         sc_panic!("Winner not found");
     }
-    
+
     fn reset_lottery(&self) {
         // Clear all player tickets
         for player in self.players().iter() {
@@ -5404,23 +5447,23 @@ pub trait Lottery:
         self.players().clear();
         self.total_tickets().clear();
     }
-    
+
     // Storage patterns
     #[storage_mapper("ticket_price")]
     fn ticket_price(&self) -> SingleValueMapper<BigUint>;
-    
+
     #[storage_mapper("player_tickets")]
     fn player_tickets(&self, player: &ManagedAddress) -> SingleValueMapper<u32>;
-    
+
     #[storage_mapper("total_tickets")]
     fn total_tickets(&self) -> SingleValueMapper<u32>;
-    
+
     #[storage_mapper("prize_pool")]
     fn prize_pool(&self) -> SingleValueMapper<BigUint>;
-    
+
     #[storage_mapper("players")]
     fn players(&self) -> UnorderedSetMapper<ManagedAddress>;
-    
+
     // Events
     #[event("ticketPurchased")]
     fn ticket_purchased_event(
@@ -5428,7 +5471,7 @@ pub trait Lottery:
         #[indexed] player: &ManagedAddress,
         #[indexed] tickets: u32,
     );
-    
+
     #[event("winnerDrawn")]
     fn winner_drawn_event(
         &self,
@@ -5488,13 +5531,13 @@ fn receive_payment(&self) {
     // ⚠️ payment is ManagedRef<BigUint>, not BigUint!
     let payment = self.call_value().klv_value();
     let min_amount = self.min_amount().get();  // This is BigUint
-    
+
     // ✅ CORRECT - Dereference ManagedRef with *
     require!(*payment >= min_amount, "Below minimum");
-    
+
     // ✅ CORRECT - Use &* for arithmetic and updates
     self.balance().update(|b| *b += &*payment);
-    
+
     // ❌ WRONG - Type mismatch
     // require!(payment >= min_amount, "Below minimum");  // ERROR!
 }
@@ -5527,7 +5570,7 @@ fn compare_mixed(&self, amount: BigUint, balance: &BigUint) {
     if &amount <= balance {
         // Now both are references - works!
     }
-    
+
     // Or the other way
     if amount <= balance.clone() {
         // Clone the reference to owned - also works but less efficient
@@ -5540,12 +5583,12 @@ fn compare_mixed(&self, amount: BigUint, balance: &BigUint) {
 fn compare_managed_ref(&self) {
     let payment = self.call_value().klv_value();  // ManagedRef<BigUint>
     let balance = self.balance().get();           // BigUint
-    
+
     // ✅ Dereference ManagedRef
     if *payment <= balance {
         // Works!
     }
-    
+
     // ✅ Or use references
     if &*payment <= &balance {
         // Also works!
@@ -5605,10 +5648,10 @@ self.balance(&user).set(amount.clone());   // Clone if needed ✅
 fn transfer(&self, to: ManagedAddress, amount: BigUint) {
     let caller = self.blockchain().get_caller();
     let balance = self.balances(&caller).get();
-    
+
     // ✅ CORRECT - Compare owned values
     require!(balance >= amount, "Insufficient balance");
-    
+
     // ✅ CORRECT - Use references in updates
     self.balances(&caller).update(|b| *b -= &amount);
     self.balances(&to).update(|b| *b += &amount);
@@ -5622,18 +5665,18 @@ fn complex_check(&self, amount: BigUint) {
     let min_amount = BigUint::from(100u32);
     let max_amount = BigUint::from(10000u32);
     let user_balance = self.get_user_balance();
-    
+
     // ✅ All comparisons use consistent types
     require!(
         &amount >= &min_amount && &amount <= &max_amount,
         "Amount out of range"
     );
-    
+
     require!(
         &user_balance >= &amount,
         "Insufficient balance"
     );
-    
+
     // Process the amount...
 }
 \`\`\`
@@ -5643,10 +5686,10 @@ fn complex_check(&self, amount: BigUint) {
 fn calculate_with_fee(&self, amount: &BigUint) -> BigUint {
     let fee_percent = BigUint::from(3u32);  // 3%
     let hundred = BigUint::from(100u32);
-    
+
     // ✅ Calculate fee using references
     let fee = amount * &fee_percent / &hundred;
-    
+
     // ✅ Return total using references
     amount + &fee
 }
@@ -5672,8 +5715,17 @@ fn calculate_with_fee(&self, amount: &BigUint) -> BigUint {
 | Can't subtract \`&BigUint\` from \`BigUint\` | Use references: \`&balance - &amount\` |`,
     metadata: {
       title: 'BigUint Type Handling and Comparison Patterns',
-      description: 'Complete guide to avoiding type mismatch errors with BigUint in Klever smart contracts',
-      tags: ['critical', 'biguint', 'types', 'comparison', 'arithmetic', 'common-error', 'ownership'],
+      description:
+        'Complete guide to avoiding type mismatch errors with BigUint in Klever smart contracts',
+      tags: [
+        'critical',
+        'biguint',
+        'types',
+        'comparison',
+        'arithmetic',
+        'common-error',
+        'ownership',
+      ],
       language: 'rust',
       relevanceScore: 1.0,
       contractType: 'any',
@@ -5703,120 +5755,120 @@ pub trait StakingContract {
         self.min_stake().set(min_stake);
         self.reward_rate().set(reward_rate);  // Rate per 1000 staked per day
     }
-    
+
     #[payable("KLV")]
     #[endpoint]
     fn stake(&self) {
         let payment = self.call_value().klv_value();
         let min_stake = self.min_stake().get();
-        
+
         // ✅ Comparison - both owned values
         require!(*payment >= min_stake, "Below minimum stake");
-        
+
         let caller = self.blockchain().get_caller();
         let timestamp = self.blockchain().get_block_timestamp();
-        
+
         // ✅ Storage update using reference
         self.staked_amount(&caller).update(|amount| *amount += &*payment);
         self.stake_timestamp(&caller).set(timestamp);
-        
+
         // ✅ Update total using reference
         self.total_staked().update(|total| *total += &*payment);
     }
-    
+
     #[endpoint]
     fn calculate_rewards(&self, user: ManagedAddress) -> BigUint {
         let staked = self.staked_amount(&user).get();
         let stake_time = self.stake_timestamp(&user).get();
         let current_time = self.blockchain().get_block_timestamp();
-        
+
         // ✅ Comparison with zero
         if staked == BigUint::zero() {
             return BigUint::zero();
         }
-        
+
         // Calculate time staked (in seconds)
         let time_staked = current_time - stake_time;
         let days_staked = BigUint::from(time_staked / 86400u64);
-        
+
         // ✅ Complex arithmetic with references
         let reward_rate = self.reward_rate().get();
         let thousand = BigUint::from(1000u32);
-        
+
         // rewards = (staked * reward_rate * days) / 1000
         &staked * &reward_rate * &days_staked / &thousand
     }
-    
+
     #[endpoint]
     fn unstake(&self, amount: BigUint) {
         let caller = self.blockchain().get_caller();
         let staked = self.staked_amount(&caller).get();
-        
+
         // ✅ Comparison - both owned
         require!(amount > BigUint::zero(), "Invalid amount");
         require!(staked >= amount, "Insufficient staked amount");
-        
+
         // Calculate and add rewards first
         let rewards = self.calculate_rewards(caller.clone());
-        
+
         // ✅ Update staked amount using reference
         self.staked_amount(&caller).update(|s| *s -= &amount);
-        
+
         // ✅ Calculate total to send (stake + rewards)
         let total_amount = &amount + &rewards;
-        
+
         // ✅ Update total staked
         self.total_staked().update(|t| *t -= &amount);
-        
+
         // Send funds
         self.send().direct_klv(&caller, &total_amount);
-        
+
         // Emit event
         self.unstake_event(&caller, &amount, &rewards);
     }
-    
+
     #[endpoint]
     fn compound_rewards(&self) {
         let caller = self.blockchain().get_caller();
         let rewards = self.calculate_rewards(caller.clone());
-        
+
         // ✅ Check rewards > 0
         require!(&rewards > &BigUint::zero(), "No rewards to compound");
-        
+
         // ✅ Add rewards to stake using reference
         self.staked_amount(&caller).update(|s| *s += &rewards);
         self.total_staked().update(|t| *t += &rewards);
-        
+
         // Reset timestamp
         let timestamp = self.blockchain().get_block_timestamp();
         self.stake_timestamp(&caller).set(timestamp);
     }
-    
+
     // Advanced: Calculate percentage
     fn calculate_percentage(&self, amount: &BigUint, percentage: u32) -> BigUint {
         let hundred = BigUint::from(100u32);
         let perc = BigUint::from(percentage);
-        
+
         // ✅ All references in calculation
         amount * &perc / &hundred
     }
-    
+
     // Storage
     #[storage_mapper("min_stake")]
     fn min_stake(&self) -> SingleValueMapper<BigUint>;
-    
+
     #[storage_mapper("reward_rate")]
     fn reward_rate(&self) -> SingleValueMapper<BigUint>;
-    
+
     #[storage_mapper("staked_amount")]
     fn staked_amount(&self, user: &ManagedAddress) -> SingleValueMapper<BigUint>;
-    
+
     #[storage_mapper("stake_timestamp")]
     fn stake_timestamp(&self, user: &ManagedAddress) -> SingleValueMapper<u64>;
-    
+
     #[storage_mapper("total_staked")]
     fn total_staked(&self) -> SingleValueMapper<BigUint>;
-    
+
     // Events
     #[event("unstake")]
     fn unstake_event(
@@ -5865,28 +5917,28 @@ pub trait FeeCollector {
     fn init(&self, fee_amount: BigUint) {
         self.fee_amount().set(fee_amount);
     }
-    
+
     // Collect fee in KLV
     #[payable("KLV")]
     #[endpoint]
     fn pay_fee(&self) {
         let payment = self.call_value().klv_value();  // ManagedRef<BigUint>
         let required_fee = self.fee_amount().get();
-        
+
         // ✅ Dereference ManagedRef for comparison
         require!(*payment >= required_fee, "Insufficient fee");
-        
+
         // Store user as paid
         let caller = self.blockchain().get_caller();
         self.has_paid(&caller).set(true);
-        
+
         // Return excess if any
         if *payment > required_fee {
             let excess = &*payment - &required_fee;
             self.send().direct_klv(&caller, &excess);
         }
     }
-    
+
     // Withdraw collected fees
     #[only_owner]
     #[endpoint]
@@ -5894,13 +5946,13 @@ pub trait FeeCollector {
         let owner = self.blockchain().get_owner_address();
         let balance = self.blockchain()
             .get_sc_balance(&TokenIdentifier::klv(), 0);
-        
+
         self.send().direct_klv(&owner, &balance);
     }
-    
+
     #[storage_mapper("fee_amount")]
     fn fee_amount(&self) -> SingleValueMapper<BigUint>;
-    
+
     #[storage_mapper("has_paid")]
     fn has_paid(&self, user: &ManagedAddress) -> SingleValueMapper<bool>;
 }
@@ -5915,34 +5967,34 @@ pub trait TokenSwap {
     #[endpoint]
     fn swap_for_klv(&self) {
         let payment: KdaTokenPayment<Self::Api> = self.call_value().any_payment();
-        
+
         // Don't accept KLV (no point swapping KLV for KLV)
         require!(
             payment.token_identifier != TokenIdentifier::klv(),
             "Cannot swap KLV for KLV"
         );
-        
+
         // Calculate KLV amount based on rates
         let klv_amount = self.calculate_klv_amount(&payment);
-        
+
         // Check we have enough KLV
         let klv_balance = self.blockchain()
             .get_sc_balance(&TokenIdentifier::klv(), 0);
         require!(klv_balance >= klv_amount, "Insufficient KLV liquidity");
-        
+
         // Send KLV to user
         let caller = self.blockchain().get_caller();
         self.send().direct_klv(&caller, &klv_amount);
-        
+
         // Store the received token
         self.store_token_payment(payment);
     }
-    
+
     fn calculate_klv_amount(&self, payment: &KdaTokenPayment<Self::Api>) -> BigUint {
         // Your rate calculation logic here
         payment.amount.clone() // Simplified 1:1 for example
     }
-    
+
     fn store_token_payment(&self, payment: KdaTokenPayment<Self::Api>) {
         // Store received tokens for later withdrawal
     }
@@ -5959,7 +6011,7 @@ pub trait Treasury {
     fn deposit(&self) {
         let payment: KdaTokenPayment<Self::Api> = self.call_value().any_payment();
         let caller = self.blockchain().get_caller();
-        
+
         // Track different token types differently
         if payment.token_identifier == TokenIdentifier::klv() {
             // Track KLV deposits
@@ -5971,17 +6023,17 @@ pub trait Treasury {
                 .push(&payment);
         }
     }
-    
+
     // Withdraw specific token
     #[endpoint]
     fn withdraw(&self, token: TokenIdentifier, amount: BigUint) {
         let caller = self.blockchain().get_caller();
-        
+
         if token == TokenIdentifier::klv() {
             // Withdraw KLV
             let balance = self.klv_deposits(&caller).get();
             require!(balance >= amount, "Insufficient KLV balance");
-            
+
             self.klv_deposits(&caller)
                 .update(|b| *b -= &amount);
             self.send().direct_klv(&caller, &amount);
@@ -5990,10 +6042,10 @@ pub trait Treasury {
             // Implementation for other tokens...
         }
     }
-    
+
     #[storage_mapper("klv_deposits")]
     fn klv_deposits(&self, user: &ManagedAddress) -> SingleValueMapper<BigUint>;
-    
+
     #[storage_mapper("token_deposits")]
     fn token_deposits(&self, user: &ManagedAddress) -> VecMapper<KdaTokenPayment<Self::Api>>;
 }
@@ -6026,7 +6078,7 @@ The \`RandomnessSource\` in Klever provides cryptographically secure randomness 
 When you call \`RandomnessSource::new()\`, the blockchain internally initializes a randomizer using:
 
 1. **Previous Block Random Seed** - Random seed from the previous block
-2. **Current Block Random Seed** - Random seed from the current block  
+2. **Current Block Random Seed** - Random seed from the current block
 3. **Transaction Hash** - Unique hash of the current transaction
 
 These are combined to create a deterministic but unpredictable random seed:
@@ -6077,12 +6129,12 @@ fn roll_dice_v1(&self) -> u8 {
 // Generate multiple random numbers from same source
 fn generate_multiple_randoms(&self) -> (u8, u32, u64) {
     let mut rand_source = RandomnessSource::new();
-    
+
     // All these use the same initialized seed
     let random_u8 = rand_source.next_u8();
     let random_u32 = rand_source.next_u32();
     let random_u64 = rand_source.next_u64();
-    
+
     (random_u8, random_u32, random_u64)
 }
 \`\`\`
@@ -6161,7 +6213,7 @@ fn random_in_range(&self, min: u64, max: u64) -> u64 {
 fn shuffle_array(&self, items: &mut ManagedVec<u32>) {
     let mut rand_source = RandomnessSource::new();
     let len = items.len();
-    
+
     for i in 0..len {
         let j = rand_source.next_u32() % (len - i) + i;
         // Swap items[i] and items[j]
@@ -6178,7 +6230,7 @@ fn weighted_random_selection(&self, weights: &ManagedVec<u32>) -> usize {
     let mut rand_source = RandomnessSource::new();
     let total_weight: u32 = weights.iter().sum();
     let random_weight = rand_source.next_u32() % total_weight;
-    
+
     let mut cumulative = 0u32;
     for (index, weight) in weights.iter().enumerate() {
         cumulative += weight;
@@ -6186,7 +6238,7 @@ fn weighted_random_selection(&self, weights: &ManagedVec<u32>) -> usize {
             return index;
         }
     }
-    
+
     weights.len() - 1
 }
 \`\`\`
@@ -6199,23 +6251,23 @@ pub trait LotteryContract {
     fn draw_winner(&self) -> ManagedAddress {
         let participants = self.participants().len();
         require!(participants > 0, "No participants");
-        
+
         // Use combined entropy for fairness
         let mut rand = Rand::new(
             self.blockchain().get_block_random_seed(),
             self.blockchain().get_tx_hash(),
         );
-        
+
         let winner_index = rand.next_usize() % participants;
         let winner = self.participants().get(winner_index);
-        
+
         self.winner_drawn_event(&winner, winner_index);
         winner
     }
-    
+
     #[storage_mapper("participants")]
     fn participants(&self) -> ManagedVec<ManagedAddress>;
-    
+
     #[event("winnerDrawn")]
     fn winner_drawn_event(
         &self,
@@ -6256,8 +6308,19 @@ fn bad_random_v2(&self) -> u8 {
 \`\`\``,
     metadata: {
       title: 'Secure Random Number Generation - Complete Guide',
-      description: 'Comprehensive guide explaining how RandomnessSource works internally with blockchain entropy sources, plus best practices and common patterns',
-      tags: ['random', 'security', 'best-practice', 'randomness', 'validator-signature', 'randomness-source', 'entropy', 'blockchain', 'gaming'],
+      description:
+        'Comprehensive guide explaining how RandomnessSource works internally with blockchain entropy sources, plus best practices and common patterns',
+      tags: [
+        'random',
+        'security',
+        'best-practice',
+        'randomness',
+        'validator-signature',
+        'randomness-source',
+        'entropy',
+        'blockchain',
+        'gaming',
+      ],
       language: 'rust',
       relevanceScore: 1.0,
       contractType: 'any',
@@ -6370,7 +6433,7 @@ JSON_ARGS="["
 
 for ((i=0; i<\${#ARGUMENTS[@]}; i++)); do
     ARG="\${ARGUMENTS[$i]}"
-    
+
     # Special handling for hex values
     if [[ "$ARG" == 0x* ]]; then
         HEX_VALUE="\${ARG#0x}"
@@ -6378,7 +6441,7 @@ for ((i=0; i<\${#ARGUMENTS[@]}; i++)); do
     else
         ENCODED=$(echo -n "$ARG" | base64)
     fi
-    
+
     [[ $i -gt 0 ]] && JSON_ARGS="$JSON_ARGS,"
     JSON_ARGS="$JSON_ARGS\\"$ENCODED\\""
 done
@@ -6458,7 +6521,7 @@ Important: Always handle both subdirectory and direct creation patterns.`,
 # Example output:
 # Available templates:
 # - empty: Basic contract structure with init function
-# - adder: Simple contract with add functionality  
+# - adder: Simple contract with add functionality
 # - ping-pong: Example contract demonstrating message passing
 # - crowdfunding: Crowdfunding contract example
 # - multisig: Multi-signature wallet implementation
@@ -6792,7 +6855,7 @@ KLEVER_NODE=https://node.testnet.klever.org \\
 ## When to Use the API vs Koperator
 
 ### Use the API for Querying (Read-Only Operations)
-When you need to read data from smart contract view endpoints, use the Klever API directly. 
+When you need to read data from smart contract view endpoints, use the Klever API directly.
 View endpoints are read-only and don't require transactions.
 
 **API Endpoint Format:**
@@ -7058,7 +7121,7 @@ Retrieve detailed account information including balance, nonce, and assets.
 
 #### GET /address/{address}/transactions
 Get transaction history for an address.
-- Query params: 
+- Query params:
   - \`page\`: Page number (starts at 1)
   - \`limit\`: Items per page (e.g., 50)
   - \`type\`: Transaction type (e.g., 63 for smart contract transactions)
@@ -7282,7 +7345,7 @@ if [ $# -eq 1 ]; then
 else
     echo "Getting latest contract from history.json..."
     CONTRACT_ADDRESS=$(grep -o '"contractAddress": "[^"]*"' output/history.json | tail -n 1 | cut -d'"' -f4)
-    
+
     if [ -z "$CONTRACT_ADDRESS" ]; then
         echo "Error: No contract address found"
         echo "Usage: $0 [contract-address]"
@@ -7363,7 +7426,7 @@ fi
 JSON_ARGS="["
 for ((i=0; i<\${#ARGUMENTS[@]}; i++)); do
     ARG="\${ARGUMENTS[$i]}"
-    
+
     if [[ "$ARG" == 0x* ]]; then
         # Hex argument
         HEX_VALUE="\${ARG#0x}"
@@ -7372,7 +7435,7 @@ for ((i=0; i<\${#ARGUMENTS[@]}; i++)); do
         # Text argument
         ENCODED=$(echo -n "$ARG" | base64)
     fi
-    
+
     [[ $i -gt 0 ]] && JSON_ARGS="$JSON_ARGS,"
     JSON_ARGS="$JSON_ARGS\\"$ENCODED\\""
 done
@@ -7527,15 +7590,15 @@ export const payableEndpointPatterns: ContextPayload[] = [
 #[endpoint(myPayableEndpoint)]
 fn my_payable_endpoint(&self, arg: BigUint) -> BigUint {
     let payment = self.call_value().any_payment();
-    
+
     // Access payment details
     let token = payment.token_identifier;
     let amount = payment.amount;
     let nonce = payment.token_nonce;
-    
+
     // Process the payment...
     self.total_payments(&token).update(|total| *total += &amount);
-    
+
     amount
 }
 
@@ -7545,7 +7608,7 @@ fn my_payable_endpoint(&self, arg: BigUint) -> BigUint {
 fn deposit_klv(&self) {
     let klv_amount = self.call_value().klv_value();
     require!(klv_amount > 0, "No KLV payment received");
-    
+
     let caller = self.blockchain().get_caller();
     self.user_klv_balance(&caller).update(|balance| *balance += klv_amount);
 }
@@ -7557,7 +7620,7 @@ fn stake_kfi(&self, lock_period: u64) {
     let payment = self.call_value().single_kda();
     require!(payment.token_identifier == TokenIdentifier::from("KFI"), "Only KFI accepted");
     require!(payment.amount > 0, "Amount must be positive");
-    
+
     // Process KFI staking...
 }
 
@@ -7566,7 +7629,7 @@ fn stake_kfi(&self, lock_period: u64) {
 #[endpoint(multiTokenDeposit)]
 fn multi_token_deposit(&self) {
     let payments = self.call_value().all_kda_transfers();
-    
+
     for payment in payments.iter() {
         match payment.token_identifier.as_managed_buffer().to_string().as_str() {
             "KLV" => self.process_klv_deposit(&payment),
@@ -7692,7 +7755,7 @@ fn receive_payment(&self) {
     // 1. Always check for payment existence
     let payment = self.call_value().any_payment();
     require!(payment.amount > 0, "No payment received");
-    
+
     // 2. Validate token if specific tokens expected
     let accepted_tokens = ["KLV", "KFI", "USDT"];
     let token_str = payment.token_identifier.as_managed_buffer().to_string();
@@ -7700,18 +7763,18 @@ fn receive_payment(&self) {
         accepted_tokens.contains(&token_str.as_str()),
         "Token not accepted"
     );
-    
+
     // 3. Check minimum amounts
     let min_amount = BigUint::from(1000u64);
     require!(payment.amount >= min_amount, "Amount too small");
-    
+
     // 4. Emit payment event
     self.payment_received_event(
         &self.blockchain().get_caller(),
         &payment.token_identifier,
         &payment.amount
     );
-    
+
     // 5. Update state atomically
     self.total_deposits(&payment.token_identifier)
         .update(|total| *total += &payment.amount);
@@ -7721,11 +7784,11 @@ fn receive_payment(&self) {
 #[endpoint]
 fn withdraw(&self, token: TokenIdentifier, amount: BigUint) {
     self.require_owner();
-    
+
     // Check contract balance before sending
     let balance = self.blockchain().get_sc_balance(&token, 0);
     require!(balance >= amount, "Insufficient contract balance");
-    
+
     self.send().direct_kda(
         &self.blockchain().get_caller(),
         &token,
@@ -7766,32 +7829,32 @@ pub trait ExternalContract {
 pub trait MyContract {
     #[storage_mapper("externalContractAddress")]
     fn external_contract_address(&self) -> SingleValueMapper<ManagedAddress>;
-    
+
     #[endpoint]
     fn call_external_contract(&self, value: BigUint) {
         let contract_address = self.external_contract_address().get();
-        
+
         // Create contract proxy
         let mut contract_proxy = self.send()
             .contract_call::<ExternalContract>(contract_address)
             .do_something(value);
-            
+
         // Execute the call
         let result = contract_proxy.execute_on_dest_context::<BigUint>();
-        
+
         // Process result...
     }
-    
+
     #[endpoint]
     fn contract_call_example(&self, value: BigUint) {
         let contract_address = self.external_contract_address().get();
-        
+
         // Synchronous call - result returned immediately
         let result: BigUint = self.send()
             .contract_call::<ExternalContract>(contract_address)
             .do_something(value)
             .execute_on_dest_context();
-        
+
         // Process result immediately
         self.result_value().set(&result);
         self.call_completed_event(&contract_address, &result);
@@ -7820,25 +7883,25 @@ pub trait MyContract {
     // Local storage mapper
     #[storage_mapper("my_mapper")]
     fn my_mapper(&self) -> SetMapper<u32>;
-    
+
     // Remote storage mapper - accesses storage at another address
     #[storage_mapper_from_address("my_mapper")]
     fn my_mapper_from_address(
-        &self, 
+        &self,
         address: ManagedAddress
     ) -> SetMapper<u32, ManagedAddress>;
-    
+
     #[endpoint]
     fn read_remote_storage(&self, contract_address: ManagedAddress) {
         // Access the remote contract's storage
         let remote_mapper = self.my_mapper_from_address(contract_address);
-        
+
         // Iterate over remote storage
         for value in remote_mapper.iter() {
             // Process value from remote contract
         }
     }
-    
+
     // Example with additional keys
     #[storage_mapper_from_address("user_data")]
     fn user_data_from_address(
@@ -8157,7 +8220,8 @@ fi
 \`\`\``,
     metadata: {
       title: 'Understanding Contract Query Responses',
-      description: 'How to properly decode empty values and response data from Klever contract queries',
+      description:
+        'How to properly decode empty values and response data from Klever contract queries',
       tags: ['query', 'api', 'response-parsing', 'debugging'],
       language: 'bash',
       relevanceScore: 0.9,
@@ -8197,7 +8261,7 @@ fi
 1. **Verify deployment**:
    - Query view functions
    - Check initial state
-   
+
 2. **Fund contract** (if needed):
    - For games/DEX: Add liquidity
    - For prizes: Add reward pool
@@ -8378,7 +8442,8 @@ For NFTs and SFTs with nonces, use the format: \`KDA_ID/NONCE=AMOUNT\`
 - Example: \`--values "MYSFT-5678/100=5"\` for 5 SFTs with nonce 100\`\`\``,
     metadata: {
       title: 'Koperator Payment Flags - Critical Information',
-      description: 'Correct usage of payment flags in koperator - avoiding common --klv and --payment errors',
+      description:
+        'Correct usage of payment flags in koperator - avoiding common --klv and --payment errors',
       tags: ['koperator', 'payments', 'klv', 'kda', 'common-error', 'critical'],
       language: 'bash',
       relevanceScore: 1.0,
