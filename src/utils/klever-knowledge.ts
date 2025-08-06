@@ -11,7 +11,7 @@ export const kleverKnowledgeBase: ContextPayload[] = [
 ### VERY IMPORTANT !!!!!!:
 - **1 KLV = 1_000_000 (1e6) smallest units**
 - **1 KFI = 1_000_000 (1e6) smallest units**
-- Always use \`u64\` values in contracts (smallest units)
+- Always use \`ManagedRef<BigUint>\` values in contracts (smallest units)
 - Convert to human-readable amounts by dividing by 1_000_000
 ### Example Conversions:
 \`\`\`rust
@@ -24,7 +24,7 @@ const HUNDRED_KLV: u64 = 100_000_000;  // 100 KLV
 #[payable("KLV")]
 #[endpoint(deposit)]
 fn deposit(&self) {
-    let amount = self.call_value().klv_value(); // Already in smallest units (u64)
+    let amount = self.call_value().klv_value();
     // amount is already multiplied by 1_000_000
 }
 \`\`\`
@@ -87,9 +87,9 @@ koperator sc invoke CONTRACT swap --values "KLV=500000"
       language: 'bash',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      relevanceScore: 1.0,
+      relevanceScore: 1.0
     },
-    relatedContextIds: [],
+    relatedContextIds: []
   },
   // CRITICAL KLV/KFI DECIMALS - MUST READ
   {
@@ -163,16 +163,15 @@ koperator sc invoke CONTRACT method --values "KLV=500000"   # 5 zeros + 5
 - **When in doubt**: 1 KLV = 1 followed by 6 zeros`,
     metadata: {
       title: 'CRITICAL: KLV/KFI Always 6 Decimals - NOT 8, 9, 10 or 18',
-      description:
-        'KLV and KFI ALWAYS use 6 decimal places. Using 8, 9, 10 or 18 decimals is WRONG and will cause massive overpayments!',
+      description: 'KLV and KFI ALWAYS use 6 decimal places. Using 8, 9, 10 or 18 decimals is WRONG and will cause massive overpayments!',
       tags: ['critical', 'decimals', 'KLV', 'KFI', 'error', 'must-read-first'],
       author: 'system',
       language: 'bash',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      relevanceScore: 1.0,
+      relevanceScore: 1.0
     },
-    relatedContextIds: [],
+    relatedContextIds: []
   },
   // CODE EXAMPLE DISCOVERY GUIDE
   {
@@ -694,8 +693,7 @@ fn game_played_event(
 **Just use #[indexed] on EVERYTHING** - It's simpler and avoids errors!`,
     metadata: {
       title: 'CRITICAL: Event Parameter One-Data Rule',
-      description:
-        'The most important rule about Klever events - prevents "only 1 data argument allowed" error',
+      description: 'The most important rule about Klever events - prevents "only 1 data argument allowed" error',
       tags: ['critical', 'events', 'indexed', 'error-prevention', 'must-read', 'common-error'],
       language: 'rust',
       relevanceScore: 1.0,
@@ -1088,8 +1086,7 @@ fn player_games(&self, player: &ManagedAddress) -> VecMapper<GameResult<Self::Ap
 5. **Inside other generic types**: ManagedVec<T>, Option<T>, etc.`,
     metadata: {
       title: 'ManagedTypeApi Requirements for Structs',
-      description:
-        'Complete guide on using ManagedTypeApi with custom structs containing managed types',
+      description: 'Complete guide on using ManagedTypeApi with custom structs containing managed types',
       tags: ['managed-types', 'structs', 'generics', 'best-practice', 'patterns'],
       language: 'rust',
       relevanceScore: 0.95,
@@ -2580,7 +2577,7 @@ fn stake_kfi(&self) {
 ### VERY IMPORTANT !!!!!!:
 - **1 KLV = 1_000_000 (1e6) smallest units**
 - **1 KFI = 1_000_000 (1e6) smallest units**
-- Always use \`u64\` values in contracts (smallest units)
+- Always use \`ManagedRef<BigUint>\` values in contracts (smallest units)
 - Convert to human-readable amounts by dividing by 1_000_000
 ### Example Conversions:
 \`\`\`rust
@@ -2593,7 +2590,7 @@ const HUNDRED_KLV: u64 = 100_000_000;  // 100 KLV
 #[payable("KLV")]
 #[endpoint(deposit)]
 fn deposit(&self) {
-    let amount = self.call_value().klv_value(); // Already in smallest units (u64)
+    let amount = self.call_value().klv_value();
     // amount is already multiplied by 1_000_000
 }
 \`\`\`
@@ -3008,8 +3005,7 @@ fn game_result_event(
 This is different from other blockchains where multiple non-indexed parameters are allowed.`,
     metadata: {
       title: 'Event Parameter Limitation Error',
-      description:
-        'Common error when defining events with multiple non-indexed parameters in Klever',
+      description: 'Common error when defining events with multiple non-indexed parameters in Klever',
       tags: ['error', 'events', 'indexed', 'parameters', 'compilation'],
       language: 'rust',
       relevanceScore: 0.95,
@@ -4097,8 +4093,7 @@ KLEVER_NODE=https://node.testnet.klever.org \\
 - \`--result-only\`: Show only the transaction result (clean JSON output without logs)`,
     metadata: {
       title: 'CRITICAL: Correct Koperator Syntax - READ THIS FIRST',
-      description:
-        'The ONLY correct way to use koperator sc invoke - NEVER use --contract, --function, --value. Always include --result-only for clean output',
+      description: 'The ONLY correct way to use koperator sc invoke - NEVER use --contract, --function, --value. Always include --result-only for clean output',
       tags: ['koperator', 'critical', 'syntax', 'sc-invoke', 'commands'],
       language: 'bash',
       relevanceScore: 1.0,
@@ -4998,8 +4993,7 @@ fn process(&self, payment: KlvTokenPayment) {  // Compilation error!
 4. There is NO KlvTokenPayment type - always use KdaTokenPayment`,
     metadata: {
       title: 'CRITICAL: Token Types Clarification - KLV vs KDA',
-      description:
-        'Complete guide clarifying KlvTokenPayment vs KdaTokenPayment vs TokenIdentifier confusion',
+      description: 'Complete guide clarifying KlvTokenPayment vs KdaTokenPayment vs TokenIdentifier confusion',
       tags: ['critical', 'tokens', 'klv', 'kda', 'payment', 'common-confusion', 'must-read'],
       language: 'rust',
       relevanceScore: 1.0,
@@ -5299,8 +5293,7 @@ if payment.token_identifier == TokenIdentifier::klv() {
 \`\`\``,
     metadata: {
       title: 'Correct KLV Token Identifier Usage',
-      description:
-        'How to properly use TokenIdentifier for KLV and avoid common KlvTokenIdentifier error',
+      description: 'How to properly use TokenIdentifier for KLV and avoid common KlvTokenIdentifier error',
       tags: ['klv', 'token-identifier', 'balance', 'common-error'],
       language: 'rust',
       relevanceScore: 1.0,
@@ -5715,17 +5708,8 @@ fn calculate_with_fee(&self, amount: &BigUint) -> BigUint {
 | Can't subtract \`&BigUint\` from \`BigUint\` | Use references: \`&balance - &amount\` |`,
     metadata: {
       title: 'BigUint Type Handling and Comparison Patterns',
-      description:
-        'Complete guide to avoiding type mismatch errors with BigUint in Klever smart contracts',
-      tags: [
-        'critical',
-        'biguint',
-        'types',
-        'comparison',
-        'arithmetic',
-        'common-error',
-        'ownership',
-      ],
+      description: 'Complete guide to avoiding type mismatch errors with BigUint in Klever smart contracts',
+      tags: ['critical', 'biguint', 'types', 'comparison', 'arithmetic', 'common-error', 'ownership'],
       language: 'rust',
       relevanceScore: 1.0,
       contractType: 'any',
@@ -6308,19 +6292,8 @@ fn bad_random_v2(&self) -> u8 {
 \`\`\``,
     metadata: {
       title: 'Secure Random Number Generation - Complete Guide',
-      description:
-        'Comprehensive guide explaining how RandomnessSource works internally with blockchain entropy sources, plus best practices and common patterns',
-      tags: [
-        'random',
-        'security',
-        'best-practice',
-        'randomness',
-        'validator-signature',
-        'randomness-source',
-        'entropy',
-        'blockchain',
-        'gaming',
-      ],
+      description: 'Comprehensive guide explaining how RandomnessSource works internally with blockchain entropy sources, plus best practices and common patterns',
+      tags: ['random', 'security', 'best-practice', 'randomness', 'validator-signature', 'randomness-source', 'entropy', 'blockchain', 'gaming'],
       language: 'rust',
       relevanceScore: 1.0,
       contractType: 'any',
@@ -8220,8 +8193,7 @@ fi
 \`\`\``,
     metadata: {
       title: 'Understanding Contract Query Responses',
-      description:
-        'How to properly decode empty values and response data from Klever contract queries',
+      description: 'How to properly decode empty values and response data from Klever contract queries',
       tags: ['query', 'api', 'response-parsing', 'debugging'],
       language: 'bash',
       relevanceScore: 0.9,
@@ -8442,8 +8414,7 @@ For NFTs and SFTs with nonces, use the format: \`KDA_ID/NONCE=AMOUNT\`
 - Example: \`--values "MYSFT-5678/100=5"\` for 5 SFTs with nonce 100\`\`\``,
     metadata: {
       title: 'Koperator Payment Flags - Critical Information',
-      description:
-        'Correct usage of payment flags in koperator - avoiding common --klv and --payment errors',
+      description: 'Correct usage of payment flags in koperator - avoiding common --klv and --payment errors',
       tags: ['koperator', 'payments', 'klv', 'kda', 'common-error', 'critical'],
       language: 'bash',
       relevanceScore: 1.0,
