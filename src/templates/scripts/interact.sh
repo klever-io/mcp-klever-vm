@@ -291,7 +291,7 @@ main() {
                 fi
                 ;;
             6)
-                echo -e "\n${BOLD}${MAGENTA}=== Contract Information ===${RESET}"
+                echo -e "\n${BOLD}${CYAN}=== Contract Information ===${RESET}"
                 echo ""
                 echo -e "${CYAN}Current Configuration:${RESET}"
                 get_contract_address || true

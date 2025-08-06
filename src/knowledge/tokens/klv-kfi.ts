@@ -20,7 +20,7 @@ When calling payable endpoints, you MUST use \`--values\` (plural) not \`--value
 koperator contract invoke \\
   --contract-address $CONTRACT \\
   --method "deposit" \\
-  --value "1000000"  # ❌ WRONG! Will be ignored!
+  --value "1000000"  # ❌ WRONG! Will throw an error
 \`\`\`
 
 ### ✅ CORRECT
