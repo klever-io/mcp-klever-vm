@@ -281,10 +281,10 @@ name = "my_contract"
 crate-type = ["cdylib"]
 
 [dependencies]
-klever-sc = { version = "0.50.6" }
+klever-sc = { version = "0.45.0" }
 
 [dev-dependencies]
-klever-sc-scenario = { version = "0.50.6" }
+klever-sc-scenario = { version = "0.45.0" }
 \`\`\`
 
 ### 6. Build and Test
@@ -451,16 +451,16 @@ crate-type = ["cdylib"]
 path = "src/lib.rs"
 
 [dependencies]
-klever-sc = { version = "0.50.6" }
+klever-sc = { version = "0.45.0" }
 
 [dev-dependencies]
-klever-sc-scenario = { version = "0.50.6" }
+klever-sc-scenario = { version = "0.45.0" }
 \`\`\`
 
 ### With Additional Dependencies
 \`\`\`toml
 [dependencies]
-klever-sc = { version = "0.50.6" }
+klever-sc = { version = "0.45.0" }
 
 # Optional: For advanced math operations
 num-bigint = "0.4"
@@ -470,7 +470,7 @@ num-traits = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
-klever-sc-scenario = { version = "0.50.6" }
+klever-sc-scenario = { version = "0.45.0" }
 
 # Optional: For testing utilities
 hex = "0.4"
