@@ -245,6 +245,7 @@ require!(self.check_invariant(), "Contract state inconsistency detected");
 
 ### Include Context When Helpful
 \`\`\`rust
+#[payable("KLV")]  // Required to receive KLV payments
 #[endpoint]
 fn place_bet(&self, number: u8) {
     require!(

@@ -122,37 +122,55 @@ require!(
 
 ## Payment API
 
+### IMPORTANT: Payable Annotation Required
+To receive payments, endpoints MUST have the \`#[payable]\` annotation:
+- \`#[payable("*")]\` - Accept any token (KLV, KFI, or any KDA token)
+- \`#[payable("KLV")]\` - Accept only KLV
+- \`#[payable("MYTOKEN-A1B2")]\` - Accept only specific token
+
 ### KLV Payments
 \`\`\`rust
-// Get KLV payment amount
-let klv_amount = self.call_value().klv_value();
-
-// Check if any KLV was sent
-let has_klv_payment = *klv_amount > 0;
+#[payable("KLV")]  // Required to receive KLV
+#[endpoint]
+fn deposit(&self) {
+    // Get KLV payment amount
+    let klv_amount = self.call_value().klv_value();
+    
+    // Check if any KLV was sent
+    let has_klv_payment = *klv_amount > 0;
+}
 \`\`\`
 
 ### KDA Token Payments
 \`\`\`rust
-// Get all KDA payments
-let kda_payments = self.call_value().all_kda_transfers();
-
-// Get single KDA payment
-let payment = self.call_value().single_kda();
-
-// Access payment properties
-let token_id = &payment.token_identifier;
-let nonce = payment.token_nonce;
-let amount = &payment.amount;
+#[payable("*")]  // Required to receive KDA tokens
+#[endpoint]
+fn deposit_token(&self) {
+    // Get all KDA payments
+    let kda_payments = self.call_value().all_kda_transfers();
+    
+    // Get single KDA payment
+    let payment = self.call_value().single_kda();
+    
+    // Access payment properties
+    let token_id = &payment.token_identifier;
+    let nonce = payment.token_nonce;
+    let amount = &payment.amount;
+}
 \`\`\`
 
 ### Multi-Token Payments
 \`\`\`rust
-// Get all payments (KLV + KDA)
-let klv_amount = self.call_value().klv_value();
-let kda_payments = self.call_value().all_kda_transfers();
-
-// Check total payment count
-let payment_count = if *klv_amount > 0 { 1 } else { 0 } + kda_payments.len();
+#[payable("*")]  // Accept any token
+#[endpoint]
+fn deposit_multi(&self) {
+    // Get all payments (KLV + KDA)
+    let klv_amount = self.call_value().klv_value();
+    let kda_payments = self.call_value().all_kda_transfers();
+    
+    // Check total payment count
+    let payment_count = if *klv_amount > 0 { 1 } else { 0 } + kda_payments.len();
+}
 \`\`\`
 
 ## Send API
@@ -334,7 +352,7 @@ pub trait TokenContract {
     // Constant for decimal conversion
     const DECIMALS: u64 = 1_000_000; // 10^6 for 6 decimals
 
-    #[payable("KLV")]
+    #[payable("KLV")]  // REQUIRED to receive KLV payments
     #[endpoint]
     fn deposit(&self) {
         let payment = self.call_value().klv_value();

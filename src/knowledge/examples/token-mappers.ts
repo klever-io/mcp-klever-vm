@@ -49,6 +49,7 @@ fn mint(&self, amount: BigUint) {
     self.send().direct_payment(&caller, &mint_result);
 }
 
+#[payable("*")]  // Required to receive KDA tokens
 #[endpoint]
 fn burn(&self, amount: BigUint) {
     let payment = self.call_value().single_kda();
