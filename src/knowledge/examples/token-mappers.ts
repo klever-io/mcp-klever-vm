@@ -41,14 +41,12 @@ fn fungible_token_mapper(&self) -> FungibleTokenMapper;
 \`\`\`rust
 #[endpoint]
 fn mint(&self, amount: BigUint) {
-    self.require_roles(&[KdaRole::Mint]);
-    
-    let token_id = self.fungible_token_mapper().get_token_id();
-    let minted = self.fungible_token_mapper().mint(amount);
-    
+    // Mint tokens using the mapper
+    let mint_result = self.fungible_token_mapper().mint(&amount);
+
     // Send to caller
     let caller = self.blockchain().get_caller();
-    self.send().direct_kda(&caller, &token_id, 0, &minted);
+    self.send().direct_payment(&caller, &mint_result);
 }
 
 #[endpoint]
