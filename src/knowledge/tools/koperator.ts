@@ -512,21 +512,58 @@ sc invoke klv1abc... transfer
 When you need to read data from smart contract view endpoints, use the Klever API directly.
 View endpoints are read-only and don't require transactions.
 
-**API Endpoint Format:**
+**API Endpoint:**
 \`\`\`
-GET https://api.{network}.klever.org/contract/{contractAddress}/call/{endpoint}
+POST https://api.{network}.klever.org/v1.0/sc/query
 \`\`\`
+
+**Important:** Arguments must be base64-encoded!
+
+**Argument Encoding Rules:**
+- **Klever Address**: Decode bech32 to 32-byte hex, then base64
+- **Numbers**: Convert to 8-byte big-endian hex, then base64
+- **Strings**: Direct base64 encoding
+- **Hex (0x...)**: Remove 0x prefix, decode hex to bytes, then base64
 
 **Example - Query a view endpoint:**
 \`\`\`bash
-# Query getBalance view endpoint via API
-curl "https://api.testnet.klever.org/contract/klv1contract_address/call/getBalance?args=Address:klv1user_address"
+# Query getTotalSupply (no arguments)
+curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \
+    -H 'Content-Type: application/json' \
+    --data-raw '{
+        "ScAddress": "klv1contract_address_here",
+        "FuncName": "getTotalSupply",
+        "Arguments": []
+    }'
 
-# Query getTotalSupply view endpoint
-curl "https://api.testnet.klever.org/contract/klv1contract_address/call/getTotalSupply"
+# Query getBalance with address argument
+# Example: klv1qqq...qqpgm89z (zero address) = 32 zero bytes = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \
+    -H 'Content-Type: application/json' \
+    --data-raw '{
+        "ScAddress": "klv1contract_address_here",
+        "FuncName": "getBalance",
+        "Arguments": ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="]
+    }'
 
-# Query with multiple arguments
-curl "https://api.testnet.klever.org/contract/klv1contract_address/call/getUserInfo?args=Address:klv1user&args=u32:42"
+# Query with multiple arguments (address + number)
+# Address: 32 bytes base64
+# Number 42: 0x000000000000002a (8 bytes big-endian) = "AAAAAAAAACo="
+curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \
+    -H 'Content-Type: application/json' \
+    --data-raw '{
+        "ScAddress": "klv1contract_address_here",
+        "FuncName": "getUserInfo",
+        "Arguments": ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "AAAAAAAAACo="]
+    }'
+
+# Helper examples:
+# Encode number 42: printf "%016x" 42 | xxd -r -p | base64
+# Result: "AAAAAAAAACo="
+# Encode string "hello": echo -n "hello" | base64
+# Result: "aGVsbG8="
+# Encode hex 0xdeadbeef: echo -n "deadbeef" | xxd -r -p | base64
+# Result: "3q2+7w=="
 \`\`\`
 
 ### Use Koperator for Transactional Operations (Write Operations)
