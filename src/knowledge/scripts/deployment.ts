@@ -505,7 +505,7 @@ overflow-checks = true
 ~/klever-sdk/ksc all build
 
 # Alternative: Direct cargo build
-cargo build --release --target wasm32-unknown-unknown
+cargo build --release --target wasm32v1-none
 \`\`\`
 
 ### Clean Build
@@ -550,7 +550,7 @@ crate-type = ["cdylib"]
 ### Issue: WASM target not installed
 \`\`\`bash
 # Install WASM target
-rustup target add wasm32-unknown-unknown
+rustup target add wasm32v1-none
 \`\`\`
 
 ### Issue: Large WASM size
