@@ -421,7 +421,7 @@ fn complex_access(&self) {
 
     // Owner OR admin can proceed
     require!(
-        caller == self.blockchain().get_owner() || self.is_admin(caller),
+        caller == self.blockchain().get_owner_address() || self.is_admin(caller),
         "Only owner or admin can call"
     );
 }

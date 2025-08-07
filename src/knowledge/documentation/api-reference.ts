@@ -48,7 +48,7 @@ export const apiReferenceKnowledge: KnowledgeEntry[] = [
 let caller = self.blockchain().get_caller();
 
 // Get contract owner
-let owner = self.blockchain().get_owner();
+let owner = self.blockchain().get_owner_address();
 
 // Get current contract address  
 let contract_addr = self.blockchain().get_sc_address();
@@ -89,8 +89,15 @@ let gas_left = self.blockchain().get_gas_left();
 // Check if address is smart contract
 let is_contract = self.blockchain().is_smart_contract(&address);
 
-// Check if user is contract owner
-let is_owner = self.blockchain().is_smart_contract(&address);
+// Check if caller is contract owner
+let caller = self.blockchain().get_caller();
+let is_owner = caller == self.blockchain().get_owner_address();
+
+// Common pattern: require owner
+require!(
+    self.blockchain().get_caller() == self.blockchain().get_owner_address(),
+    "Only owner can perform this action"
+);
 \`\`\`
 
 ## Payment API

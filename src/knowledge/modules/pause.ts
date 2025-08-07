@@ -47,7 +47,7 @@ pub trait MyContract: pause::PauseModule {
     fn emergency_withdraw(&self) {
         // No pause check - owner can always withdraw
         let contract_balance = self.blockchain().get_balance(&self.blockchain().get_sc_address());
-        let owner = self.blockchain().get_owner();
+        let owner = self.blockchain().get_owner_address();
         self.send().direct_klv(&owner, &contract_balance);
     }
 
