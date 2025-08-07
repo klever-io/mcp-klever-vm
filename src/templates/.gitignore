@@ -1,0 +1,80 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+*.coverage
+.coverage
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Backup files
+*.backup
+*.bak
+
+# Node (if using any JS tools)
+node_modules/
+.npm/
+
+# Python (if using any Python tools)
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+
+# Documentation builds
+docs/_build/
+docs/.doctrees/
+
+# Contract deployment history
+deployment-history/
+*.deployment.json
+output/history.json
+
+# Local configuration
+config.local.json
+settings.local.json
+
+# Keys and secrets (NEVER commit these)
+*.key
+*.pem
+*.pfx
+*.p12
+keystore/
+secrets/
+
+# Klever specific
+output/
+wasm/
+*.wasm

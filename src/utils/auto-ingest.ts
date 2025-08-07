@@ -1,6 +1,7 @@
 import { ContextService } from '../context/service.js';
 import { ContractIngester } from './ingest.js';
-import { allKleverContexts } from './klever-knowledge.js';
+import { kleverKnowledge } from '../knowledge/index.js';
+import { ContextPayload } from '../types/index.js';
 
 export async function autoIngestKnowledge(contextService: ContextService): Promise<void> {
   console.error('🔄 Auto-ingesting Klever knowledge base...');
@@ -9,6 +10,14 @@ export async function autoIngestKnowledge(contextService: ContextService): Promi
 
   // First, ingest common patterns
   await ingester.ingestCommonPatterns();
+
+  // Convert new knowledge format to ContextPayload format
+  const allKleverContexts: ContextPayload[] = kleverKnowledge.map(entry => ({
+    type: entry.type,
+    content: entry.content,
+    metadata: entry.metadata,
+    relatedContextIds: entry.relatedContextIds || [],
+  }));
 
   // Then, ingest all the comprehensive knowledge
   let successCount = 0;
