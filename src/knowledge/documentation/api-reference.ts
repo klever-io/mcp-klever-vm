@@ -53,11 +53,31 @@ let owner = self.blockchain().get_owner_address();
 // Get current contract address  
 let contract_addr = self.blockchain().get_sc_address();
 
-// Get account balance
-let balance = self.blockchain().get_balance(&address);
+// Get contract's own KLV balance
+let klv_balance = self.blockchain().get_sc_balance(
+    &TokenIdentifier::klv(),
+    0
+);
 
-// Get specific token balance
-let token_balance = self.blockchain().get_sc_balance(&token_id, nonce);
+// Get contract's own KDA token balance
+let token_balance = self.blockchain().get_sc_balance(
+    &token_identifier,
+    nonce
+);
+
+// Get KDA token balance of any address
+let address_token_balance = self.blockchain().get_kda_balance(
+    &address,
+    &token_identifier,
+    nonce
+);
+
+// Get KLV balance of any address
+let address_klv_balance = self.blockchain().get_kda_balance(
+    &address,
+    &TokenIdentifier::klv(),
+    0
+);
 \`\`\`
 
 ### Block Information
