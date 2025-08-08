@@ -58,7 +58,15 @@ export const koperatorKnowledge: KnowledgeEntry[] = [
 - \`--values\`: For sending tokens (KLV, KFI, or KDA tokens)
 - \`--await\`: Wait for transaction confirmation
 - \`--sign\`: Sign the transaction
-- \`--result-only\`: Show only the transaction result (clean JSON output without logs)`,
+- \`--result-only\`: Show only the transaction result (clean JSON output without logs)
+
+## 🚨 CRITICAL for Unattended Scripts:
+When using koperator in automated/unattended scripts, you MUST use these three flags together:
+- \`--sign\`: Signs and broadcasts the transaction without user interaction
+- \`--await\`: Waits for the transaction to be included in a block
+- \`--result-only\`: Returns only clean JSON result without extra output
+
+Without these flags, scripts will hang waiting for user input or produce unparseable output!`,
     {
       title: 'CRITICAL: Correct Koperator Syntax - READ THIS FIRST',
       description: 'The ONLY correct way to use koperator sc invoke - NEVER use --contract, --function, --value. Always include --result-only for clean output',
@@ -823,6 +831,186 @@ Always include both --payable and --payableBySC if your contract handles any pay
       tags: ['koperator', 'deployment', 'payable', 'payableBySC', 'flags', 'contract-creation'],
       language: 'bash',
       relevanceScore: 0.95,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
+
+  // Koperator for Unattended Scripts
+  createKnowledgeEntry(
+    'best_practice',
+    `# Using Koperator in Unattended/Automated Scripts
+
+## 🚨 CRITICAL: Three Required Flags for Automation
+
+When using koperator in unattended scripts (CI/CD, cron jobs, automated deployments), you MUST use these three flags together:
+
+### Required Flags:
+1. \`--sign\` - Signs and broadcasts the transaction without user interaction
+2. \`--await\` - Waits for the transaction to be included in a block before returning
+3. \`--result-only\` - Outputs only the transaction result in clean JSON format
+
+## Why These Flags Are Essential:
+
+### Without --sign:
+- Script will hang waiting for user to confirm transaction
+- Terminal prompt: "Do you want to sign? (y/n)"
+- Script never continues
+
+### Without --await:
+- Script continues immediately after broadcasting
+- Transaction might fail but script won't know
+- No way to verify transaction success
+
+### Without --result-only:
+- Output includes progress messages, ASCII art, logs
+- JSON result is mixed with text output
+- Cannot parse result programmatically
+
+## Correct Usage in Scripts:
+
+### ✅ CORRECT - Automated Deployment Script
+\`\`\`bash
+#!/bin/bash
+set -e  # Exit on error
+
+# Deploy contract and capture result
+RESULT=$(KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc create \\
+    --wasm="output/contract.wasm" \\
+    --upgradeable --readable --payable --payableBySC \\
+    --sign \\        # No user interaction
+    --await \\       # Wait for confirmation
+    --result-only)   # Clean JSON output
+
+# Parse contract address from result
+CONTRACT_ADDRESS=$(echo "$RESULT" | jq -r '.contractAddress')
+echo "Deployed to: $CONTRACT_ADDRESS"
+\`\`\`
+
+### ✅ CORRECT - CI/CD Pipeline
+\`\`\`yaml
+# .github/workflows/deploy.yml
+- name: Deploy Smart Contract
+  run: |
+    ~/klever-sdk/koperator \\
+      --key-file="\${KEY_FILE}" \\
+      sc create \\
+      --wasm="output/contract.wasm" \\
+      --upgradeable --readable --payable \\
+      --sign --await --result-only > deployment.json
+    
+    # Extract and save contract address
+    CONTRACT_ADDR=$(jq -r '.contractAddress' deployment.json)
+    echo "CONTRACT_ADDRESS=\${CONTRACT_ADDR}" >> $GITHUB_ENV
+\`\`\`
+
+### ✅ CORRECT - Automated Testing Script
+\`\`\`bash
+#!/bin/bash
+
+# Function to invoke contract and check result
+invoke_and_verify() {
+    local function_name=$1
+    local expected_status=$2
+    
+    RESULT=$(~/klever-sdk/koperator \\
+        --key-file="$HOME/klever-sdk/walletKey.pem" \\
+        sc invoke "$CONTRACT_ADDRESS" "$function_name" \\
+        --sign --await --result-only)
+    
+    STATUS=$(echo "$RESULT" | jq -r '.status')
+    
+    if [ "$STATUS" != "$expected_status" ]; then
+        echo "Error: Expected $expected_status, got $STATUS"
+        echo "Full result: $RESULT"
+        exit 1
+    fi
+}
+
+# Run tests
+invoke_and_verify "initialize" "success"
+invoke_and_verify "deposit" "success"
+\`\`\`
+
+### ❌ WRONG - Will Hang in Scripts
+\`\`\`bash
+# WRONG - Missing --sign, will wait for user input
+~/klever-sdk/koperator sc invoke CONTRACT transfer \\
+    --args "Address:klv1..." \\
+    --await --result-only
+
+# WRONG - Missing --await, won't know if transaction succeeded
+~/klever-sdk/koperator sc invoke CONTRACT transfer \\
+    --args "Address:klv1..." \\
+    --sign --result-only
+
+# WRONG - Missing --result-only, output not parseable
+~/klever-sdk/koperator sc invoke CONTRACT transfer \\
+    --args "Address:klv1..." \\
+    --sign --await
+\`\`\`
+
+## Parsing the JSON Result:
+
+### With --result-only, you get clean JSON:
+\`\`\`json
+{
+  "txHash": "abc123...",
+  "status": "success",
+  "contractAddress": "klv1...",
+  "gasUsed": 5000000,
+  "returnData": ["0x01"],
+  "logs": []
+}
+\`\`\`
+
+### Parse with jq:
+\`\`\`bash
+# Get transaction hash
+TX_HASH=$(echo "$RESULT" | jq -r '.txHash')
+
+# Get status
+STATUS=$(echo "$RESULT" | jq -r '.status')
+
+# Check if successful
+if [ "$(echo "$RESULT" | jq -r '.status')" = "success" ]; then
+    echo "Transaction successful"
+else
+    echo "Transaction failed"
+    exit 1
+fi
+\`\`\`
+
+## Environment Variables for Scripts:
+
+\`\`\`bash
+#!/bin/bash
+
+# Set environment for script
+export KLEVER_NODE="https://node.testnet.klever.org"
+export KEY_FILE="$HOME/klever-sdk/walletKey.pem"
+
+# Now all koperator commands use these settings
+~/klever-sdk/koperator \\
+    --key-file="$KEY_FILE" \\
+    sc invoke CONTRACT_ADDRESS function_name \\
+    --sign --await --result-only
+\`\`\`
+
+## Summary:
+- **Always use**: \`--sign --await --result-only\` for scripts
+- **Never forget**: All three flags are required for automation
+- **Parse output**: Use jq or similar to extract data from JSON result
+- **Set -e**: Use \`set -e\` in bash scripts to exit on errors`,
+    {
+      title: 'Using Koperator in Unattended/Automated Scripts',
+      description: 'CRITICAL: How to use koperator in CI/CD, automated scripts, and unattended environments',
+      tags: ['koperator', 'automation', 'scripts', 'ci-cd', 'unattended', 'sign', 'await', 'result-only', 'critical'],
+      language: 'bash',
+      relevanceScore: 1.0,
       contractType: 'any',
       author: 'klever-mcp',
     }
