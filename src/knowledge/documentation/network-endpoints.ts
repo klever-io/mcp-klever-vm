@@ -1,272 +1,190 @@
 import { createKnowledgeEntry, KnowledgeEntry } from '../types.js';
 
 /**
- * Network endpoints documentation for Klever blockchain
+ * Comprehensive network endpoints and API documentation for Klever blockchain
  */
 
 export const networkEndpointsKnowledge: KnowledgeEntry[] = [
-  // Klever Network Endpoints Reference
+  // Main Network Endpoints Reference
   createKnowledgeEntry(
     'documentation',
     `# Klever Network Endpoints Reference
 
-## Node Endpoints (for Koperator)
-Node endpoints are used by koperator for transaction broadcasting and blockchain interaction.
+## Quick Network URLs
 
 ### Mainnet
-\`\`\`bash
-https://node.mainnet.klever.org
-\`\`\`
+- **Node**: https://node.mainnet.klever.org
+- **API**: https://api.mainnet.klever.org
+- **Swagger Node**: https://node.mainnet.klever.org/swagger/index.html
+- **Swagger API**: https://api.mainnet.klever.org/swagger/index.html
 
 ### Testnet
-\`\`\`bash
-https://node.testnet.klever.org
-\`\`\`
+- **Node**: https://node.testnet.klever.org
+- **API**: https://api.testnet.klever.org
+- **Swagger Node**: https://node.testnet.klever.org/swagger/index.html
+- **Swagger API**: https://api.testnet.klever.org/swagger/index.html
 
 ### Devnet
-\`\`\`bash
-https://node.devnet.klever.org
-\`\`\`
+- **Node**: https://node.devnet.klever.org
+- **API**: https://api.devnet.klever.org
+- **Swagger Node**: https://node.devnet.klever.org/swagger/index.html
+- **Swagger API**: https://api.devnet.klever.org/swagger/index.html
 
 ### Local Development
-\`\`\`bash
-http://localhost:8080  # Default local node port
-\`\`\`
-
-## API Endpoints (for Queries and Data)
-API endpoints provide REST APIs for querying blockchain data and smart contracts.
-
-### Mainnet API
-\`\`\`bash
-https://api.mainnet.klever.org
-\`\`\`
-
-### Testnet API
-\`\`\`bash
-https://api.testnet.klever.org
-\`\`\`
-
-### Devnet API
-\`\`\`bash
-https://api.devnet.klever.org
-\`\`\`
-
-### Local API
-\`\`\`bash
-http://localhost:9090  # Default klever-proxy port
-\`\`\`
-
-## Usage Examples
-
-### Setting Node Endpoint for Koperator
-
-#### Environment Variable (Recommended)
-\`\`\`bash
-# Set for session
-export KLEVER_NODE="https://node.testnet.klever.org"
-
-# Use in koperator commands
-~/klever-sdk/koperator \\
-    --key-file="walletKey.pem" \\
-    sc create --wasm="contract.wasm"
-\`\`\`
-
-#### Inline with Command
-\`\`\`bash
-KLEVER_NODE=https://node.testnet.klever.org \\
-    ~/klever-sdk/koperator \\
-    --key-file="walletKey.pem" \\
-    sc invoke CONTRACT_ADDRESS FUNCTION
-\`\`\`
-
-#### Using --node Parameter
-\`\`\`bash
-~/klever-sdk/koperator \\
-    --node="https://node.testnet.klever.org" \\
-    --key-file="walletKey.pem" \\
-    sc create --wasm="contract.wasm"
-\`\`\`
-
-### Using API Endpoints
-
-#### Smart Contract Query
-\`\`\`bash
-curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \\
-    -H 'Content-Type: application/json' \\
-    --data-raw '{
-        "ScAddress": "klv1contract...",
-        "FuncName": "getValue",
-        "Arguments": []
-    }'
-\`\`\`
-
-#### Get Account Info
-\`\`\`bash
-curl -s 'https://api.testnet.klever.org/v1.0/accounts/klv1address...'
-\`\`\`
-
-#### Get Transaction
-\`\`\`bash
-curl -s 'https://api.testnet.klever.org/v1.0/transactions/TX_HASH'
-\`\`\`
-
-#### Get Block
-\`\`\`bash
-curl -s 'https://api.testnet.klever.org/v1.0/blocks/BLOCK_NUMBER'
-\`\`\`
-
-## Node vs API: When to Use Each
-
-### Use Node Endpoints for:
-- Deploying smart contracts (koperator sc create)
-- Invoking contract functions (koperator sc invoke)
-- Upgrading contracts (koperator sc upgrade)
-- Sending transactions
-- Account operations via koperator
-
-### Use API Endpoints for:
-- Querying smart contract views (read-only)
-- Getting account balances and info
-- Fetching transaction details
-- Retrieving block information
-- Exploring blockchain data
-- Building dApps and explorers
-
-## Important Notes
-
-1. **Node endpoints** are required for koperator to broadcast transactions
-2. **API endpoints** provide REST interfaces for data queries
-3. For local development, both node and API typically run on the same port (8080)
-4. Always use HTTPS for production (mainnet/testnet)
-5. The API has rate limiting - consider this for production applications
-
-## Common Endpoints
-
-### Node Status Check
-\`\`\`bash
-# Check if node is running
-curl -s "https://node.testnet.klever.org/node/status"
-\`\`\`
-
-### API Health Check
-\`\`\`bash
-# Check API health
-curl -s "https://api.testnet.klever.org/v1.0/health"
-\`\`\`
-
-## Swagger Documentation
-
-### Node Swagger
-Direct blockchain node API documentation:
-- Mainnet: https://node.mainnet.klever.org/swagger/index.html
-- Testnet: https://node.testnet.klever.org/swagger/index.html
-- Devnet: https://node.devnet.klever.org/swagger/index.html
-
-### API Swagger
-Indexed data API documentation:
-- Mainnet: https://api.mainnet.klever.org/swagger/index.html
-- Testnet: https://api.testnet.klever.org/swagger/index.html
-- Devnet: https://api.devnet.klever.org/swagger/index.html
+- **Node**: http://localhost:8080 (blockchain node)
+- **API**: http://localhost:9090 (klever-proxy)
+- **ElasticSearch**: http://localhost:9200
+- **Kibana**: http://localhost:5601 (optional)
 
 ## Architecture Overview
 
-### Node Endpoint
-- Direct connection to blockchain node
-- Handles transaction broadcasting
-- Provides real-time blockchain state
-- Used by koperator for all write operations
-
-### API Endpoint (Klever Proxy)
-- Powered by [klever-proxy-go](https://github.com/klever-io/klever-proxy-go)
-- Connects to ElasticSearch database
-- Provides indexed and searchable blockchain data
-- Optimized for read operations and queries
-
-### Indexer Node Configuration
-The API data comes from an indexer node with ElasticSearch connector:
-
-\`\`\`yaml
-# external.yaml configuration for indexer node
-elasticSearchConnector:
-  enabled: true
-  indexerCacheSize: 100
-  url: http://localhost:9200
-  useKibana: true
-  username:
-  password:
-  enabledIndexes:
-    - transactions      # Transaction history
-    - blocks           # Block data
-    - accounts         # Account information
-    - accountshistory  # Account history
-    - assets           # KDA tokens and NFTs
-    - proposals        # Governance proposals
-    - marketplaces     # NFT marketplaces
-    - network-parameters # Network configuration
-    - rating           # Validator ratings
-    - epoch            # Epoch information
-    - accountskda      # Account KDA holdings
-    - peersaccounts    # Peer accounts
-    - marketplaceorders # Marketplace orders
-    - itos             # Initial Token Offerings
-    - kdapools         # KDA liquidity pools
-    - logs             # Event logs
-    - scdeploys        # Smart contract deployments
-\`\`\`
-
-## Data Flow Architecture
-
+### Data Flow
 \`\`\`
 Blockchain → Indexer Node → ElasticSearch → Klever Proxy API → Client
                 ↓
          (external.yaml)
 \`\`\`
 
-1. **Blockchain**: Core Klever blockchain network
-2. **Indexer Node**: Regular node with ElasticSearch connector enabled
-3. **ElasticSearch**: Stores indexed blockchain data
-4. **Klever Proxy**: REST API server that queries ElasticSearch
-5. **Client**: Your application or query tool
-
-## Why Two Different Endpoints?
-
 ### Node Endpoint
-- **Purpose**: Direct blockchain interaction
-- **Use Case**: Sending transactions, deploying contracts
-- **Data**: Real-time, non-indexed
-- **Performance**: Lower latency for writes
+- Direct blockchain connection
+- Real-time data
+- Transaction broadcasting
+- Used by koperator
 
-### API Endpoint (via Proxy)
-- **Purpose**: Query indexed data
-- **Use Case**: Search, analytics, historical data
-- **Data**: Indexed, searchable, aggregated
-- **Performance**: Optimized for complex queries
+### API Endpoint (Klever Proxy)
+- Powered by [klever-proxy-go](https://github.com/klever-io/klever-proxy-go)
+- Indexed data from ElasticSearch
+- Historical queries
+- Search capabilities
 
-## Example Use Cases
+## When to Use Which Endpoint
 
-### When to Use Node Endpoint
+### Use Node Endpoints for:
+✅ Transaction broadcasting
+✅ Real-time blockchain state
+✅ Contract deployment
+✅ Direct VM queries
+✅ Latest block info
+
+### Use API Proxy for:
+✅ Transaction history
+✅ Account history
+✅ Asset searches
+✅ Complex queries
+✅ Indexed data`,
+    {
+      title: 'Klever Network Endpoints Overview',
+      description: 'Main reference for Klever network endpoints and architecture',
+      tags: ['endpoints', 'network', 'api', 'node', 'architecture', 'documentation'],
+      language: 'markdown',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
+
+  // Complete Endpoint Reference
+  createKnowledgeEntry(
+    'documentation',
+    `# Complete Klever Endpoint Reference
+
+## Node Direct Endpoints
+
+### Account Operations
 \`\`\`bash
-# Deploy contract - needs direct node access
-KLEVER_NODE=https://node.testnet.klever.org \\
-    ~/klever-sdk/koperator sc create --wasm="contract.wasm"
+GET /address/{address}                        # Full account details
+GET /address/{address}/balance                # KLV balance
+GET /address/{address}/nonce                  # Transaction nonce
+GET /address/{address}/kda                    # All KDA tokens
+GET /address/{address}/kda/{tokenID}          # Specific token balance
+GET /address/{address}/kda/{tokenID}/nonce/{nonce}  # NFT details
+GET /address/{address}/code                   # Contract bytecode (if SC)
 \`\`\`
 
-### When to Use API Endpoint
+### Transaction Operations
 \`\`\`bash
-# Search transactions - uses indexed data
-curl "https://api.testnet.klever.org/v1.0/transactions?sender=klv1..."
+POST /transaction/send         # Build unsigned transaction (returns proto + hash)
+POST /transactions/broadcast   # Broadcast signed transaction
+POST /transaction/decode       # Decode proto to human-readable JSON
+POST /transaction/cost         # Calculate transaction cost
+GET /transaction/{hash}        # Get transaction by hash
+\`\`\`
 
-# Get account history - uses indexed data
-curl "https://api.testnet.klever.org/v1.0/accounts/klv1.../history"
+### Block Operations
+\`\`\`bash
+GET /block/by-nonce/{nonce}   # Get block by number
+GET /block/by-hash/{hash}     # Get block by hash
+\`\`\`
 
-# Query smart contract - uses indexed data
-curl -X POST "https://api.testnet.klever.org/v1.0/sc/query" \\
-    -d '{"ScAddress":"klv1...","FuncName":"getValue","Arguments":[]}'
+### Smart Contract VM
+\`\`\`bash
+POST /vm/query                # Query contract view directly
+# Body: {"scAddress": "klv1...", "funcName": "getValue", "args": ["base64..."]}
+\`\`\`
+
+### Network Information
+\`\`\`bash
+GET /node/status              # Node health and sync status
+GET /network/config           # Network configuration
+GET /network/economics        # Economic parameters
+GET /network/parameters       # Network parameters
+GET /validators               # All validators
+GET /validators/{address}     # Specific validator
+\`\`\`
+
+## API Proxy Endpoints (Port 9090)
+
+### Account Endpoints
+\`\`\`bash
+GET /v1.0/address/{address}                   # Account with formatted data
+GET /v1.0/address/{address}/overview          # Account overview
+GET /v1.0/address/{address}/transactions      # Transaction list
+GET /v1.0/address/list                        # List addresses (with filters)
+\`\`\`
+
+### Transaction Endpoints
+\`\`\`bash
+GET /v1.0/transaction/{hash}                  # Transaction details
+GET /v1.0/transaction/list                    # List transactions with filters
+POST /transaction/decode                      # Decode transaction proto
+GET /transaction/statistics                   # Transaction statistics
+\`\`\`
+
+### Smart Contract Endpoints
+\`\`\`bash
+POST /v1.0/sc/query                          # Query contract (indexed)
+# Body: {"ScAddress": "klv1...", "FuncName": "getValue", "Arguments": ["base64..."]}
+GET /v1.0/sc/list                            # List deployed contracts
+GET /v1.0/sc/{address}                       # Contract details
+GET /v1.0/sc/invokes/{scAddress}             # Contract invocation history
+\`\`\`
+
+### Asset Endpoints
+\`\`\`bash
+GET /v1.0/assets                             # All assets
+GET /v1.0/assets/{assetID}                   # Asset details
+GET /v1.0/assets/{assetID}/holders           # Token holders
+GET /v1.0/assets/{collection}/nfts           # NFT collection
+\`\`\`
+
+### Block Endpoints
+\`\`\`bash
+GET /v1.0/block/list                         # List blocks with pagination
+GET /v1.0/block/by-nonce/{nonce}             # Block by number
+GET /v1.0/block/by-hash/{hash}               # Block by hash
+\`\`\`
+
+### Network Statistics
+\`\`\`bash
+GET /v1.0/network/stats                      # Network statistics
+GET /v1.0/epoch/current                      # Current epoch
+GET /v1.0/validators                         # Validator list
+GET /v1.0/health                            # API health check
 \`\`\``,
     {
-      title: 'Klever Network Endpoints Reference',
-      description: 'Complete reference for Klever node and API endpoints across all networks',
-      tags: ['endpoints', 'network', 'api', 'node', 'mainnet', 'testnet', 'devnet', 'documentation'],
+      title: 'Complete Endpoint Reference',
+      description: 'Comprehensive listing of all Klever node and API endpoints',
+      tags: ['endpoints', 'api', 'node', 'reference', 'documentation'],
       language: 'bash',
       relevanceScore: 1.0,
       contractType: 'any',
@@ -274,104 +192,289 @@ curl -X POST "https://api.testnet.klever.org/v1.0/sc/query" \\
     }
   ),
 
-  // Node vs API Usage Guide
+  // Transaction Workflow
   createKnowledgeEntry(
-    'best_practice',
-    `# Node vs API: Quick Decision Guide
+    'deployment_tool',
+    `# Transaction Building and Broadcasting Flow
 
-## Quick Reference Table
+## Complete Transaction Lifecycle
 
-| Task | Use | Endpoint | Method |
-|------|-----|----------|--------|
-| Deploy Contract | Node | KLEVER_NODE + koperator | Transaction |
-| Call Contract (Write) | Node | KLEVER_NODE + koperator | Transaction |
-| Query Contract (Read) | API | /v1.0/sc/query | POST |
-| Get Account Balance | API | /v1.0/accounts/{address} | GET |
-| Get Transaction | API | /v1.0/transactions/{hash} | GET |
-| Send KLV | Node | KLEVER_NODE + koperator | Transaction |
-| Check Node Status | Node | /node/status | GET |
-
-## Examples Side by Side
-
-### Writing to Blockchain (Use Node)
+### Step 1: Get Account Nonce
 \`\`\`bash
-# ✅ Correct: Use node endpoint with koperator
-KLEVER_NODE=https://node.testnet.klever.org \\
-    ~/klever-sdk/koperator \\
-    --key-file="wallet.pem" \\
-    sc invoke klv1contract... transfer \\
-    --args "Address:klv1recipient..." \\
-    --args "bi:1000000" \\
-    --await --sign
+NONCE=$(curl -s "https://node.testnet.klever.org/address/klv1sender.../nonce" | jq -r '.nonce')
+echo "Current nonce: $NONCE"
 \`\`\`
 
-### Reading from Blockchain (Use API)
+### Step 2: Build Transaction (Unsigned)
 \`\`\`bash
-# ✅ Correct: Use API endpoint for queries
-curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \\
-    -H 'Content-Type: application/json' \\
-    --data-raw '{
-        "ScAddress": "klv1contract...",
-        "FuncName": "getBalance",
-        "Arguments": ["base64_encoded_address"]
-    }'
+# POST /transaction/send creates unsigned tx with computed hash
+TX_RESPONSE=$(curl -s -X POST "https://node.testnet.klever.org/transaction/send" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "type": "transfer",
+        "sender": "klv1sender...",
+        "receiver": "klv1receiver...",
+        "amount": 1000000,
+        "nonce": '$NONCE',
+        "gasPrice": 1000000000,
+        "gasLimit": 50000
+    }')
+
+TX_HASH=$(echo $TX_RESPONSE | jq -r '.hash')
+TX_DATA=$(echo $TX_RESPONSE | jq -r '.tx')
 \`\`\`
 
-## Common Mistakes to Avoid
-
-### ❌ Wrong: Using API for transactions
-\`\`\`bash
-# This won't work - API can't broadcast transactions
-curl -X POST 'https://api.testnet.klever.org/...' \\
-    --data '{"deploy": "contract.wasm"}'
+### Step 3: Sign Transaction (Client-side)
+\`\`\`javascript
+// Client-side signing with private key
+// NEVER send private keys to any API!
+const signature = await signWithPrivateKey(privateKey, txHash);
 \`\`\`
 
-### ❌ Wrong: Using koperator for simple queries
+### Step 4: Broadcast Signed Transaction
 \`\`\`bash
-# Inefficient - requires wallet and may consume gas
-~/klever-sdk/koperator sc query ...
+RESULT=$(curl -s -X POST "https://node.testnet.klever.org/transactions/broadcast" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "tx": "'$TX_DATA'",
+        "signature": "'$SIGNATURE'"
+    }')
+
+BROADCAST_HASH=$(echo $RESULT | jq -r '.txHash')
 \`\`\`
 
-### ✅ Correct: Use the right tool for the job
-- **Node + Koperator**: When you need to change state
-- **API**: When you just need to read data
-
-## Network Selection
-
-### For Development
+### Step 5: Monitor Transaction
 \`\`\`bash
-# Use testnet for development
-export KLEVER_NODE="https://node.testnet.klever.org"
-export KLEVER_API="https://api.testnet.klever.org"
+# Wait for indexing (usually 2-6 seconds)
+sleep 5
+
+# Check status via API
+curl -s "https://api.testnet.klever.org/v1.0/transactions/$BROADCAST_HASH" | jq '.status'
 \`\`\`
 
-### For Production
-\`\`\`bash
-# Use mainnet for production
-export KLEVER_NODE="https://node.mainnet.klever.org"
-export KLEVER_API="https://api.mainnet.klever.org"
-\`\`\`
-
-### For Local Testing
-\`\`\`bash
-# Use localhost for local blockchain
-export KLEVER_NODE="http://localhost:8080"  # Node port
-export KLEVER_API="http://localhost:9090"   # Proxy port
-\`\`\`
-
-## Local Development Ports
-
-When running locally, different services use different ports:
-- **Node**: Port 8080 (blockchain node)
-- **API Proxy**: Port 9090 (klever-proxy-go)
-- **ElasticSearch**: Port 9200 (data indexing)
-- **Kibana**: Port 5601 (optional, for ES visualization)`,
+## Important Notes
+- Node NEVER handles private keys
+- Signing is ALWAYS client-side
+- /transaction/send does NOT send, it only builds
+- /transactions/broadcast requires pre-signed tx`,
     {
-      title: 'Node vs API Usage Guide',
-      description: 'Quick guide for choosing between node and API endpoints',
-      tags: ['node', 'api', 'endpoints', 'best-practice', 'guide'],
+      title: 'Transaction Building and Broadcasting',
+      description: 'Complete workflow for building and sending transactions',
+      tags: ['transaction', 'workflow', 'signing', 'broadcasting', 'deployment'],
       language: 'bash',
       relevanceScore: 0.95,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
+
+  // Quick Task Reference
+  createKnowledgeEntry(
+    'best_practice',
+    `# Quick Task → Endpoint Guide
+
+## "I need to..." Quick Reference
+
+### Account Information
+**Get KLV balance**
+- Real-time: \`GET node.../address/{addr}/balance\`
+- With details: \`GET api.../v1.0/address/{addr}\`
+
+**Get transaction nonce for building tx**
+- \`GET node.../address/{addr}/nonce\`
+
+**Get account's KDA tokens**
+- \`GET node.../address/{addr}/kda\` (direct from node)
+
+**Get transaction history**
+- \`GET api.../v1.0/address/{addr}/transactions\`
+
+### Smart Contracts
+**Deploy contract**
+- Use koperator with KLEVER_NODE
+
+**Call contract (write)**
+- Use koperator with KLEVER_NODE
+
+**Query contract (read)**
+- Indexed: \`POST api.../v1.0/sc/query\`
+- Direct: \`POST node.../vm/query\`
+
+### Transactions
+**Build transaction**
+- \`POST node.../transaction/send\`
+
+**Broadcast signed tx**
+- \`POST node.../transactions/broadcast\`
+
+**Check tx status**
+- \`GET api.../v1.0/transactions/{hash}\`
+
+**Decode transaction**
+- \`POST node.../transaction/decode\`
+
+### Network Info
+**Check if node is healthy**
+- \`GET node.../node/status\`
+
+**Get latest block**
+- \`GET api.../v1.0/block/list?limit=1\` (via API proxy)
+
+**Get network stats**
+- \`GET api.../v1.0/network/stats\`
+
+## Decision Helper
+
+\`\`\`
+Need real-time data?
+  → Use Node endpoint directly
+
+Need historical/searchable data?
+  → Use API proxy endpoint
+
+Need to modify blockchain state?
+  → Use Node + Koperator
+
+Just reading contract data?
+  → Use API /v1.0/sc/query
+\`\`\``,
+    {
+      title: 'Quick Task to Endpoint Guide',
+      description: 'Task-based quick reference for finding the right endpoint',
+      tags: ['quick-reference', 'tasks', 'endpoints', 'best-practice', 'guide'],
+      language: 'text',
+      relevanceScore: 0.9,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
+
+  // Common Patterns
+  createKnowledgeEntry(
+    'code_example',
+    `# Common API Usage Patterns
+
+## Pattern: Get Full Account Balance
+\`\`\`javascript
+async function getFullBalance(address) {
+    const [account, kdaTokens] = await Promise.all([
+        fetch(\`https://api.testnet.klever.org/v1.0/address/\${address}\`).then(r => r.json()),
+        fetch(\`https://node.testnet.klever.org/address/\${address}/kda\`).then(r => r.json())
+    ]);
+    
+    return {
+        klv: account.data?.balance,
+        nonce: account.data?.nonce,
+        tokens: kdaTokens.data?.kdas || []
+    };
+}
+\`\`\`
+
+## Pattern: Query Smart Contract
+\`\`\`javascript
+async function queryContract(contract, funcName, args = []) {
+    const response = await fetch('https://api.testnet.klever.org/v1.0/sc/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            ScAddress: contract,
+            FuncName: funcName,
+            Arguments: args  // Must be base64 encoded!
+        })
+    });
+    
+    const result = await response.json();
+    if (result.data?.returnData) {
+        // Decode base64 results
+        return result.data.returnData.map(d => 
+            Buffer.from(d, 'base64').toString('hex')
+        );
+    }
+    throw new Error(result.error || 'Query failed');
+}
+
+// Helper to encode arguments
+function encodeArg(value, type = 'auto') {
+    if (type === 'address' || value.startsWith('klv1')) {
+        // Decode bech32 address to hex, then base64
+        const hex = decodeBech32(value);
+        return Buffer.from(hex, 'hex').toString('base64');
+    }
+    if (type === 'number' || !isNaN(value)) {
+        // Convert to 8-byte big-endian
+        const buf = Buffer.alloc(8);
+        buf.writeBigUInt64BE(BigInt(value));
+        return buf.toString('base64');
+    }
+    // String: direct base64
+    return Buffer.from(value).toString('base64');
+}
+\`\`\`
+
+## Pattern: Monitor Transaction
+\`\`\`javascript
+async function waitForTx(txHash, maxWait = 30000) {
+    const start = Date.now();
+    
+    while (Date.now() - start < maxWait) {
+        try {
+            const res = await fetch(\`https://api.testnet.klever.org/v1.0/transaction/\${txHash}\`);
+            if (res.ok) {
+                const tx = await res.json();
+                return { success: tx.data?.status === 'success', tx: tx.data };
+            }
+        } catch (e) {
+            // Not indexed yet
+        }
+        await new Promise(r => setTimeout(r, 2000));
+    }
+    throw new Error('Transaction timeout');
+}
+\`\`\`
+
+## Pattern: Build & Send Transaction
+\`\`\`javascript
+async function sendKLV(from, to, amount, privateKey) {
+    // 1. Get nonce
+    const nonceRes = await fetch(\`https://node.testnet.klever.org/address/\${from}/nonce\`);
+    const { nonce } = await nonceRes.json();
+    
+    // 2. Build unsigned tx
+    const buildRes = await fetch('https://node.testnet.klever.org/transaction/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            type: 'transfer',
+            sender: from,
+            receiver: to,
+            amount: amount,
+            nonce: nonce,
+            gasPrice: 1000000000,
+            gasLimit: 50000
+        })
+    });
+    const { hash, tx } = await buildRes.json();
+    
+    // 3. Sign (client-side - implement based on your crypto library)
+    const signature = await signTransaction(privateKey, hash);
+    
+    // 4. Broadcast
+    const broadcastRes = await fetch('https://node.testnet.klever.org/transactions/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tx, signature })
+    });
+    
+    const result = await broadcastRes.json();
+    return result.txHash;
+}
+\`\`\``,
+    {
+      title: 'Common API Usage Patterns',
+      description: 'JavaScript patterns for common Klever API operations',
+      tags: ['api', 'patterns', 'javascript', 'examples', 'code'],
+      language: 'javascript',
+      relevanceScore: 0.85,
       contractType: 'any',
       author: 'klever-mcp',
     }
