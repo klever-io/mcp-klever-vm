@@ -190,13 +190,13 @@ Based on koperator's encode function, use these type prefixes:
 - \`bi:\`, \`BI:\`, \`BigInt:\`, \`bigint:\`, \`BigUint:\`, \`biguint:\` - Big integers
 
 ### String and Buffer Types
-- \`str:\`, \`String:\`, \`string:\` - String value
+- \`str:\`, \`String:\`, \`string:\` - String value (REQUIRED for all text arguments)
 - \`bytes:\`, \`Bytes:\` - Byte array
-- \`TokenIdentifier:\` - Token identifier
+- \`TokenIdentifier:\` - Token identifier (REQUIRED for token ID arguments like "KLV", "KFI", "MYTOKEN-AB34")
 - \`KdaTokenIdentifier:\` - KDA token identifier
 
 ### Address Types
-- \`Address:\`, \`address:\` - Klever address (must start with "klv")
+- \`Address:\`, \`address:\` - Klever address (REQUIRED for all address arguments, must start with "klv")
 
 ### Boolean Types
 - \`bool:\`, \`b:\` - Boolean (true/false, 0/1)
@@ -204,6 +204,33 @@ Based on koperator's encode function, use these type prefixes:
 ### Special Types
 - \`empty\` - No value (for Option::None)
 - \`CodeMetadata:\` - Contract metadata
+
+## 🔴 CRITICAL: Three Most Important Prefixes
+
+### 1. TokenIdentifier: - For ALL Token References
+Use \`TokenIdentifier:\` when passing a token ID as an argument:
+\`\`\`bash
+--args "TokenIdentifier:KLV"              # Native KLV token
+--args "TokenIdentifier:KFI"              # Native KFI token
+--args "TokenIdentifier:USDT-A1B2"        # KDA token
+--args "TokenIdentifier:MYNFT-XYZ1/3"     # NFT collection
+\`\`\`
+
+### 2. Address: - For ALL Klever Addresses
+Use \`Address:\` when passing any Klever address:
+\`\`\`bash
+--args "Address:klv1recipient..."         # Recipient address
+--args "Address:klv1owner..."             # Owner address
+--args "Address:klv1qqqqqqqqqqqqqqqq..."  # Zero address
+\`\`\`
+
+### 3. String: - For ALL Text/String Values
+Use \`String:\` when passing any text data:
+\`\`\`bash
+--args "String:hello world"               # Text message
+--args "String:transfer"                  # Function name as string
+--args "String:user_123"                  # User ID
+\`\`\`
 
 ## Usage Examples
 
@@ -214,12 +241,17 @@ Based on koperator's encode function, use these type prefixes:
 --args "u32:1000"                # 32-bit unsigned integer
 --args "bi:1000000"              # BigUint for large numbers
 
-# Strings
+# Strings (ALWAYS use String: prefix for text)
 --args "String:hello world"      # String value
 --args "bytes:0x48656c6c6f"      # Byte array (hex)
 
-# Addresses
+# Addresses (ALWAYS use Address: prefix)
 --args "Address:klv1abc..."      # Klever address
+
+# Token Identifiers (ALWAYS use TokenIdentifier: prefix)
+--args "TokenIdentifier:KLV"     # For KLV token
+--args "TokenIdentifier:KFI"     # For KFI token  
+--args "TokenIdentifier:MYTOKEN-AB12" # For custom tokens
 
 # Booleans
 --args "bool:true"               # Boolean true
@@ -490,14 +522,41 @@ sc invoke klv1abc... transfer
     --await --sign --result-only
 \`\`\`
 
+### Example 4: Using All Three Critical Prefixes
+\`\`\`bash
+# Function that accepts: token_id, recipient, description
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1dex... registerTransfer \\
+    --args "TokenIdentifier:USDT-A1B2" \\    # Token ID
+    --args "Address:klv1recipient..." \\        # Recipient address  
+    --args "String:Payment for services" \\     # Description text
+    --await --sign --result-only
+\`\`\`
+
 ## ⚠️ Common Pitfalls and Solutions
 
 1. **Wrong Parameter Names**: CONTRACT_ADDRESS and FUNCTION are positional, not flags
 2. **Missing Type Prefix**: Always include type: prefix (u32:, String:, etc.)
 3. **Payment Confusion**: Use --values with = for payments, not --args with :
 4. **Multiple Arguments**: Each argument needs its own --args flag
-5. **Address Format**: Addresses must start with "klv"
-6. **NFT Format**: TOKEN_ID/NONCE=AMOUNT for NFTs/SFTs`,
+5. **Address Format**: Addresses must start with "klv" AND use Address: prefix
+6. **Token ID Format**: ALWAYS use TokenIdentifier: prefix for token IDs
+7. **String Format**: ALWAYS use String: prefix for text values
+8. **NFT Format**: TOKEN_ID/NONCE=AMOUNT for NFTs/SFTs in --values
+
+### ❌ Common Prefix Mistakes:
+\`\`\`bash
+# WRONG - Missing prefixes
+--args "klv1abc..."              # ❌ Missing Address: prefix
+--args "KLV"                     # ❌ Missing TokenIdentifier: prefix
+--args "hello"                   # ❌ Missing String: prefix
+
+# CORRECT - With proper prefixes
+--args "Address:klv1abc..."      # ✅ Address with prefix
+--args "TokenIdentifier:KLV"     # ✅ Token ID with prefix
+--args "String:hello"            # ✅ String with prefix
+\`\`\``,
     {
       title: 'Complete Koperator Argument Encoding Guide',
       description: 'Comprehensive guide for encoding arguments and payments in koperator commands',
