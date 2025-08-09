@@ -58,7 +58,15 @@ export const koperatorKnowledge: KnowledgeEntry[] = [
 - \`--values\`: For sending tokens (KLV, KFI, or KDA tokens)
 - \`--await\`: Wait for transaction confirmation
 - \`--sign\`: Sign the transaction
-- \`--result-only\`: Show only the transaction result (clean JSON output without logs)`,
+- \`--result-only\`: Show only the transaction result (clean JSON output without logs)
+
+## 🚨 CRITICAL for Unattended Scripts:
+When using koperator in automated/unattended scripts, you MUST use these three flags together:
+- \`--sign\`: Signs and broadcasts the transaction without user interaction
+- \`--await\`: Waits for the transaction to be included in a block
+- \`--result-only\`: Returns only clean JSON result without extra output
+
+Without these flags, scripts will hang waiting for user input or produce unparseable output!`,
     {
       title: 'CRITICAL: Correct Koperator Syntax - READ THIS FIRST',
       description: 'The ONLY correct way to use koperator sc invoke - NEVER use --contract, --function, --value. Always include --result-only for clean output',
@@ -182,13 +190,13 @@ Based on koperator's encode function, use these type prefixes:
 - \`bi:\`, \`BI:\`, \`BigInt:\`, \`bigint:\`, \`BigUint:\`, \`biguint:\` - Big integers
 
 ### String and Buffer Types
-- \`str:\`, \`String:\`, \`string:\` - String value
+- \`str:\`, \`String:\`, \`string:\` - String value (REQUIRED for all text arguments)
 - \`bytes:\`, \`Bytes:\` - Byte array
-- \`TokenIdentifier:\` - Token identifier
+- \`TokenIdentifier:\` - Token identifier (REQUIRED for token ID arguments like "KLV", "KFI", "MYTOKEN-AB34")
 - \`KdaTokenIdentifier:\` - KDA token identifier
 
 ### Address Types
-- \`Address:\`, \`address:\` - Klever address (must start with "klv")
+- \`Address:\`, \`address:\` - Klever address (REQUIRED for all address arguments, must start with "klv")
 
 ### Boolean Types
 - \`bool:\`, \`b:\` - Boolean (true/false, 0/1)
@@ -196,6 +204,33 @@ Based on koperator's encode function, use these type prefixes:
 ### Special Types
 - \`empty\` - No value (for Option::None)
 - \`CodeMetadata:\` - Contract metadata
+
+## 🔴 CRITICAL: Three Most Important Prefixes
+
+### 1. TokenIdentifier: - For ALL Token References
+Use \`TokenIdentifier:\` when passing a token ID as an argument:
+\`\`\`bash
+--args "TokenIdentifier:KLV"              # Native KLV token
+--args "TokenIdentifier:KFI"              # Native KFI token
+--args "TokenIdentifier:USDT-A1B2"        # KDA token
+--args "TokenIdentifier:MYNFT-XYZ1/3"     # NFT collection
+\`\`\`
+
+### 2. Address: - For ALL Klever Addresses
+Use \`Address:\` when passing any Klever address:
+\`\`\`bash
+--args "Address:klv1recipient..."         # Recipient address
+--args "Address:klv1owner..."             # Owner address
+--args "Address:klv1qqqqqqqqqqqqqqqq..."  # Zero address
+\`\`\`
+
+### 3. String: - For ALL Text/String Values
+Use \`String:\` when passing any text data:
+\`\`\`bash
+--args "String:hello world"               # Text message
+--args "String:transfer"                  # Function name as string
+--args "String:user_123"                  # User ID
+\`\`\`
 
 ## Usage Examples
 
@@ -206,12 +241,17 @@ Based on koperator's encode function, use these type prefixes:
 --args "u32:1000"                # 32-bit unsigned integer
 --args "bi:1000000"              # BigUint for large numbers
 
-# Strings
+# Strings (ALWAYS use String: prefix for text)
 --args "String:hello world"      # String value
 --args "bytes:0x48656c6c6f"      # Byte array (hex)
 
-# Addresses
+# Addresses (ALWAYS use Address: prefix)
 --args "Address:klv1abc..."      # Klever address
+
+# Token Identifiers (ALWAYS use TokenIdentifier: prefix)
+--args "TokenIdentifier:KLV"     # For KLV token
+--args "TokenIdentifier:KFI"     # For KFI token  
+--args "TokenIdentifier:MYTOKEN-AB12" # For custom tokens
 
 # Booleans
 --args "bool:true"               # Boolean true
@@ -246,7 +286,7 @@ Based on koperator's encode function, use these type prefixes:
 --values "KLV=1000000,KFI=500000,USDT-A1B2=250000"
 
 # NFT/SFT with nonce
---values "NFT-XYZ/01=1"          # NFT with nonce 01
+--values "NFT-XY01/01=1"         # NFT with nonce 01
 \`\`\`
 
 ## Common Mistakes to Avoid
@@ -312,8 +352,8 @@ sc invoke klv1abc... transfer
 --values "KLV=1000000,KFI=500000" # Multiple tokens
 
 # NFT/SFT with nonce
---values "NFT-XYZ/01=1"          # NFT with nonce 01
---values "SFT-ABC/05=100"        # 100 SFTs with nonce 05
+--values "NFT-XY01/01=1"         # NFT with nonce 01
+--values "SFT-AB12/05=100"       # 100 SFTs with nonce 05
 
 # Optional Values
 --args "Option:String:hello"     # Some("hello")
@@ -444,7 +484,7 @@ sc invoke klv1abc... transfer
 --values "MYSFT-C3D4/05=100"     # 100 SFTs with nonce 05
 
 # Multiple NFTs/SFTs
---values "NFT1-XYZ/01=1,NFT2-ABC/02=1,SFT-DEF/03=50"
+--values "NFT1-AB12/01=1,NFT2-CD34/02=1,SFT-EF56/03=50"
 \`\`\`
 
 ## 🔧 Real-World Examples
@@ -482,14 +522,41 @@ sc invoke klv1abc... transfer
     --await --sign --result-only
 \`\`\`
 
+### Example 4: Using All Three Critical Prefixes
+\`\`\`bash
+# Function that accepts: token_id, recipient, description
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1dex... registerTransfer \\
+    --args "TokenIdentifier:USDT-A1B2" \\    # Token ID
+    --args "Address:klv1recipient..." \\        # Recipient address  
+    --args "String:Payment for services" \\     # Description text
+    --await --sign --result-only
+\`\`\`
+
 ## ⚠️ Common Pitfalls and Solutions
 
 1. **Wrong Parameter Names**: CONTRACT_ADDRESS and FUNCTION are positional, not flags
 2. **Missing Type Prefix**: Always include type: prefix (u32:, String:, etc.)
 3. **Payment Confusion**: Use --values with = for payments, not --args with :
 4. **Multiple Arguments**: Each argument needs its own --args flag
-5. **Address Format**: Addresses must start with "klv"
-6. **NFT Format**: TOKEN_ID/NONCE=AMOUNT for NFTs/SFTs`,
+5. **Address Format**: Addresses must start with "klv" AND use Address: prefix
+6. **Token ID Format**: ALWAYS use TokenIdentifier: prefix for token IDs
+7. **String Format**: ALWAYS use String: prefix for text values
+8. **NFT Format**: TOKEN_ID/NONCE=AMOUNT for NFTs/SFTs in --values
+
+### ❌ Common Prefix Mistakes:
+\`\`\`bash
+# WRONG - Missing prefixes
+--args "klv1abc..."              # ❌ Missing Address: prefix
+--args "KLV"                     # ❌ Missing TokenIdentifier: prefix
+--args "hello"                   # ❌ Missing String: prefix
+
+# CORRECT - With proper prefixes
+--args "Address:klv1abc..."      # ✅ Address with prefix
+--args "TokenIdentifier:KLV"     # ✅ Token ID with prefix
+--args "String:hello"            # ✅ String with prefix
+\`\`\``,
     {
       title: 'Complete Koperator Argument Encoding Guide',
       description: 'Comprehensive guide for encoding arguments and payments in koperator commands',
@@ -823,6 +890,186 @@ Always include both --payable and --payableBySC if your contract handles any pay
       tags: ['koperator', 'deployment', 'payable', 'payableBySC', 'flags', 'contract-creation'],
       language: 'bash',
       relevanceScore: 0.95,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
+
+  // Koperator for Unattended Scripts
+  createKnowledgeEntry(
+    'best_practice',
+    `# Using Koperator in Unattended/Automated Scripts
+
+## 🚨 CRITICAL: Three Required Flags for Automation
+
+When using koperator in unattended scripts (CI/CD, cron jobs, automated deployments), you MUST use these three flags together:
+
+### Required Flags:
+1. \`--sign\` - Signs and broadcasts the transaction without user interaction
+2. \`--await\` - Waits for the transaction to be included in a block before returning
+3. \`--result-only\` - Outputs only the transaction result in clean JSON format
+
+## Why These Flags Are Essential:
+
+### Without --sign:
+- Script will hang waiting for user to confirm transaction
+- Terminal prompt: "Do you want to sign? (y/n)"
+- Script never continues
+
+### Without --await:
+- Script continues immediately after broadcasting
+- Transaction might fail but script won't know
+- No way to verify transaction success
+
+### Without --result-only:
+- Output includes progress messages, ASCII art, logs
+- JSON result is mixed with text output
+- Cannot parse result programmatically
+
+## Correct Usage in Scripts:
+
+### ✅ CORRECT - Automated Deployment Script
+\`\`\`bash
+#!/bin/bash
+set -e  # Exit on error
+
+# Deploy contract and capture result
+RESULT=$(KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc create \\
+    --wasm="output/contract.wasm" \\
+    --upgradeable --readable --payable --payableBySC \\
+    --sign \\        # No user interaction
+    --await \\       # Wait for confirmation
+    --result-only)   # Clean JSON output
+
+# Parse contract address from result
+CONTRACT_ADDRESS=$(echo "$RESULT" | jq -r '.contractAddress')
+echo "Deployed to: $CONTRACT_ADDRESS"
+\`\`\`
+
+### ✅ CORRECT - CI/CD Pipeline
+\`\`\`yaml
+# .github/workflows/deploy.yml
+- name: Deploy Smart Contract
+  run: |
+    ~/klever-sdk/koperator \\
+      --key-file="\${KEY_FILE}" \\
+      sc create \\
+      --wasm="output/contract.wasm" \\
+      --upgradeable --readable --payable \\
+      --sign --await --result-only > deployment.json
+    
+    # Extract and save contract address
+    CONTRACT_ADDR=$(jq -r '.contractAddress' deployment.json)
+    echo "CONTRACT_ADDRESS=\${CONTRACT_ADDR}" >> $GITHUB_ENV
+\`\`\`
+
+### ✅ CORRECT - Automated Testing Script
+\`\`\`bash
+#!/bin/bash
+
+# Function to invoke contract and check result
+invoke_and_verify() {
+    local function_name=$1
+    local expected_status=$2
+    
+    RESULT=$(~/klever-sdk/koperator \\
+        --key-file="$HOME/klever-sdk/walletKey.pem" \\
+        sc invoke "$CONTRACT_ADDRESS" "$function_name" \\
+        --sign --await --result-only)
+    
+    STATUS=$(echo "$RESULT" | jq -r '.status')
+    
+    if [ "$STATUS" != "$expected_status" ]; then
+        echo "Error: Expected $expected_status, got $STATUS"
+        echo "Full result: $RESULT"
+        exit 1
+    fi
+}
+
+# Run tests
+invoke_and_verify "initialize" "success"
+invoke_and_verify "deposit" "success"
+\`\`\`
+
+### ❌ WRONG - Will Hang in Scripts
+\`\`\`bash
+# WRONG - Missing --sign, will wait for user input
+~/klever-sdk/koperator sc invoke CONTRACT transfer \\
+    --args "Address:klv1..." \\
+    --await --result-only
+
+# WRONG - Missing --await, won't know if transaction succeeded
+~/klever-sdk/koperator sc invoke CONTRACT transfer \\
+    --args "Address:klv1..." \\
+    --sign --result-only
+
+# WRONG - Missing --result-only, output not parseable
+~/klever-sdk/koperator sc invoke CONTRACT transfer \\
+    --args "Address:klv1..." \\
+    --sign --await
+\`\`\`
+
+## Parsing the JSON Result:
+
+### With --result-only, you get clean JSON:
+\`\`\`json
+{
+  "txHash": "abc123...",
+  "status": "success",
+  "contractAddress": "klv1...",
+  "gasUsed": 5000000,
+  "returnData": ["0x01"],
+  "logs": []
+}
+\`\`\`
+
+### Parse with jq:
+\`\`\`bash
+# Get transaction hash
+TX_HASH=$(echo "$RESULT" | jq -r '.txHash')
+
+# Get status
+STATUS=$(echo "$RESULT" | jq -r '.status')
+
+# Check if successful
+if [ "$(echo "$RESULT" | jq -r '.status')" = "success" ]; then
+    echo "Transaction successful"
+else
+    echo "Transaction failed"
+    exit 1
+fi
+\`\`\`
+
+## Environment Variables for Scripts:
+
+\`\`\`bash
+#!/bin/bash
+
+# Set environment for script
+export KLEVER_NODE="https://node.testnet.klever.org"
+export KEY_FILE="$HOME/klever-sdk/walletKey.pem"
+
+# Now all koperator commands use these settings
+~/klever-sdk/koperator \\
+    --key-file="$KEY_FILE" \\
+    sc invoke CONTRACT_ADDRESS function_name \\
+    --sign --await --result-only
+\`\`\`
+
+## Summary:
+- **Always use**: \`--sign --await --result-only\` for scripts
+- **Never forget**: All three flags are required for automation
+- **Parse output**: Use jq or similar to extract data from JSON result
+- **Set -e**: Use \`set -e\` in bash scripts to exit on errors`,
+    {
+      title: 'Using Koperator in Unattended/Automated Scripts',
+      description: 'CRITICAL: How to use koperator in CI/CD, automated scripts, and unattended environments',
+      tags: ['koperator', 'automation', 'scripts', 'ci-cd', 'unattended', 'sign', 'await', 'result-only', 'critical'],
+      language: 'bash',
+      relevanceScore: 1.0,
       contractType: 'any',
       author: 'klever-mcp',
     }

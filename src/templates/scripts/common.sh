@@ -126,7 +126,7 @@ set_network_endpoint() {
     
     case "$network" in
         mainnet)
-            echo "https://node.klever.org"
+            echo "https://node.mainnet.klever.org"
             ;;
         testnet)
             echo "https://node.testnet.klever.org"
@@ -149,7 +149,7 @@ get_api_endpoint() {
     
     case "$network" in
         mainnet)
-            echo "https://api.klever.org/v1.0/sc/query"
+            echo "https://api.mainnet.klever.org/v1.0/sc/query"
             ;;
         testnet)
             echo "https://api.testnet.klever.org/v1.0/sc/query"
@@ -158,10 +158,10 @@ get_api_endpoint() {
             echo "https://api.devnet.klever.org/v1.0/sc/query"
             ;;
         local)
-            echo "http://localhost:8080/v1.0/sc/query"
+            echo "http://localhost:9090/v1.0/sc/query"
             ;;
         *)
-            echo "http://localhost:8080/v1.0/sc/query"
+            echo "http://localhost:9090/v1.0/sc/query"
             ;;
     esac
 }
