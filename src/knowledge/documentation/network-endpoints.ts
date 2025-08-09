@@ -4,7 +4,7 @@ import { createKnowledgeEntry, KnowledgeEntry } from '../types.js';
  * Comprehensive network endpoints and API documentation for Klever blockchain
  */
 
-export const networkEndpointsKnowledge: KnowledgeEntry[] = [
+const networkEndpointsKnowledge: KnowledgeEntry[] = [
   // Asset Properties Endpoint
   createKnowledgeEntry(
     'documentation',
