@@ -5,6 +5,467 @@ import { createKnowledgeEntry, KnowledgeEntry } from '../types.js';
  */
 
 export const networkEndpointsKnowledge: KnowledgeEntry[] = [
+  // Asset Properties Endpoint
+  createKnowledgeEntry(
+    'documentation',
+    `# Asset Properties Endpoint
+
+## Node API Endpoint for Complete Asset Information
+
+### Endpoint
+\`\`\`
+GET /asset/{assetID}
+\`\`\`
+
+### Description
+Retrieve comprehensive properties and configuration for any asset (KLV, KFI, KDA tokens, NFT collections).
+
+### Parameters
+- \`{assetID}\`: The asset identifier (e.g., "KLV", "KFI", "USDT-A1B2", "LPKLVKFI-3I0N")
+
+### Example Requests
+\`\`\`bash
+# Get KLV properties
+curl "http://localhost:8080/asset/KLV"
+
+# Get custom token properties  
+curl "http://localhost:8080/asset/LPKLVKFI-3I0N"
+
+# Get NFT collection properties
+curl "https://node.testnet.klever.org/asset/MYNFT-A1B2"
+\`\`\`
+
+### Response Format - KDA Token Example
+\`\`\`json
+{
+  "data": {
+    "asset": {
+      "ID": "TFBLTFZLRkktM0kwTg==",
+      "Name": "TFBLTFZLRkk=",
+      "Ticker": "TFBLTFZLRkk=",
+      "OwnerAddress": "AAAAAAAAAAAFAMgZoFqFvjJxcXvlBTPd50Da3BxAw+Y=",
+      "Precision": 6,
+      "InitialSupply": 1000,
+      "CirculatingSupply": 100001000,
+      "MintedValue": 100001000,
+      "IssueDate": 1754757945,
+      "Royalties": {
+        "Address": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "Properties": {
+        "CanFreeze": true,
+        "CanWipe": true,
+        "CanPause": true,
+        "CanMint": true,
+        "CanBurn": true,
+        "CanChangeOwner": true,
+        "CanAddRoles": true
+      },
+      "Attributes": {},
+      "Roles": [
+        {
+          "Address": "AAAAAAAAAAAFAKMCVDuF4gE0Fcq3qD+nLXWPw0psw+Y=",
+          "HasRoleMint": true,
+          "HasRoleSetITOPrices": true,
+          "HasRoleDeposit": true,
+          "HasRoleTransfer": true
+        }
+      ],
+      "AdminAddress": "AAAAAAAAAAAFAMgZoFqFvjJxcXvlBTPd50Da3BxAw+Y="
+    }
+  },
+  "error": "",
+  "code": "successful"
+}
+\`\`\`
+
+### Response Format - KLV Example
+\`\`\`json
+{
+  "data": {
+    "asset": {
+      "ID": "S0xW",
+      "Name": "S0xFVkVS",
+      "Ticker": "S0xW",
+      "Logo": "https://bc.klever.finance/logo_klv",
+      "URIs": {
+        "Exchange": "https://klever.io",
+        "Github": "https://github.com/klever-io",
+        "Instagram": "https://instagram.com/klever.io",
+        "Twitter": "https://twitter.com/klever_io",
+        "Wallet": "https://klever.finance/wallet",
+        "Website": "https://klever.finance",
+        "Whitepaper": "https://bc.klever.finance/wp"
+      },
+      "Precision": 6,
+      "InitialSupply": 29000000000000,
+      "CirculatingSupply": 28995438394794,
+      "MaxSupply": 10000000000000000,
+      "MintedValue": 29000000000000,
+      "BurnedValue": 4561605206,
+      "IssueDate": 1754750421,
+      "Properties": {
+        "CanFreeze": true,
+        "CanMint": true,
+        "CanBurn": true
+      },
+      "Attributes": {
+        "IsNFTMintStopped": true
+      }
+    }
+  },
+  "error": "",
+  "code": "successful"
+}
+\`\`\`
+
+### JavaScript/TypeScript Example
+\`\`\`javascript
+async function getAssetProperties(assetId, network = 'testnet') {
+    const baseUrl = network === 'local' 
+        ? 'http://localhost:8080' 
+        : \`https://node.\${network}.klever.org\`;
+    
+    const response = await fetch(\`\${baseUrl}/asset/\${assetId}\`);
+    const result = await response.json();
+    
+    if (result.code === 'successful') {
+        const asset = result.data.asset;
+        
+        // Decode base64 fields
+        return {
+            id: atob(asset.ID),
+            name: atob(asset.Name),
+            ticker: atob(asset.Ticker),
+            precision: asset.Precision,
+            supply: {
+                initial: asset.InitialSupply,
+                circulating: asset.CirculatingSupply,
+                max: asset.MaxSupply,
+                minted: asset.MintedValue,
+                burned: asset.BurnedValue
+            },
+            properties: asset.Properties,
+            roles: asset.Roles,
+            uris: asset.URIs,
+            logo: asset.Logo
+        };
+    }
+    
+    throw new Error(result.error || 'Failed to fetch asset properties');
+}
+
+// Usage examples
+const klvInfo = await getAssetProperties('KLV', 'local');
+console.log('KLV Precision:', klvInfo.precision);
+console.log('KLV Properties:', klvInfo.properties);
+
+const lpTokenInfo = await getAssetProperties('LPKLVKFI-3I0N', 'local');
+console.log('LP Token Supply:', lpTokenInfo.supply.circulating);
+console.log('Can Mint:', lpTokenInfo.properties.CanMint);
+\`\`\`
+
+### Key Information Provided
+- **Asset Identification**: ID, Name, Ticker (base64 encoded)
+- **Supply Information**: Initial, Circulating, Max, Minted, Burned values
+- **Properties**: Permissions like CanMint, CanBurn, CanFreeze, etc.
+- **Roles**: Addresses with special permissions
+- **Metadata**: URIs, Logo, social links (for major assets)
+- **Precision**: Decimal places for the asset
+
+### Use Cases
+- Verify token permissions before operations
+- Check circulating supply and max supply
+- Validate asset properties for DeFi protocols
+- Monitor minting and burning activity
+- Retrieve asset metadata and social links`,
+    {
+      title: 'Asset Properties Endpoint',
+      description: 'Node API endpoint for retrieving complete asset properties and configuration',
+      tags: ['api', 'node', 'asset', 'properties', 'token', 'kda', 'configuration'],
+      language: 'javascript',
+      relevanceScore: 0.95,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
+
+  // NFT Asset Details Endpoint
+  createKnowledgeEntry(
+    'documentation',
+    `# NFT Asset Details Endpoint
+
+## Node API Endpoint for NFT Information
+
+### Endpoint
+\`\`\`
+GET /asset/nft/{owner}/{id}
+\`\`\`
+
+### Description
+Retrieve detailed information about a specific NFT for a given owner address.
+
+### Parameters
+- \`{owner}\`: The Klever address of the NFT owner
+- \`{id}\`: The NFT asset ID (e.g., "MYNFT-A1B2/01" where 01 is the nonce)
+
+### Example Request
+\`\`\`bash
+# Local network example
+curl "http://localhost:8080/asset/nft/klv1owner.../MYNFT-A1B2/01"
+
+# Testnet example
+curl "https://node.testnet.klever.org/asset/nft/klv1abc.../ARTNFT-XY78/42"
+\`\`\`
+
+### Response Format
+\`\`\`json
+{
+  "data": {
+    "assetId": "MYNFT-A1B2/01",
+    "ownerAddress": "klv1owner...",
+    "attributes": {
+      // NFT attributes and metadata
+    },
+    "uri": "ipfs://...",
+    "royalties": {
+      // Royalty information if applicable
+    }
+  },
+  "error": "",
+  "code": "successful"
+}
+\`\`\`
+
+### JavaScript/TypeScript Example
+\`\`\`javascript
+async function getNFTDetails(ownerAddress, nftId, network = 'testnet') {
+    const baseUrl = network === 'local' 
+        ? 'http://localhost:8080' 
+        : \`https://node.\${network}.klever.org\`;
+    
+    const response = await fetch(
+        \`\${baseUrl}/asset/nft/\${ownerAddress}/\${nftId}\`
+    );
+    
+    const result = await response.json();
+    
+    if (result.code === 'successful') {
+        return result.data;
+    }
+    
+    throw new Error(result.error || 'Failed to fetch NFT details');
+}
+
+// Usage
+const nftDetails = await getNFTDetails(
+    'klv1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqlllllh',
+    'COOLNFT-A1B2/01',
+    'testnet'
+);
+
+console.log('NFT ID:', nftDetails.assetId);
+console.log('Owner:', nftDetails.ownerAddress);
+console.log('Metadata URI:', nftDetails.uri);
+\`\`\`
+
+### Notes
+- The ID format includes both the collection identifier and the nonce
+- This endpoint returns detailed NFT metadata including attributes and URIs
+- For fungible tokens (KDA), use the balance or kda endpoints instead`,
+    {
+      title: 'NFT Asset Details Endpoint',
+      description: 'Node API endpoint for querying NFT ownership and metadata',
+      tags: ['api', 'node', 'nft', 'asset', 'metadata', 'endpoint'],
+      language: 'javascript',
+      relevanceScore: 0.9,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
+
+  // KDA Token Detailed Info Endpoint
+  createKnowledgeEntry(
+    'documentation',
+    `# KDA Token Detailed Information Endpoint
+
+## Node API Endpoint for Detailed KDA Token Information
+
+### Endpoint
+\`\`\`
+GET /address/{address}/kda?asset={KDA-ID}
+\`\`\`
+
+### Description
+Retrieve detailed information about a specific KDA token for a given address, including staking mechanisms and claim data.
+
+### Parameters
+- \`{address}\`: The Klever address to query
+- \`asset\`: Query parameter with the KDA token ID (e.g., "LPKLVKFI-3I0N", "USDT-A1B2")
+
+### Example Request
+\`\`\`bash
+# Local network example
+curl "http://localhost:8080/address/klv17e8zzgn73h6ehe3c6q9vlt77kuxk5euddmhymy5uhv2rhv0dc0nqlfp0ap/kda?asset=LPKLVKFI-3I0N"
+
+# Testnet example
+curl "https://node.testnet.klever.org/address/klv1abc.../kda?asset=USDT-A1B2"
+\`\`\`
+
+### Response Format
+\`\`\`json
+{
+  "data": {
+    "address": "klv17e8zzgn73h6ehe3c6q9vlt77kuxk5euddmhymy5uhv2rhv0dc0nqlfp0ap",
+    "asset": "LPKLVKFI-3I0N",
+    "userKDA": {
+      "LastClaim": {
+        // Staking/claim related data if applicable
+      }
+      // Additional KDA-specific data
+    }
+  },
+  "error": "",
+  "code": "successful"
+}
+\`\`\`
+
+### JavaScript/TypeScript Example
+\`\`\`javascript
+async function getKDATokenDetails(address, tokenId, network = 'testnet') {
+    const baseUrl = network === 'local' 
+        ? 'http://localhost:8080' 
+        : \`https://node.\${network}.klever.org\`;
+    
+    const response = await fetch(
+        \`\${baseUrl}/address/\${address}/kda?asset=\${tokenId}\`
+    );
+    
+    const result = await response.json();
+    
+    if (result.code === 'successful') {
+        return result.data;
+    }
+    
+    throw new Error(result.error || 'Failed to fetch KDA details');
+}
+
+// Usage
+const kdaDetails = await getKDATokenDetails(
+    'klv17e8zzgn73h6ehe3c6q9vlt77kuxk5euddmhymy5uhv2rhv0dc0nqlfp0ap',
+    'LPKLVKFI-3I0N',
+    'local'
+);
+
+console.log('Asset:', kdaDetails.asset);
+console.log('User KDA Info:', kdaDetails.userKDA);
+console.log('Last Claim:', kdaDetails.userKDA?.LastClaim);
+\`\`\`
+
+### Differences from Balance Endpoint
+- \`/balance?asset={KDA-ID}\`: Returns only the balance amount
+- \`/kda?asset={KDA-ID}\`: Returns detailed information including staking/claim data
+
+### Use Cases
+- Check staking rewards and claim information
+- Get detailed KDA metadata
+- Monitor liquidity pool positions
+- Track NFT/SFT ownership details`,
+    {
+      title: 'KDA Token Detailed Information Endpoint',
+      description: 'Node API endpoint for querying detailed KDA token information including staking data',
+      tags: ['api', 'node', 'kda', 'staking', 'tokens', 'endpoint', 'claims'],
+      language: 'javascript',
+      relevanceScore: 0.95,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
+
+  // KDA Token Balance Endpoint
+  createKnowledgeEntry(
+    'documentation',
+    `# KDA Token Balance Query Endpoint
+
+## Node API Endpoint for Specific KDA Token Balance
+
+### Endpoint
+\`\`\`
+GET /address/{address}/balance?asset={KDA-ID}
+\`\`\`
+
+### Description
+Retrieve the balance of a specific KDA token for a given address directly from the node.
+
+### Parameters
+- \`{address}\`: The Klever address to query
+- \`asset\`: Query parameter with the KDA token ID (e.g., "USDT-A1B2", "LPKLVKFI-3I0N")
+
+### Example Request
+\`\`\`bash
+# Local network example
+curl "http://localhost:8080/address/klv17e8zzgn73h6ehe3c6q9vlt77kuxk5euddmhymy5uhv2rhv0dc0nqlfp0ap/balance?asset=LPKLVKFI-3I0N"
+
+# Testnet example
+curl "https://node.testnet.klever.org/address/klv1abc.../balance?asset=USDT-A1B2"
+\`\`\`
+
+### Response Format
+\`\`\`json
+{
+  "data": {
+    "balance": 99999000
+  },
+  "error": "",
+  "code": "successful"
+}
+\`\`\`
+
+### JavaScript/TypeScript Example
+\`\`\`javascript
+async function getKDATokenBalance(address, tokenId, network = 'testnet') {
+    const baseUrl = network === 'local' 
+        ? 'http://localhost:8080' 
+        : \`https://node.\${network}.klever.org\`;
+    
+    const response = await fetch(
+        \`\${baseUrl}/address/\${address}/balance?asset=\${tokenId}\`
+    );
+    
+    const result = await response.json();
+    
+    if (result.code === 'successful') {
+        return result.data.balance;
+    }
+    
+    throw new Error(result.error || 'Failed to fetch balance');
+}
+
+// Usage
+const balance = await getKDATokenBalance(
+    'klv17e8zzgn73h6ehe3c6q9vlt77kuxk5euddmhymy5uhv2rhv0dc0nqlfp0ap',
+    'LPKLVKFI-3I0N',
+    'local'
+);
+console.log('Balance:', balance / 1e6, 'tokens'); // Assuming 6 decimals
+\`\`\`
+
+### Notes
+- This endpoint returns the balance for a single KDA token
+- For KLV balance, use \`/address/{address}/balance\` without the asset parameter
+- For detailed KDA info with staking data, use \`/address/{address}/kda?asset={KDA-ID}\`
+- Balance is returned in the smallest unit (consider token decimals)`,
+    {
+      title: 'KDA Token Balance Query Endpoint',
+      description: 'Node API endpoint for querying specific KDA token balances',
+      tags: ['api', 'node', 'kda', 'balance', 'tokens', 'endpoint'],
+      language: 'javascript',
+      relevanceScore: 0.95,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
+
   // Main Network Endpoints Reference
   createKnowledgeEntry(
     'documentation',
@@ -94,11 +555,16 @@ Blockchain → Indexer Node → ElasticSearch → Klever Proxy API → Client
 \`\`\`bash
 GET /address/{address}                        # Full account details
 GET /address/{address}/balance                # KLV balance
+GET /address/{address}/balance?asset={KDA-ID} # Specific KDA token balance (simple)
 GET /address/{address}/nonce                  # Transaction nonce
-GET /address/{address}/kda                    # All KDA tokens
-GET /address/{address}/kda/{tokenID}          # Specific token balance
-GET /address/{address}/kda/{tokenID}/nonce/{nonce}  # NFT details
+GET /address/{address}/kda?asset={KDA-ID}     # Detailed KDA info with staking data
 GET /address/{address}/code                   # Contract bytecode (if SC)
+\`\`\`
+
+### Asset Operations
+\`\`\`bash
+GET /asset/{assetID}                          # Complete asset properties and configuration
+GET /asset/nft/{owner}/{id}                   # NFT details for specific owner and asset
 \`\`\`
 
 ### Transaction Operations
@@ -284,10 +750,21 @@ curl -s "https://api.testnet.klever.org/v1.0/transactions/$BROADCAST_HASH" | jq 
 - \`GET node.../address/{addr}/nonce\`
 
 **Get account's KDA tokens**
-- \`GET node.../address/{addr}/kda\` (direct from node)
+- Specific token balance: \`GET node.../address/{addr}/balance?asset={KDA-ID}\`
+- Detailed KDA info: \`GET node.../address/{addr}/kda?asset={KDA-ID}\`
 
 **Get transaction history**
 - \`GET api.../v1.0/address/{addr}/transactions\`
+
+### Asset/Token Operations
+**Get asset properties**
+- \`GET node.../asset/{assetID}\` (properties, supply, permissions)
+
+**Get NFT details**
+- \`GET node.../asset/nft/{owner}/{nft-id}\`
+
+**Check token permissions**
+- Query asset properties to verify CanMint, CanBurn, etc.
 
 ### Smart Contracts
 **Deploy contract**
@@ -367,6 +844,104 @@ async function getFullBalance(address) {
         nonce: account.data?.nonce,
         tokens: kdaTokens.data?.kdas || []
     };
+}
+\`\`\`
+
+## Pattern: Get Specific KDA Token Balance
+\`\`\`javascript
+async function getKDABalance(address, tokenId) {
+    // Simple balance endpoint
+    const response = await fetch(
+        \`https://node.testnet.klever.org/address/\${address}/balance?asset=\${tokenId}\`
+    );
+    const result = await response.json();
+    
+    // Returns format: {"data":{"balance":99999000},"error":"","code":"successful"}
+    return result.data?.balance || 0;
+}
+
+async function getKDADetails(address, tokenId) {
+    // Detailed KDA info endpoint (includes staking data)
+    const response = await fetch(
+        \`https://node.testnet.klever.org/address/\${address}/kda?asset=\${tokenId}\`
+    );
+    const result = await response.json();
+    
+    // Returns full KDA details with userKDA info
+    return result.data;
+}
+
+// Example usage:
+const lpBalance = await getKDABalance(
+    "klv17e8zzgn73h6ehe3c6q9vlt77kuxk5euddmhymy5uhv2rhv0dc0nqlfp0ap",
+    "LPKLVKFI-3I0N"
+);
+console.log("LP Token Balance:", lpBalance); // 99999000 (6 decimals)
+
+// Get detailed info including staking
+const lpDetails = await getKDADetails(
+    "klv17e8zzgn73h6ehe3c6q9vlt77kuxk5euddmhymy5uhv2rhv0dc0nqlfp0ap",
+    "LPKLVKFI-3I0N"
+);
+console.log("Staking info:", lpDetails.userKDA);
+\`\`\`
+
+## Pattern: Get Asset Properties
+\`\`\`javascript
+async function getAssetInfo(assetId) {
+    const response = await fetch(
+        \`https://node.testnet.klever.org/asset/\${assetId}\`
+    );
+    const result = await response.json();
+    
+    if (result.code === 'successful') {
+        const asset = result.data.asset;
+        return {
+            name: atob(asset.Name || ''),
+            ticker: atob(asset.Ticker || ''),
+            precision: asset.Precision,
+            circulatingSupply: asset.CirculatingSupply,
+            canMint: asset.Properties?.CanMint || false,
+            canBurn: asset.Properties?.CanBurn || false,
+            canFreeze: asset.Properties?.CanFreeze || false
+        };
+    }
+    return null;
+}
+
+// Check if a token can be minted
+const tokenInfo = await getAssetInfo('MYTOKEN-A1B2');
+if (tokenInfo?.canMint) {
+    console.log('Token can be minted');
+}
+console.log('Circulating:', tokenInfo.circulatingSupply);
+\`\`\`
+
+## Pattern: Query NFT Details
+\`\`\`javascript
+async function getNFT(ownerAddress, nftId) {
+    const response = await fetch(
+        \`https://node.testnet.klever.org/asset/nft/\${ownerAddress}/\${nftId}\`
+    );
+    const result = await response.json();
+    
+    if (result.code === 'successful') {
+        return result.data;
+    }
+    
+    return null;
+}
+
+// Example: Check NFT ownership and metadata
+const nft = await getNFT(
+    "klv1useraddress...",
+    "MYNFT-A1B2/01"  // Collection ID + "/" + nonce
+);
+
+if (nft) {
+    console.log("NFT owned by:", nft.ownerAddress);
+    console.log("Metadata URI:", nft.uri);
+    console.log("Attributes:", nft.attributes);
 }
 \`\`\`
 

@@ -286,7 +286,7 @@ Use \`String:\` when passing any text data:
 --values "KLV=1000000,KFI=500000,USDT-A1B2=250000"
 
 # NFT/SFT with nonce
---values "NFT-XYZ/01=1"          # NFT with nonce 01
+--values "NFT-XY01/01=1"         # NFT with nonce 01
 \`\`\`
 
 ## Common Mistakes to Avoid
@@ -352,8 +352,8 @@ sc invoke klv1abc... transfer
 --values "KLV=1000000,KFI=500000" # Multiple tokens
 
 # NFT/SFT with nonce
---values "NFT-XYZ/01=1"          # NFT with nonce 01
---values "SFT-ABC/05=100"        # 100 SFTs with nonce 05
+--values "NFT-XY01/01=1"         # NFT with nonce 01
+--values "SFT-AB12/05=100"       # 100 SFTs with nonce 05
 
 # Optional Values
 --args "Option:String:hello"     # Some("hello")
@@ -484,7 +484,7 @@ sc invoke klv1abc... transfer
 --values "MYSFT-C3D4/05=100"     # 100 SFTs with nonce 05
 
 # Multiple NFTs/SFTs
---values "NFT1-XYZ/01=1,NFT2-ABC/02=1,SFT-DEF/03=50"
+--values "NFT1-AB12/01=1,NFT2-CD34/02=1,SFT-EF56/03=50"
 \`\`\`
 
 ## 🔧 Real-World Examples
