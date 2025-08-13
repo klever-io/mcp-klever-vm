@@ -78,7 +78,7 @@ deploy_contract() {
             KLEVER_NODE="https://node.testnet.klever.org"
             ;;
         "mainnet")
-            KLEVER_NODE="https://node.klever.org"
+            KLEVER_NODE="https://node.mainnet.klever.org"
             ;;
         "devnet")
             KLEVER_NODE="https://node.devnet.klever.org"
@@ -141,7 +141,7 @@ upgrade_contract() {
     # Set node URL
     case \$NETWORK in
         "testnet") KLEVER_NODE="https://node.testnet.klever.org" ;;
-        "mainnet") KLEVER_NODE="https://node.klever.org" ;;
+        "mainnet") KLEVER_NODE="https://node.mainnet.klever.org" ;;
         *) echo -e "\${RED}❌ Invalid network\${RESET}"; exit 1 ;;
     esac
     
