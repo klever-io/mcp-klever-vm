@@ -87,7 +87,12 @@ pnpm install
 cp .env.example .env
 ```
 
-4. Build the project:
+4. Install Klever SDK tools (required for transactions):
+```bash
+chmod +x scripts/install-sdk.sh && ./scripts/install-sdk.sh
+```
+
+5. Build the project:
 ```bash
 pnpm run build
 ```
