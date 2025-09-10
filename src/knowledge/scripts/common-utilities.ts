@@ -59,7 +59,7 @@ fi
 ### Multiple Data Interpretations
 For each returnData value:
 1. Base64 decode to hex
-2. Try as printable string  
+2. Try as printable string
 3. Parse as number (up to 8 bytes)
 4. Format with underscores
 5. Convert to KLV if > 1,000,000 units
@@ -100,6 +100,68 @@ NETWORK=local ./scripts/deploy.sh
       relevanceScore: 1.0,
       contractType: 'any',
       author: 'klever-mcp',
+    }
+  ),
+
+  // Testnet Faucet
+  createKnowledgeEntry(
+    'deployment_tool',
+    `# Klever Testnet Faucet - Get Free Test KLV
+
+## When to Use the Faucet
+Use the Klever testnet faucet when you encounter these situations:
+- **Insufficient funds** for transactions or deployments
+- **Zero balance** in your testnet wallet
+- **Low KLV balance** preventing contract interactions
+- **Need test tokens** for development and testing
+- **Transaction fails** due to insufficient balance
+- **Cannot deploy contracts** due to lack of funds
+- **Error messages** about insufficient balance or fees
+
+## Request Test Funds
+To request test funds on Klever testnet, you can make a POST request to the faucet:
+
+\`\`\`javascript
+// Request funds for an account on testnet
+const url = \`https://api.testnet.klever.org/v1.0/transaction/send-user-funds/\${Settings.getAddress()}\`;
+const options = {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json",
+    },
+};
+
+fetch(url, options)
+    .then(response => response.json())
+    .then(result => console.log("Funds requested:", result))
+    .catch(error => console.error("Error:", error));
+\`\`\`
+
+## cURL Example
+\`\`\`bash
+curl -X POST "https://api.testnet.klever.org/v1.0/transaction/send-user-funds/YOUR_ADDRESS" \\
+     -H "Content-Type: application/json"
+\`\`\`
+
+## Common Error Messages That Indicate Need for Faucet
+- "insufficient funds"
+- "balance too low"
+- "not enough KLV"
+- "transaction failed: insufficient balance"
+- "cannot pay transaction fees"
+- "account has zero balance"
+
+**Important Notes:**
+- Only works on **testnet**, not mainnet
+- Rate limiting: typically a few requests per address per day
+- Funds are only for testing purposes`,
+    {
+      title: 'Klever Testnet Faucet - Get Free Test KLV',
+      description: 'How to request test funds when you have insufficient balance, zero funds, or low KLV for testnet development',
+      tags: ['faucet', 'testnet', 'fund', 'outoffunds', 'balance', 'insufficient', 'funds', 'zero', 'low'],
+      contractType: 'any',
+      author: 'klever-mcp',
+      relevanceScore: 1.0,
     }
   ),
 ];
