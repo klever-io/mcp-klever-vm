@@ -18,10 +18,10 @@ load_config() {
     if [ -f "$CONFIG_FILE" ]; then
         export $(cat "$CONFIG_FILE" | grep -v '^#' | xargs)
     fi
-    
+
     # Set defaults if not in config
     NETWORK="${NETWORK:-$DEFAULT_NETWORK}"
-    KEY_FILE="${KEY_FILE:-$HOME/klever-sdk/walletKey.pem}"
+    KEY_FILE="${KEY_FILE:-$KLEVER_WALLET_KEY}"
 }
 
 # Set network endpoint
@@ -35,14 +35,14 @@ set_network() {
 get_contract_address() {
     if [ -z "$CONTRACT_ADDRESS" ]; then
         CONTRACT_ADDRESS=$(get_contract_from_history "$NETWORK" "$HISTORY_FILE")
-        
+
         if [ -z "$CONTRACT_ADDRESS" ]; then
             echo -e "${RED}No contract found for $NETWORK. Deploy first!${RESET}"
             echo -e "${YELLOW}Run: ./scripts/deploy.sh${RESET}"
             return 1
         fi
     fi
-    
+
     echo -e "${CYAN}Contract: ${BOLD}$CONTRACT_ADDRESS${RESET}"
     return 0
 }
@@ -52,24 +52,24 @@ invoke_contract() {
     local method=$1
     shift
     local args=("$@")
-    
+
     echo -e "${YELLOW}Invoking ${BOLD}$method${RESET}..."
-    
+
     # Build koperator command
-    local cmd="KLEVER_NODE=$KLEVER_NODE ~/klever-sdk/koperator"
+    local cmd="KLEVER_NODE=$KLEVER_NODE \"$KOPERATOR_BIN\""
     cmd="$cmd --key-file=\"$KEY_FILE\""
     cmd="$cmd sc invoke \"$CONTRACT_ADDRESS\" $method"
-    
+
     # Add arguments
     for arg in "${args[@]}"; do
         cmd="$cmd $arg"
     done
-    
+
     # Add common flags
     cmd="$cmd --await --sign --result-only"
-    
+
     echo -e "${CYAN}Command: $cmd${RESET}"
-    
+
     # Execute
     eval "$cmd"
 }
@@ -79,17 +79,17 @@ query_contract() {
     local endpoint=$1
     shift
     local args=("$@")
-    
+
     echo -e "${YELLOW}Querying ${BOLD}$endpoint${RESET}..."
-    
+
     # Use the query.sh script
     local cmd="./scripts/query.sh --endpoint $endpoint --contract $CONTRACT_ADDRESS"
-    
+
     # Add arguments
     for arg in "${args[@]}"; do
         cmd="$cmd --arg \"$arg\""
     done
-    
+
     eval "$cmd"
 }
 
@@ -97,12 +97,12 @@ query_contract() {
 build_arg() {
     local type=$1
     local value=$2
-    
+
     # Parse numbers with underscores
     if [[ "$type" =~ ^(u64|u32|u16|u8|bi|BigInt|BigUint)$ ]]; then
         value=$(parse_number "$value")
     fi
-    
+
     case "$type" in
         String)
             echo "--args String:\"$value\""
@@ -221,7 +221,7 @@ show_examples() {
 main() {
     load_config
     set_network
-    
+
     # If arguments provided, execute and exit
     if [ $# -gt 0 ]; then
         case "$1" in
@@ -245,12 +245,12 @@ main() {
         esac
         exit 0
     fi
-    
+
     # Interactive mode
     while true; do
         show_menu
         read -p "Select option: " choice
-        
+
         case "$choice" in
             1)
                 ./scripts/build.sh
@@ -277,7 +277,7 @@ main() {
                     while true; do
                         read -p "Arg: " arg_input
                         [ -z "$arg_input" ] && break
-                        
+
                         # Parse type:value
                         if [[ "$arg_input" =~ ^([^:]+):(.+)$ ]]; then
                             arg_type="${BASH_REMATCH[1]}"
@@ -298,7 +298,7 @@ main() {
                 echo -e "Network: $NETWORK"
                 echo -e "Node: $KLEVER_NODE"
                 echo -e "Key file: $KEY_FILE"
-                
+
                 if [ -f "$HISTORY_FILE" ]; then
                     echo ""
                     echo -e "${CYAN}Deployment History:${RESET}"
@@ -343,7 +343,7 @@ main() {
                 echo -e "${RED}Invalid option${RESET}"
                 ;;
         esac
-        
+
         echo
         read -p "Press Enter to continue..."
     done

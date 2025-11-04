@@ -51,7 +51,7 @@ fi
 
 # Set defaults
 NETWORK="${NETWORK:-$DEFAULT_NETWORK}"
-KEY_FILE="${KEY_FILE:-$HOME/klever-sdk/walletKey.pem}"
+KEY_FILE="${KEY_FILE:-$KLEVER_WALLET_KEY}"
 
 # Set network endpoint
 KLEVER_NODE=$(set_network_endpoint "$NETWORK")
@@ -66,7 +66,7 @@ if [ $# -eq 1 ] && [ "$1" != "--help" ] && [ "$1" != "-h" ]; then
     echo -e "${CYAN}Contract:${RESET} $CONTRACT_ADDRESS (provided)"
 else
     CONTRACT_ADDRESS=$(get_contract_from_history "$NETWORK" "$HISTORY_FILE")
-    
+
     if [ -z "$CONTRACT_ADDRESS" ]; then
         echo -e "${RED}Error: No contract address found for $NETWORK${RESET}"
         echo "Usage: $0 [contract-address]"
@@ -80,7 +80,7 @@ echo ""
 
 # Build first
 echo -e "${YELLOW}Building smart contract...${RESET}"
-~/klever-sdk/ksc all build || { 
+"$KSC_BIN" all build || {
     echo -e "${RED}❌ Build failed!${RESET}"
     exit 1
 }
@@ -108,7 +108,7 @@ fi
 # Upgrade contract
 echo -e "${YELLOW}Upgrading contract...${RESET}"
 UPGRADE_OUTPUT=$(KLEVER_NODE=$KLEVER_NODE \
-    ~/klever-sdk/koperator \
+    "$KOPERATOR_BIN" \
     --key-file="$KEY_FILE" \
     sc upgrade "$CONTRACT_ADDRESS" \
     --wasm="$CONTRACT_WASM" \
@@ -122,7 +122,7 @@ else
     echo -e "${GREEN}Contract upgrade completed${RESET}"
 fi
 
-# Extract transaction hash  
+# Extract transaction hash
 TX_HASH=$(echo "$UPGRADE_OUTPUT" | grep -o '"hash": "[^"]*"' | head -1 | cut -d'"' -f4)
 
 if [ -n "$TX_HASH" ]; then
@@ -130,7 +130,7 @@ if [ -n "$TX_HASH" ]; then
     jq --arg tx "$TX_HASH" --arg addr "$CONTRACT_ADDRESS" --arg net "$NETWORK" \
        '. + [{"hash": $tx, "contractAddress": $addr, "network": $net, "type": "upgrade", "timestamp": now | strftime("%Y-%m-%d %H:%M:%S")}]' \
        "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"
-    
+
     echo ""
     echo -e "${BOLD}${GREEN}=== Upgrade Summary ===${RESET}"
     echo -e "${CYAN}Transaction:${RESET} $TX_HASH"

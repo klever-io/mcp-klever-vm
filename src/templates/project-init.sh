@@ -19,6 +19,9 @@ CONTRACT_NAME=""
 MOVE_TO_CURRENT=true
 NO_MOVE_SPECIFIED=false
 
+KLEVER_SDK_PATH="${KLEVER_SDK_PATH:-$HOME/klever-sdk}"
+KSC_BIN="${KSC_BIN:-$KLEVER_SDK_PATH/ksc}"
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -59,15 +62,15 @@ mkdir -p "$TEMP_DIR"
 echo -e "${YELLOW}Creating contract from template: $TEMPLATE${RESET}"
 
 # Check if ksc exists
-if [ ! -f ~/klever-sdk/ksc ]; then
-    echo -e "${RED}Error: Klever SDK (ksc) not found at ~/klever-sdk/ksc${RESET}"
-    echo "Please install the Klever SDK first"
+if [ ! -f "$KSC_BIN" ]; then
+    echo -e "${RED}Error: Klever SDK (ksc) not found at $KSC_BIN${RESET}"
+    echo "Please install the Klever SDK first or set KLEVER_SDK_PATH environment variable"
     exit 1
 fi
 
 # Run ksc new command
-echo -e "${YELLOW}Running: ~/klever-sdk/ksc new --template \"$TEMPLATE\" --name \"$CONTRACT_NAME\" --path \"$TEMP_DIR\"${RESET}"
-~/klever-sdk/ksc new --template "$TEMPLATE" --name "$CONTRACT_NAME" --path "$TEMP_DIR" || {
+echo -e "${YELLOW}Running: $KSC_BIN new --template \"$TEMPLATE\" --name \"$CONTRACT_NAME\" --path \"$TEMP_DIR\"${RESET}"
+"$KSC_BIN" new --template "$TEMPLATE" --name "$CONTRACT_NAME" --path "$TEMP_DIR" || {
     echo -e "${RED}Error: Failed to create contract${RESET}"
     echo -e "${RED}ksc exit code: $?${RESET}"
     exit 1
@@ -112,11 +115,11 @@ if [ "$MOVE_TO_CURRENT" = true ]; then
     echo -e "${YELLOW}Moving project to current directory...${RESET}"
     echo -e "${YELLOW}PROJECT_DIR: $PROJECT_DIR${RESET}"
     echo -e "${YELLOW}Current directory: $(pwd)${RESET}"
-    
+
     # List what we're about to move
     echo -e "${YELLOW}Files to move:${RESET}"
     ls -la "$PROJECT_DIR"
-    
+
     # If project is in a subdirectory
     if [ "$PROJECT_DIR" = "$TEMP_DIR/$CONTRACT_NAME" ]; then
         echo -e "${YELLOW}Moving contents from subdirectory to current directory...${RESET}"
@@ -124,7 +127,7 @@ if [ "$MOVE_TO_CURRENT" = true ]; then
         if [ -n "$(ls -A $PROJECT_DIR)" ]; then
             # Move contents, not the directory itself
             echo -e "${YELLOW}Moving all files from $PROJECT_DIR/ to current directory${RESET}"
-            
+
             # First try with rsync (moves contents, not directory)
             if command -v rsync >/dev/null 2>&1; then
                 rsync -av "$PROJECT_DIR/" . || {
@@ -172,16 +175,16 @@ if [ "$MOVE_TO_CURRENT" = true ]; then
             fi
         fi
     fi
-    
+
     echo -e "${GREEN}Files after move:${RESET}"
     ls -la .
 else
     echo -e "${YELLOW}--no-move specified: Using current directory as project root...${RESET}"
     # When noMove is specified, we want to place files directly in current directory
-    
+
     if [ -d "$PROJECT_DIR" ] && [ -n "$(ls -A $PROJECT_DIR)" ]; then
         echo -e "${YELLOW}Moving project files to current directory...${RESET}"
-        
+
         # Move contents directly to current directory (not in a subdirectory)
         if command -v rsync >/dev/null 2>&1; then
             rsync -av "$PROJECT_DIR/" . || {
@@ -191,13 +194,13 @@ else
         else
             find "$PROJECT_DIR" -maxdepth 1 -mindepth 1 -exec cp -r {} . \; 2>&1 || echo -e "${RED}Failed to copy files${RESET}"
         fi
-        
+
         # If PROJECT_DIR was ./$CONTRACT_NAME created by ksc, remove the now-empty directory
         if [ "$PROJECT_DIR" = "./$CONTRACT_NAME" ]; then
             rmdir "./$CONTRACT_NAME" 2>/dev/null || true
         fi
     fi
-    
+
     echo -e "${GREEN}Files in current directory:${RESET}"
     ls -la .
 fi

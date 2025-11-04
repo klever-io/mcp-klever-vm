@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# Klever SDK base path
+export KLEVER_SDK_PATH="${KLEVER_SDK_PATH:-$HOME/klever-sdk}"
+
+# Klever SDK binaries
+export KSC_BIN="${KSC_BIN:-$KLEVER_SDK_PATH/ksc}"
+export KOPERATOR_BIN="${KOPERATOR_BIN:-$KLEVER_SDK_PATH/koperator}"
+
+# Wallet key file
+export KLEVER_WALLET_KEY="${KLEVER_WALLET_KEY:-${KEY_FILE:-$KLEVER_SDK_PATH/walletKey.pem}}"
+
+# Network configurations
+export KLEVER_NODE="${KLEVER_NODE:-https://node.testnet.klever.org}"
+export KLEVER_NETWORK="${KLEVER_NETWORK:-testnet}"
+
 # Common functions and utilities for Klever scripts
 
 # Colors
@@ -15,7 +29,7 @@ export CYAN="\x1b[36m"
 # Bech32 decoder for Klever addresses using inline Python
 decode_bech32_address() {
     local address="$1"
-    
+
     python3 -c "
 def bech32_decode(bech):
     charset = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l'
@@ -99,31 +113,31 @@ parse_number() {
 get_contract_from_history() {
     local network="${1:-testnet}"
     local history_file="${2:-output/history.json}"
-    
+
     if [ ! -f "$history_file" ]; then
         return 1
     fi
-    
+
     # Try to get address for specific network
     local contract_address=$(jq -r ".[] | select(.network == \"$network\") | .contractAddress" "$history_file" 2>/dev/null | tail -1)
-    
+
     # Fallback to last deployed contract if no network match
     if [ -z "$contract_address" ] || [ "$contract_address" = "null" ]; then
         contract_address=$(jq -r '.[-1].contractAddress' "$history_file" 2>/dev/null)
     fi
-    
+
     if [ -n "$contract_address" ] && [ "$contract_address" != "null" ]; then
         echo "$contract_address"
         return 0
     fi
-    
+
     return 1
 }
 
 # Set network endpoint
 set_network_endpoint() {
     local network="${1:-testnet}"
-    
+
     case "$network" in
         mainnet)
             echo "https://node.mainnet.klever.org"
@@ -146,7 +160,7 @@ set_network_endpoint() {
 # Get API endpoint for network
 get_api_endpoint() {
     local network="${1:-testnet}"
-    
+
     case "$network" in
         mainnet)
             echo "https://api.mainnet.klever.org/v1.0/sc/query"
@@ -169,7 +183,7 @@ get_api_endpoint() {
 # Encode argument for API calls
 encode_arg() {
     local arg="$1"
-    
+
     # Handle different types of arguments
     if [[ "$arg" =~ ^Address:(.+)$ ]]; then
         # Address type prefix
@@ -178,7 +192,7 @@ encode_arg() {
     elif [[ "$arg" =~ ^klv1[a-z0-9]{58,62}$ ]]; then
         # Klever address - decode using bech32
         local hex_val=$(decode_bech32_address "$arg")
-        
+
         if [ -n "$hex_val" ]; then
             echo -n "$hex_val" | xxd -r -p | base64
         else
@@ -203,7 +217,7 @@ query_contract() {
     local api_url="$3"
     shift 3
     local args=("$@")
-    
+
     # Build arguments array
     local json_args="["
     local first=true
@@ -213,7 +227,7 @@ query_contract() {
             echo "Error: Failed to encode argument: $arg" >&2
             return 1
         fi
-        
+
         if [ "$first" = true ]; then
             first=false
         else
@@ -222,14 +236,14 @@ query_contract() {
         json_args="$json_args\"$encoded\""
     done
     json_args="$json_args]"
-    
+
     # Build request body
     local request_body="{
         \"ScAddress\": \"$contract\",
         \"FuncName\": \"$endpoint\",
         \"Arguments\": $json_args
     }"
-    
+
     # Make the request
     curl -s -X POST "$api_url" \
         -H "Content-Type: application/json" \

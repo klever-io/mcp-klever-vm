@@ -7,7 +7,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/common.sh"
 
 echo "Building smart contract..."
-~/klever-sdk/ksc all build
+"$KSC_BIN" all build
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✅ Build successful!${RESET}"
