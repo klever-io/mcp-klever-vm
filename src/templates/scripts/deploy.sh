@@ -85,7 +85,7 @@ if [ -z "$BALANCE_KLV" ] || [ "$BALANCE_KLV" = "0" ] || [ "${BALANCE_INT:-0}" -l
 
                 BALANCE_INT=$(echo "$BALANCE_KLV" | cut -d. -f1)
                 if [ -z "$BALANCE_KLV" ] || [ "$BALANCE_KLV" = "0" ] || [ "${BALANCE_INT:-0}" -lt 5 ]; then
-                    echo -e "${YELLOW}⚠️  Funds not arrived yet. Please wait 1-2 minutes and run this script again${RESET}"
+                    echo -e "${YELLOW}⚠️  Funds have not arrived yet. Please wait 1-2 minutes and run this script again${RESET}"
                     exit 0
                 else
                     echo -e "${GREEN}✅ Funds received! Continuing with deployment...${RESET}"
