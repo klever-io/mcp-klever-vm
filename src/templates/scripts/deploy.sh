@@ -64,8 +64,12 @@ if [ -z "$BALANCE_KLV" ] || [ "$BALANCE_KLV" = "0" ] || [ "${BALANCE_INT:-0}" -l
 
             FAUCET_RESPONSE=$(curl -s -X POST "https://api.testnet.klever.org/v1.0/transaction/send-user-funds/$WALLET_ADDRESS" -H "Content-Type: application/json" 2>&1)
             CURL_EXIT_CODE=$?
-
-            # check jq installation
+            if [ "$CURL_EXIT_CODE" -ne 0 ]; then
+                echo -e "${RED}Failed to request testnet funds: curl exited with code $CURL_EXIT_CODE${RESET}"
+                echo -e "${RED}Response:${RESET}\n$FAUCET_RESPONSE"
+                exit 1
+            fi
+            # Check jq installation
             if ! command -v jq >/dev/null 2>&1; then
                 echo -e "${RED}❌ 'jq' is required to parse JSON responses. Please install jq and try again.${RESET}"
                 exit 1
