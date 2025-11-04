@@ -16,6 +16,24 @@ export KLEVER_NETWORK="${KLEVER_NETWORK:-testnet}"
 
 # Common functions and utilities for Klever scripts
 
+# Check required dependencies
+check_dependencies() {
+    local missing_deps=()
+
+    # Check for jq
+    if ! command -v jq >/dev/null 2>&1; then
+        missing_deps+=("jq")
+    fi
+
+    if [ ${#missing_deps[@]} -ne 0 ]; then
+        echo "Error: Missing required dependencies: ${missing_deps[*]}" >&2
+        echo "Please install the missing dependencies and try again." >&2
+        return 1
+    fi
+
+    return 0
+}
+
 # Colors
 export RESET="\x1b[0m"
 export BOLD="\x1b[1m"

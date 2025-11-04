@@ -8,6 +8,9 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/common.sh"
 
+# Check required dependencies
+check_dependencies || exit 1
+
 # Configuration
 CONFIG_FILE=".env"
 HISTORY_FILE="output/history.json"
