@@ -52,7 +52,8 @@ export function createRoutes(contextService: ContextService): Router {
   // Retrieve context by ID
   router.get('/context/:id', async (req: Request, res: Response) => {
     try {
-      const context = await contextService.retrieve(req.params.id);
+      const id = req.params.id as string;
+      const context = await contextService.retrieve(id);
 
       if (!context) {
         res.status(404).json({
@@ -110,8 +111,9 @@ export function createRoutes(contextService: ContextService): Router {
   // Update context
   router.put('/context/:id', async (req: Request, res: Response) => {
     try {
+      const id = req.params.id as string;
       const payload = ContextPayloadSchema.partial().parse(req.body);
-      const success = await contextService.update(req.params.id, payload);
+      const success = await contextService.update(id, payload);
 
       if (!success) {
         res.status(404).json({
@@ -145,7 +147,8 @@ export function createRoutes(contextService: ContextService): Router {
   // Delete context
   router.delete('/context/:id', async (req: Request, res: Response) => {
     try {
-      const success = await contextService.delete(req.params.id);
+      const id = req.params.id as string;
+      const success = await contextService.delete(id);
 
       if (!success) {
         res.status(404).json({
@@ -171,6 +174,7 @@ export function createRoutes(contextService: ContextService): Router {
   // Find similar contexts
   router.get('/context/:id/similar', async (req: Request, res: Response) => {
     try {
+      const id = req.params.id as string;
       // VALIDATION: Ensure limit is within reasonable bounds
       const limitParam = req.query.limit as string;
       const limit = limitParam ? parseInt(limitParam) : 5;
@@ -184,7 +188,7 @@ export function createRoutes(contextService: ContextService): Router {
         return;
       }
 
-      const similar = await contextService.findSimilar(req.params.id, limit);
+      const similar = await contextService.findSimilar(id, limit);
 
       res.json({
         success: true,
