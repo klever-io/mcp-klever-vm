@@ -73,7 +73,7 @@ mcp-klever-vm/
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/mcp-klever-vm.git
+git clone https://github.com/klever-io/mcp-klever-vm.git
 cd mcp-klever-vm
 ```
 
