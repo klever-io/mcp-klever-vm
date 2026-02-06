@@ -115,7 +115,10 @@ async function startPublicServer() {
   const port = process.env.PORT || 3000;
 
   // Trust proxy (required behind Cloudflare/nginx for correct client IP in rate limiting)
-  app.set('trust proxy', 1);
+  const trustProxy = process.env.TRUST_PROXY;
+  if (trustProxy !== undefined && trustProxy.toLowerCase() !== 'false') {
+    app.set('trust proxy', trustProxy.toLowerCase() === 'true' ? 1 : trustProxy);
+  }
 
   // Security headers
   app.use((req, res, next) => {
@@ -310,10 +313,21 @@ async function startPublicServer() {
     });
   });
 
+  // Start server
+  const server = app.listen(port, () => {
+    console.log(`Klever MCP Public Server running on http://localhost:${port}`);
+    console.log(`MCP endpoint: http://localhost:${port}/mcp`);
+    console.log(`API endpoint: http://localhost:${port}/api (read-only)`);
+    console.log(`Health check: http://localhost:${port}/health`);
+  });
+
   // Graceful shutdown
   const shutdown = async () => {
     console.error('\n[Public] Shutting down gracefully...');
     clearInterval(cleanupInterval);
+
+    // Stop accepting new connections
+    server.close();
 
     // Close all active sessions
     for (const [sessionId, transport] of sessions.entries()) {
@@ -331,14 +345,6 @@ async function startPublicServer() {
 
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
-
-  // Start server
-  app.listen(port, () => {
-    console.log(`Klever MCP Public Server running on http://localhost:${port}`);
-    console.log(`MCP endpoint: http://localhost:${port}/mcp`);
-    console.log(`API endpoint: http://localhost:${port}/api (read-only)`);
-    console.log(`Health check: http://localhost:${port}/health`);
-  });
 }
 
 // Determine which mode to run

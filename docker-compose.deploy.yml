@@ -7,6 +7,7 @@ services:
       - MODE=public
       - PORT=3000
       - NODE_ENV=production
+      - TRUST_PROXY=true
       # - CORS_ORIGINS=https://mcp.klever.org
       # - RATE_LIMIT_MCP=60
       # - RATE_LIMIT_API=30
