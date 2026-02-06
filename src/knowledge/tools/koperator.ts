@@ -1178,6 +1178,233 @@ curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \\
       author: 'klever-mcp',
     }
   ),
+  // KDA Token Creation with Koperator
+  createKnowledgeEntry(
+    'deployment_tool',
+    `# Creating KDA Tokens with Koperator
+
+## Overview
+Koperator provides a \`kda create\` command to create new KDA (Klever Digital Assets) tokens on the Klever blockchain.
+Creating a KDA costs 20,000 KLV.
+
+## Basic Command Structure
+\`\`\`bash
+~/klever-sdk/koperator kda create [KDA_TYPE] [flags]
+\`\`\`
+
+## KDA Types
+- \`0\` - Fungible Token (default)
+- \`1\` - Non-Fungible Token (NFT)
+- \`2\` - Semi-Fungible Token (SFT)
+
+## Essential Parameters
+
+### Basic Token Properties
+\`\`\`bash
+--name "My Token"           # Token full name
+--ticker "MYTK"              # Token ticker (3-8 uppercase chars)
+--precision 6                # Decimal places (0-8, usually 6 for fungible, 0 for NFTs)
+--initialSupply 1000000      # Initial supply (float)
+--maxSupply 10000000         # Maximum supply (float, optional)
+--logo "https://..."         # Logo URL (optional)
+--ownerAddress "klv1..."     # Owner address (optional, defaults to sender)
+--adminAddress "klv1..."     # Admin address (optional)
+\`\`\`
+
+### Permission Flags
+\`\`\`bash
+--canMint                    # Allow minting new tokens
+--canBurn                    # Allow burning tokens
+--canFreeze                  # Allow freezing accounts
+--canPause                   # Allow pausing transfers
+--canWipe                    # Allow wiping frozen accounts
+--canChangeOwner             # Allow ownership transfer
+--canAddRoles                # Allow adding roles to addresses
+\`\`\`
+
+### Initial State Flags
+\`\`\`bash
+--isPaused                   # Create token in paused state
+--isNFTMintStopped           # Create NFT with minting stopped
+--isRoyaltiesChangeStopped   # Lock royalties configuration
+--limitTransfer              # Limit token transfers
+\`\`\`
+
+## Examples
+
+### 1. Create a Basic Fungible Token
+\`\`\`bash
+KLEVER_NODE=https://node.testnet.klever.org \\
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    kda create 0 \\
+    --name "My Token" \\
+    --ticker "MYTK" \\
+    --precision 6 \\
+    --initialSupply 1000000 \\
+    --maxSupply 10000000 \\
+    --canMint \\
+    --canBurn \\
+    --sign --await --result-only
+\`\`\`
+
+### 2. Create an NFT Collection
+\`\`\`bash
+KLEVER_NODE=https://node.testnet.klever.org \\
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    kda create 1 \\
+    --name "My NFT Collection" \\
+    --ticker "MYNFT" \\
+    --precision 0 \\
+    --logo "https://example.com/logo.png" \\
+    --canMint \\
+    --canBurn \\
+    --canPause \\
+    --royaltiesAddress "klv1creator..." \\
+    --royaltiesMarketPercentage 5 \\
+    --sign --await --result-only
+\`\`\`
+
+### 3. Create a DeFi Token with Roles
+\`\`\`bash
+KLEVER_NODE=https://node.testnet.klever.org \\
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    kda create 0 \\
+    --name "DeFi Token" \\
+    --ticker "DEFI" \\
+    --precision 8 \\
+    --initialSupply 1000000 \\
+    --maxSupply 100000000 \\
+    --canMint \\
+    --canBurn \\
+    --canAddRoles \\
+    --addRolesMint "klv1minter..." \\
+    --addRolesTransfer "klv1treasury..." \\
+    --sign --await --result-only
+\`\`\`
+
+### 4. Create a Staking Pool Token
+\`\`\`bash
+KLEVER_NODE=https://node.testnet.klever.org \\
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    kda create 0 \\
+    --name "Staking Pool Token" \\
+    --ticker "SPOOL" \\
+    --precision 6 \\
+    --initialSupply 0 \\
+    --canMint \\
+    --canBurn \\
+    --apr 12.5 \\
+    --interestType 0 \\
+    --minEpochsToClaim 1 \\
+    --minEpochsToUnstake 14 \\
+    --minEpochsToWithdraw 21 \\
+    --sign --await --result-only
+\`\`\`
+
+### 5. Create Token with URIs and Metadata
+\`\`\`bash
+KLEVER_NODE=https://node.testnet.klever.org \\
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    kda create 0 \\
+    --name "Social Token" \\
+    --ticker "SOCIAL" \\
+    --precision 6 \\
+    --initialSupply 1000000 \\
+    --logo "https://example.com/logo.png" \\
+    --uris "website=https://example.com" \\
+    --uris "twitter=https://twitter.com/mytoken" \\
+    --uris "whitepaper=https://example.com/wp.pdf" \\
+    --sign --await --result-only
+\`\`\`
+
+## Royalties Configuration (for NFTs/SFTs)
+
+### Fixed Royalties
+\`\`\`bash
+--royaltiesAddress "klv1creator..."  # Required: address to receive royalties
+--royaltiesTransferFixed 100         # Fixed amount per transfer
+--royaltiesMarketFixed 50            # Fixed amount per market sale
+--royaltiesITOFixed 25               # Fixed amount per ITO sale
+\`\`\`
+
+### Percentage Royalties
+\`\`\`bash
+--royaltiesMarketPercentage 5       # 5% on market sales
+--royaltiesITOPercentage 10         # 10% on ITO sales
+\`\`\`
+
+### Transfer Percentage Royalties (tiered structure)
+\`\`\`bash
+# --royaltiesTransferPercentage accepts JSON with amount threshold and percentage
+--royaltiesTransferPercentage='{"amount": 1000, "percentage": 5}' \\
+--royaltiesTransferPercentage='{"amount": 10000, "percentage": 3}'
+\`\`\`
+
+### Split Royalties (Multiple Recipients)
+\`\`\`bash
+# Split royalties across multiple addresses with per-type percentages
+--splitRoyalties='{"address":"klv1artist...", "percentTransferPercentage": 70, "percentTransferFixed": 70, "percentMarketPercentage": 70, "percentMarketFixed": 70, "percentITOPercentage": 70, "percentITOFixed": 70}' \\
+--splitRoyalties='{"address":"klv1team...", "percentTransferPercentage": 30, "percentTransferFixed": 30, "percentMarketPercentage": 30, "percentMarketFixed": 30, "percentITOPercentage": 30, "percentITOFixed": 30}'
+\`\`\`
+
+## Role Management
+
+### Adding Roles During Creation
+\`\`\`bash
+--addRolesMint "klv1minter1...,klv1minter2..."       # Can mint tokens
+--addRolesTransfer "klv1transfer..."                 # Can transfer tokens
+--addRolesDeposit "klv1depositor..."                 # Can deposit to KDA pools
+--addRolesSetITOPrices "klv1pricesetter..."         # Can set ITO prices
+\`\`\`
+
+## Staking Parameters
+\`\`\`bash
+--apr 12.5                   # Annual percentage rate
+--interestType 0             # 0 = APR (annual percentage rate), 1 = FPR (fixed percentage return)
+--minEpochsToClaim 1         # Min epochs before claiming rewards
+--minEpochsToUnstake 14      # Min epochs before unstaking
+--minEpochsToWithdraw 21     # Min epochs before withdrawal after unstake
+\`\`\`
+
+## Important Notes
+
+1. **Creation Cost**: Creating a KDA token costs 20,000 KLV
+2. **Ticker Format**: 3-8 uppercase characters; blockchain appends a 4-char suffix (e.g., MYTK-A1B2)
+3. **Precision**: 0-8 decimal places. Usually 6 for fungible tokens, 0 for NFTs
+4. **Initial Supply**: Float value (e.g., 1000000). Use 0 for NFT collections
+5. **Permissions**: Set at creation time. Use \`kda trigger\` to modify properties later
+6. **Result**: Returns the created asset ID in format TICKER-XXXX
+
+## Parsing Creation Result
+\`\`\`bash
+# Create token and extract ID
+RESULT=$(~/klever-sdk/koperator kda create 0 ... --sign --await --result-only)
+TOKEN_ID=$(echo "$RESULT" | jq -r '.assetID')
+echo "Created token: $TOKEN_ID"  # e.g., MYTK-A1B2
+\`\`\`
+
+## Common Mistakes to Avoid
+- ❌ Forgetting \`--sign --await --result-only\` for scripts
+- ❌ Using wrong precision (NFTs should have 0)
+- ❌ Not setting maxSupply for limited supply tokens
+- ❌ Forgetting to enable necessary permissions (cannot be added after creation without \`--canAddRoles\`)
+- ❌ Using lowercase in ticker symbols
+- ❌ Not having enough KLV balance (need 20,000 KLV + gas fees)`,
+    {
+      title: 'Creating KDA Tokens with Koperator',
+      description: 'Complete guide to creating KDA tokens (fungible, NFT, SFT) using koperator kda create command',
+      tags: ['koperator', 'kda', 'token', 'create', 'nft', 'sft', 'fungible', 'deployment'],
+      language: 'bash',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
 ];
 
 export default koperatorKnowledge;

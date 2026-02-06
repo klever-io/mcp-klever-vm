@@ -4,155 +4,76 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Model Context Protocol (MCP) server implementation for Klever blockchain smart contract development. It provides contextual knowledge management for developers working with the Klever VM SDK (Rust).
-
-The server comes pre-loaded with comprehensive Klever VM knowledge including:
-- Contract structure templates and patterns
-- Storage mapper selection guides and performance comparisons
-- Event and annotation best practices
-- Deployment, upgrade, and query scripts
-- Common errors and solutions
-- Testing patterns and examples
+MCP (Model Context Protocol) server for Klever blockchain smart contract development. Provides contextual knowledge management (95+ entries across 11 categories) for developers working with the Klever VM SDK (Rust). Runs in two modes: HTTP API server (Express) or MCP protocol server (stdio transport).
 
 ## Common Commands
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Build the project
-pnpm run build
-
-# Ingest Klever knowledge base (only needed for Redis storage)
-# For memory storage, knowledge is auto-loaded on startup
-pnpm run ingest
-
-# Run in development mode (HTTP server)
-pnpm run dev
-
-# Run in production mode
-pnpm start
-
-# Run as MCP server
-MODE=mcp pnpm start
-
-# Run tests
-pnpm test
-
-# Lint code
-pnpm run lint
-
-# Format code
-pnpm run format
+pnpm install                    # Install dependencies
+pnpm run build                  # Build (tsc + copy templates to dist/)
+pnpm run dev                    # Dev mode with watch (HTTP server)
+pnpm run dev:mcp                # Dev mode with watch (MCP server, memory storage)
+pnpm test                       # Run tests (Jest with ESM via --experimental-vm-modules)
+pnpm run lint                   # Lint with ESLint
+pnpm run format                 # Format with Prettier
+pnpm run ingest                 # Ingest knowledge base into Redis storage
+MODE=mcp pnpm start             # Run as MCP server (production)
 ```
+
+Tests use Jest with ESM support. The test command is `node --experimental-vm-modules $(pnpm bin)/jest`. Test files use `.test.ts` extension and match `**/?(*.)+(spec|test).ts` or `**/__tests__/**/*.ts`.
 
 ## Architecture
 
-### Core Components
+### Data Flow
 
-1. **Storage Layer** (`src/storage/`)
-   - `InMemoryStorage`: Fast in-memory storage for development
-   - `RedisStorage`: Persistent Redis-based storage for production
-   - `StorageFactory`: Factory pattern for storage backend selection
+The server bootstraps in `src/index.ts` which selects between HTTP and MCP mode based on `MODE` env var. Both modes share the same pipeline:
 
-2. **Context Service** (`src/context/`)
-   - Manages context ingestion, retrieval, and querying
-   - Implements relevance scoring and ranking
-   - Handles context relationships
+1. `StorageFactory` creates a `StorageBackend` (memory or Redis)
+2. `ContextService` wraps storage with business logic (validation, relevance scoring, querying)
+3. On memory storage, `autoIngestKnowledge()` loads all entries from `src/knowledge/` at startup
+4. HTTP mode mounts Express routes via `createRoutes(contextService)` at `/api`
+5. MCP mode creates `KleverMCPServer` using `@modelcontextprotocol/sdk` with stdio transport
 
-3. **API Layer** (`src/api/`)
-   - RESTful HTTP endpoints for context management
-   - Input validation with Zod schemas
-   - Error handling and response formatting
+### Key Interfaces
 
-4. **MCP Server** (`src/mcp/`)
-   - Implements MCP protocol for AI assistants
-   - Provides tools for context querying and management
+- **`StorageBackend`** (`src/types/index.ts`): Core interface for store/retrieve/query/update/delete/count operations. All schemas defined with Zod.
+- **`ContextPayload`**: The main data type — has `type` (enum of 8 context types), `content`, `metadata` (title, tags, relevanceScore, etc.), and `relatedContextIds`.
+- **`KnowledgeEntry`** (`src/knowledge/types.ts`): Internal format for knowledge base entries, converted to `ContextPayload` during ingestion.
 
-5. **Parsers** (`src/parsers/`)
-   - `KleverParser`: Extracts patterns from Klever smart contracts
-   - Identifies contract structure, endpoints, events, storage mappers
-   - `KleverValidator`: Validates contracts and detects common issues
+### Knowledge Base System
 
-6. **Knowledge Base** (`src/knowledge/`)
-   - Modular structure with 95+ entries across 11 categories
-   - Core concepts, storage patterns, event handling
-   - Complete examples (lottery, staking, cross-contract)
-   - Development tools documentation (koperator, ksc)
-   - Best practices and error patterns
+Knowledge lives in `src/knowledge/` organized by category (core, storage, events, tokens, modules, tools, scripts, examples, errors, best-practices, documentation). Each category exports an array of `KnowledgeEntry` objects created via the `createKnowledgeEntry()` helper. All categories are aggregated in `src/knowledge/index.ts`.
 
-### Key Design Patterns
+### MCP Tools
 
-- **Factory Pattern**: Used for storage backend selection
-- **Service Layer**: Business logic separated from API routes
-- **Type Safety**: Full TypeScript with Zod validation
-- **Modular Architecture**: Clear separation of concerns
+The MCP server (`src/mcp/server.ts`) exposes: `query_context`, `add_context`, `get_context`, `find_similar`, `get_knowledge_stats`, `init_klever_project`, `add_helper_scripts`, `enhance_with_context`. Debug logging goes to stderr to avoid interfering with the stdio MCP protocol on stdout.
 
-## Development Guidelines
+### Adding New Knowledge Entries
+
+1. Add entries to the appropriate category folder in `src/knowledge/`
+2. Use `createKnowledgeEntry(type, content, { title, tags, ... })` helper
+3. Export from the category's `index.ts`
+4. For memory storage: auto-loaded on startup. For Redis: run `pnpm run ingest`
 
 ### Adding New Context Types
 
-1. Update the `ContextTypeSchema` in `src/types/index.ts`
-2. Update relevance scoring logic in `ContextService`
-3. Add corresponding parser logic if needed
-4. Add new contexts to appropriate category in `src/knowledge/` if they're Klever-specific
+1. Add to `ContextTypeSchema` enum in `src/types/index.ts`
+2. Update relevance scoring in `ContextService.calculateRelevanceScore()`
+3. Update MCP tool input schemas in `src/mcp/server.ts` (the enum arrays in `query_context` and `add_context`)
 
-### Updating Klever Knowledge
+## Environment Variables
 
-1. Add new entries to the appropriate category in `src/knowledge/`
-   - Choose the right folder (tokens, storage, events, etc.)
-   - Use `createKnowledgeEntry` helper function
-   - Export from the category's index.ts
-2. Run `pnpm run ingest` to reload the knowledge base (for Redis storage)
-3. For memory storage, knowledge is auto-loaded on server start
-
-### Storage Backend
-
-- Use in-memory storage for development (`STORAGE_TYPE=memory`)
-- Use Redis for production (`STORAGE_TYPE=redis`)
-- Storage interface is abstracted - easy to add new backends
-
-### Testing
-
-- Write unit tests for new features
-- Test files should be placed next to source files with `.test.ts` extension
-- Run tests before committing: `pnpm test`
-
-### Code Style
-
-- Use TypeScript for all new code
-- Follow existing patterns for consistency
-- Run linter before committing: `pnpm run lint`
-- Format code: `pnpm run format`
-
-## Environment Configuration
-
-Key environment variables:
-- `MODE`: Server mode (`http` or `mcp`)
+- `MODE`: `http` (default) or `mcp`
 - `PORT`: HTTP server port (default: 3000)
-- `STORAGE_TYPE`: Storage backend (`memory` or `redis`)
-- `REDIS_URL`: Redis connection URL
+- `STORAGE_TYPE`: `memory` (default) or `redis`
+- `REDIS_URL`: Redis connection string (only for redis storage)
+- `MEMORY_MAX_SIZE`: Max contexts in memory storage (default: 10000)
+- `NODE_ENV`: `development` or `production` (affects error detail in responses)
 
-## Troubleshooting
+## Important Notes
 
-1. **Build errors**: Ensure TypeScript is installed: `pnpm install -D typescript`
-2. **Redis connection**: Check Redis is running and URL is correct
-3. **MCP mode**: Ensure stdout is not being used for logging
-4. **Missing contexts**: Run `pnpm run ingest` to load the knowledge base
-5. **Contract validation**: Use `KleverValidator` to detect common issues
-
-## Klever-Specific Features
-
-### Contract Validation
-The server can validate Klever contracts for common issues:
-- Event annotation format errors
-- Missing API type parameters in managed types
-- Inefficient storage mapper usage
-- Missing input validations
-
-### Enhanced Parsing
-The parser extracts:
-- Contract name, endpoints, and views
-- Events and storage mappers
-- Module dependencies and proxy contracts
-- Usage of OptionalValue and MultiValue types
+- ESM-only project (`"type": "module"` in package.json, `NodeNext` module resolution)
+- All internal imports must use `.js` extensions (e.g., `import { Foo } from './bar.js'`)
+- Build step copies `src/templates/` to `dist/` alongside TypeScript compilation
+- MCP mode must not write to stdout (use `console.error` for logging)
+- Express 5 is used (not v4) — route params typed differently
