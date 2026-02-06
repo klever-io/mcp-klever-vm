@@ -1,0 +1,28 @@
+services:
+  mcp-klever-vm:
+    image: kleverapp/mcp-klever-vm:latest
+    environment:
+      - MODE=public
+      - PORT=3000
+      - NODE_ENV=production
+      # - CORS_ORIGINS=https://mcp.klever.org
+      # - RATE_LIMIT_MCP=60
+      # - RATE_LIMIT_API=30
+      # - BODY_SIZE_LIMIT=1mb
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      mcp-klever-vm:
+        condition: service_healthy
+    restart: unless-stopped

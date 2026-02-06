@@ -1,0 +1,20 @@
+services:
+  mcp-klever-vm:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - MODE=public
+      - PORT=3000
+      - NODE_ENV=production
+      # - CORS_ORIGINS=https://mcp.klever.org
+      # - RATE_LIMIT_MCP=60
+      # - RATE_LIMIT_API=30
+      # - BODY_SIZE_LIMIT=1mb
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped

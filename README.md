@@ -4,7 +4,7 @@ A Model Context Protocol (MCP) server tailored for Klever blockchain smart contr
 
 ## Features
 
-- 🚀 **Dual Mode Operation**: Run as HTTP API server or MCP protocol server
+- 🚀 **Triple Mode Operation**: Run as HTTP API server, MCP stdio server, or public hosted MCP server
 - 💾 **Flexible Storage**: In-memory or Redis backend support
 - 🔍 **Smart Context Retrieval**: Query by type, tags, or contract type
 - 📝 **Automatic Pattern Extraction**: Parse Klever contracts to extract examples and patterns
@@ -102,7 +102,7 @@ pnpm run build
 Edit `.env` file to configure the server:
 
 ```env
-# Server Mode (http or mcp)
+# Server Mode (http, mcp, or public)
 MODE=http
 
 # HTTP Server Port (only for http mode)
@@ -138,6 +138,77 @@ Follow the [Claude Desktop Installation Guide](docs/install-claude.md) to:
 - Access Klever development context through Claude's interface
 
 Both guides include troubleshooting tips and verification steps to ensure the MCP server is working correctly with your chosen client.
+
+## Public MCP Server
+
+The Klever MCP Server can be hosted as a public shared service, allowing any developer to connect without running it locally.
+
+### Connecting to the Public Server
+
+```bash
+# Add permanently (user-level)
+claude mcp add -t http klever-vm https://mcp.klever.org/mcp
+
+# Add for current project only
+claude mcp add -t http -s project klever-vm https://mcp.klever.org/mcp
+```
+
+### Available Tools (Public Mode)
+
+The public server exposes a read-only subset of tools for security:
+
+| Tool | Description |
+|------|-------------|
+| `query_context` | Search the Klever VM knowledge base |
+| `get_context` | Retrieve a specific context by ID |
+| `find_similar` | Find contexts similar to a given context |
+| `get_knowledge_stats` | Get knowledge base statistics |
+| `enhance_with_context` | Enhance queries with relevant Klever VM context |
+
+Write operations (`add_context`) and shell-based tools (`init_klever_project`, `add_helper_scripts`) are disabled in public mode.
+
+### Self-Hosting with Docker
+
+```bash
+# Build and run
+docker build -t mcp-klever-vm .
+docker run -p 3000:3000 mcp-klever-vm
+
+# Or using docker compose
+docker compose up -d
+```
+
+Then connect:
+```bash
+claude mcp add -t http klever-vm-local http://localhost:3000/mcp
+```
+
+### Self-Hosting without Docker
+
+```bash
+pnpm install
+pnpm run build
+pnpm run start:public
+```
+
+### Environment Variables (Public Mode)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MODE` | `http` | Set to `public` for hosted mode |
+| `PORT` | `3000` | Server port |
+| `CORS_ORIGINS` | `*` | Comma-separated allowed origins |
+| `RATE_LIMIT_MCP` | `60` | MCP endpoint requests/min per IP |
+| `RATE_LIMIT_API` | `30` | API endpoint requests/min per IP |
+| `BODY_SIZE_LIMIT` | `1mb` | Max request body size |
+
+### Deployment Notes
+
+For production at `mcp.klever.org`:
+- Deploy Docker container behind a reverse proxy (nginx/Caddy/cloud LB) for TLS termination
+- Ensure proxy passes `mcp-session-id` header and supports SSE (disable response buffering)
+- Single instance is sufficient as the server is read-only with an in-memory knowledge base
+- Consider Cloudflare for DDoS protection (SSE is supported)
 
 ## Usage
 
