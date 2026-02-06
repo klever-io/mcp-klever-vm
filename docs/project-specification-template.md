@@ -1,186 +1,232 @@
-# Smart Contract Development Template & Prompt
+# Smart Contract Project Specification Template
 
-> **This is a template/prompt for developing Klever smart contracts using the MCP knowledge base.**
-> 
-> Use this as a guide for any smart contract project - it provides a structured approach to discovery, planning, and implementation using MCP queries to gather the necessary knowledge before coding.
+> Copy everything below the `---` line and fill it in for your project.
+> This prompt is designed for MCP-connected AI assistants (Claude, Copilot, etc.)
+> that have access to the Klever VM MCP server.
+>
+> **How to use:**
+> 1. Copy the template below into a new file or chat prompt
+> 2. Replace the placeholder sections with your project details (see inline comments)
+> 3. Send the filled-in spec to your AI assistant
+> 4. The assistant will query the MCP knowledge base during each phase before writing code
 
 ---
 
-# Klever Smart Contract Project Specification
+# My Contract Name
+<!-- Replace with your contract name, e.g. "KleverDice", "TokenSwap", "NFTMarketplace" -->
 
-## 🎓 PHASE 0: BLOCKCHAIN DISCOVERY (MANDATORY FIRST STEP)
+## Execution Instructions
 
-Before ANY implementation, you MUST:
-1. Query the KLEVER-VM MCP knowledge base for EACH topic below
-2. **CREATE A VISIBLE KNOWLEDGE DOCUMENT** (knowledge-notes.md) with your findings
-3. Reference this document throughout implementation
+When implementing this specification:
 
-### Required Knowledge Document Structure:
-Create `knowledge-notes.md` with discovered information from MCP queries about:
-- Native tokens and their exact decimal precision
-- Payment command syntax (especially the correct --values parameter)
-- Event system rules and limitations
-- Storage mapper types and when to use each
-- Random generation methods
-- Contract structure and required imports
-- Common errors to avoid
+1. **Create a task list** — Break this spec into trackable tasks (discovery, project init, each feature, events, scripts, testing). Mark each task as complete when done so progress is visible.
+2. **Use agents for parallel work** — Dispatch independent tasks to specialized agents when possible (e.g., researching MCP knowledge in parallel, generating scripts while contract code is being reviewed).
+3. **Query MCP before each phase** — Never assume Klever patterns. Always query the MCP knowledge base and document findings before writing code.
+4. **Verify at each gate** — Do not move to the next phase until the current phase's checklist is fully checked off.
 
-### Essential Topics to Research in MCP:
-1. **Token System**:
-   - [ ] Query MCP for native/base tokens and their properties
-   - [ ] Discover token precision and decimal places
-   - [ ] Learn KDA (Klever Digital Assets) naming conventions
-   - [ ] Understand token unit conversions
+## Phase 0: Knowledge Discovery
 
-2. **Command Line Interface**:
-   - [ ] Query MCP for blockchain interaction commands
-   - [ ] Discover correct payment parameter syntax
-   - [ ] Learn argument encoding formats
-   - [ ] Find examples of token transfer commands
+Before writing any code, query the Klever VM MCP knowledge base for each topic below and save findings in `knowledge-notes.md`. This ensures correct patterns are used from the start.
 
-3. **Contract Architecture**:
-   - [ ] Query MCP for contract structure patterns
-   - [ ] Discover required imports and macros
-   - [ ] Learn about endpoint and view annotations
-   - [ ] Understand payable function patterns
+### Topics to Research
 
-4. **Development Libraries**:
-   - [ ] Query MCP for available storage solutions
-   - [ ] Discover numeric type handling
-   - [ ] Find module usage patterns
-   - [ ] Discover the sdk builtin modules available
-   - [ ] Query for event declaration and annotation patterns
-   - [ ] Learn about event system limitations and best practices
+Query MCP for each of these. Only check the box once you have documented the findings:
 
-5. **Common Patterns**:
-   - [ ] Query MCP for random number generation
-   - [ ] Discover access control patterns
-   - [ ] Learn about pausable contract patterns
-   - [ ] Find address handling best practices
+- [ ] **Token System** — Which tokens does your contract handle? Query MCP for their precision (decimal places), unit conversions, and KDA naming conventions. Example: KLV has 6 decimals, so 1 KLV = 1,000,000 units.
 
-### Discovery Process:
-1. Query MCP for each topic area
-2. **Document findings in knowledge-notes.md**
-3. Identify critical rules and common errors
-4. Build a reference sheet from MCP discoveries
-5. Validate understanding before proceeding
+- [ ] **CLI Tools** — How will you call the contract from the command line? Query MCP for koperator `sc invoke` syntax, `--args` type prefixes (e.g., `bi:`, `Address:`, `String:`), and `--values` for token payments.
 
-### Additional Resources in MCP:
-- Query for API documentation and endpoints
-- Search for SDK location and usage patterns
-- Find testnet/mainnet network configurations
-- Discover available code examples and templates
+- [ ] **Contract Structure** — What does a Klever contract look like? Query MCP for required imports (`use klever_sc::imports::*`), macros (`#[klever_sc::contract]`), endpoint annotations (`#[endpoint]`, `#[view]`, `#[payable("KLV")]`), and init patterns.
 
-## ⚠️ IMPLEMENTATION GATE
-**DO NOT PROCEED TO IMPLEMENTATION UNTIL:**
-- [ ] knowledge-notes.md file created with MCP findings
-- [ ] All essential topics have been queried and documented
-- [ ] Event system limitations are documented
-- [ ] Payment syntax is clearly documented
-- [ ] Token decimals are confirmed and documented
+- [ ] **Storage** — What data does your contract store? Query MCP for storage mapper types and when to use each: `SingleValueMapper` for single values, `MapMapper` for key-value lookups, `SetMapper` for unique collections, `VecMapper` for ordered lists.
 
-## Project Name
-**KleverDice**
+- [ ] **Events** — What actions should emit events? Query MCP for event annotation rules, parameter limitations, indexed field constraints, and naming conventions.
 
-## Template
-- Use the `empty` Klever smart contract template
+- [ ] **Modules** — Does your contract need admin controls or pause functionality? Query MCP for built-in SDK modules (`AdminModule`, `PauseModule`) and access control patterns (`#[only_owner]`, `#[only_admin]`).
 
-## Goal
-Create a smart contract for a decentralized dice game on Klever Blockchain.
+- [ ] **Common Errors** — What pitfalls should you avoid? Query MCP for frequent mistakes like wrong payment handling, missing type prefixes, incorrect event formats, and storage anti-patterns.
+
+**Do not proceed to implementation until all items above are checked and documented.**
+
+> **If MCP returns no results for a topic**, document the gap in `knowledge-notes.md` and flag it for knowledge base improvement. Never guess — missing knowledge is better caught now than after deployment.
+
+## Project Setup
+
+<!-- Fill in your project details -->
+
+- **Name**: My Contract Name
+- **Template**: `empty`
+  <!-- Use "empty" for a blank contract. This is the standard starting point. -->
+- **Network**: testnet
+  <!-- Start with testnet. Switch to mainnet only for production deployment. -->
+
+Initialize using the `init_klever_project` MCP tool. This generates:
+- Build, deploy, upgrade, query, test, and interact scripts
+- Deployment history tracking in `output/history.json`
+- Testnet-preconfigured environment
 
 ## Features
 
-### 🎮 Game Logic
-- Players bet **KLV** tokens on dice outcomes (1–6)
-- Random number is securely generated for each roll
-- Winning payout: **5.88x** the bet (6x minus **2% house edge**)
-- Enforce min/max bet rules:
-  - Minimum: **10 KLV**
-  - Maximum: **1000 KLV**
-- Reject bets from **smart contract addresses**
+<!--
+  List each feature of your contract as a subsection.
+  Be specific about rules and numbers — the more precise you are,
+  the better the generated code will be.
 
-### 📢 Event Requirements
-- Emit events for all game actions (bet placed, game won, game lost)
-- **MUST query MCP for event limitations before implementing**
-- **MUST follow discovered event annotation patterns**
-- Include relevant indexed fields based on MCP findings
+  For each feature, think about:
+  - What endpoint(s) does it need?
+  - What tokens are involved and in what amounts?
+  - What are the validation rules? (min/max, who can call it, etc.)
+  - What data needs to be stored?
+  - What events should it emit?
+-->
 
-## 🧱 Project Initialization (via init_klever_project)
-- Initialize the project using `init_klever_project`
-- This must:
-  - Generate all automation scripts (`deploy`, `upgrade`, `query`, `interact`, `build`, `test`)
-  - Enable full deployment history tracking using the MCP project context
-  - Preconfigure the environment for **testnet deployment**
-  - Ensure all scripts are prefilled with valid `koperator` calls and argument encoding
+### Feature 1 Name
 
-### 🛠 Automation Scripts
-Generate all necessary helper scripts to interact with contract using the previous generated from init project `query.sh` && `interact.sh`
+<!-- Example of a well-written feature spec: -->
+<!--
+- Players bet KLV tokens on dice outcomes (1-6)
+- Random number generated securely for each roll
+- Winning payout: 5.88x the bet (6x minus 2% house edge)
+- Min bet: 10 KLV, Max bet: 1000 KLV
+- Reject bets from smart contract addresses
+-->
 
-The `interact.sh` script must include functions for ALL contract endpoints:
-- `placeBet` - with bet amount and dice number parameters
-- `withdrawHouseProfits` - owner-only function
-- `pauseGame` - owner-only function to pause the contract
-- `resumeGame` - owner-only function to resume the contract
-- Any other endpoints added to the contract
+Describe what this feature does. Include:
+- What tokens are accepted and in what amounts
+- Validation rules (min/max values, who can call, etc.)
+- Business logic (calculations, conditions, payouts)
+- What data gets stored
 
-All scripts must have:
-- Proper encoding for arguments based on MCP knowledge
-- Ready-to-use execution flow with example values
-- Clear comments explaining each parameter
-- For KLV or KDA token payments query MCP for proper koperator payment parameters
+### Feature 2 Name
 
-### 🔐 Owner Functions
-- Withdraw house profits
-- Pause/resume the game (use klever-vm-sdk modules)
+Describe the next feature...
 
-## 📚 MCP Context Integration (Throughout Development)
+<!-- Add more ### sections for additional features -->
 
-### Phase 1: Initial Knowledge Discovery
-**MANDATORY BEFORE ANY CODE GENERATION**:
-1. Query MCP for blockchain fundamentals and patterns
-2. Search for common error patterns to avoid
-3. Find deployment tools and script templates
-4. Discover code examples and best practices
+### Events
 
-### Phase 2: Development-Time Queries
-For EVERY implementation decision, query MCP for:
-- **Token Operations**: Search for token precision and unit information
-- **Command Generation**: Find correct command syntax and parameters
-- **Contract Patterns**: Discover best practices and optimizations
-- **Error Prevention**: Look up known issues and their solutions
+<!--
+  List every event your contract emits. For each event, specify:
+  - When it fires (what action triggers it)
+  - What data it includes (player address, amounts, results, etc.)
 
-### Phase 3: Script Generation Validation
-When creating automation scripts:
-- **MUST** query MCP for exact command syntax
-- **MUST** search for argument encoding patterns
-- **MUST** find payment parameter formats
-- **NEVER** assume - always verify through MCP queries
+  The AI will query MCP for the correct event annotation syntax.
+-->
 
-### Required MCP Queries Before Implementation:
-1. **Before token payments**: Query for payment syntax and token decimals
-2. **Before contract creation**: Query for initialization patterns
-3. **Before storage implementation**: Query for storage mapper options
-4. **Before events**: Query for event system rules and limitations
-5. **Before randomness**: Query for random generation patterns
+- `MyEvent` — emitted when X happens, includes: field1, field2, field3
 
-**⚠️ FAILURE MODE**: If MCP query returns no results, document the missing information for knowledge base improvement. Never make assumptions.
+### Owner Functions
+
+<!-- List the admin/management functions. Common ones include: -->
+
+- Withdraw accumulated fees/profits
+- Pause/resume the contract (use klever-vm-sdk pause module)
+- Update configuration parameters (if needed)
+
+## Automation Scripts
+
+<!--
+  The init_klever_project tool generates starter scripts. List ALL endpoints
+  here so the AI can generate complete interact.sh and query.sh scripts.
+
+  For each endpoint specify:
+  - Name: the function name as defined in the contract
+  - Type: "endpoint" (writes state) or "view" (reads state)
+  - Params: argument types (u32, Address, BigUint, String, etc.)
+  - Payment: if it accepts tokens, specify which and how (via --values)
+-->
+
+Endpoints for `interact.sh` and `query.sh`:
+- `myEndpoint` — endpoint, params: amount (BigUint), payment: KLV via `--values`
+- `getStatus` — view, no params
+- `ownerWithdraw` — endpoint (owner-only), no params
+
+All scripts must use:
+- Correct `--args` type prefixes from MCP knowledge
+- `--values` for token payments (not `--args`)
+- `--sign --await --result-only` for unattended execution
+
+## Suggested Task Breakdown
+
+<!--
+  The AI assistant should create a task list based on this structure.
+  Each task should be marked as complete when finished.
+  Adjust tasks based on your specific features.
+-->
+
+1. **Knowledge Discovery** — Query MCP for all topics, create `knowledge-notes.md`
+2. **Project Initialization** — Run `init_klever_project`, verify generated scripts
+3. **Contract Skeleton** — Create contract struct, imports, init, storage mappers
+4. **Feature: {Feature 1}** — Implement endpoint, validation, business logic
+5. **Feature: {Feature 2}** — _(repeat for each feature)_
+6. **Events** — Implement all event definitions and emissions
+7. **Owner Functions** — Admin endpoints, pause module integration
+8. **Automation Scripts** — Update `interact.sh` and `query.sh` with all endpoints
+9. **Build and Test** — Compile contract, run tests, fix any issues
+10. **Deploy and Verify** — Deploy to testnet, call each endpoint via scripts, confirm expected behavior
 
 ## Output
-- Full project structure
-- All automation scripts preconfigured
-- Smart contract code with comments
+
+- Full project structure with contract code
+- All automation scripts preconfigured and ready to run
 - Ready for testnet deployment
 
+---
 
-## 🔍 Pre-Implementation Verification
+## Filled-in Example: KleverDice
 
-Before writing code, ensure you have:
-- [ ] Created knowledge-notes.md with MCP discoveries
-- [ ] Documented token system findings
-- [ ] Documented command syntax discoveries
-- [ ] Documented event system constraints
-- [ ] Documented storage solutions
-- [ ] Documented randomness approach
-- [ ] Documented common pitfalls to avoid
+Below is a complete example showing how to fill in this template.
 
-**Your knowledge-notes.md should enable you to implement without guessing**
+---
+
+# KleverDice
+
+## Phase 0: Knowledge Discovery
+
+_(Same checklist as above — the AI assistant checks each box as it queries MCP.)_
+
+## Project Setup
+
+- **Name**: KleverDice
+- **Template**: `empty`
+- **Network**: testnet
+
+## Features
+
+### Game Logic
+
+- Players bet KLV tokens on dice outcomes (1-6)
+- Random number generated securely for each roll
+- Winning payout: 5.88x the bet (6x minus 2% house edge)
+- Min bet: 10 KLV, Max bet: 1000 KLV
+- Reject bets from smart contract addresses
+
+### Events
+
+- `GamePlayed` — emitted on every dice roll, includes: player address, bet amount, chosen number, rolled number, payout amount
+
+### Owner Functions
+
+- `withdrawHouseProfits` — withdraw accumulated house edge to owner wallet
+- Pause/resume via klever-vm-sdk pause module
+
+## Automation Scripts
+
+Endpoints for `interact.sh` and `query.sh`:
+- `placeBet` — endpoint, params: dice number (u32), payment: KLV bet amount via `--values`
+- `withdrawHouseProfits` — endpoint (owner-only), no params
+- `pauseGame` — endpoint (owner-only), no params
+- `resumeGame` — endpoint (owner-only), no params
+- `getGameStats` — view, no params
+
+## Suggested Task Breakdown
+
+1. **Knowledge Discovery** — Query MCP for tokens, CLI, storage, events, modules; create `knowledge-notes.md`
+2. **Project Initialization** — Run `init_klever_project`, verify generated scripts
+3. **Contract Skeleton** — Create contract struct, imports, init, storage mappers
+4. **Feature: Game Logic** — Implement `placeBet` endpoint with dice roll, payout, and validation
+5. **Events** — Implement `GamePlayed` event
+6. **Owner Functions** — `withdrawHouseProfits`, pause module integration
+7. **Automation Scripts** — Update `interact.sh` and `query.sh` with all endpoints
+8. **Build and Test** — Compile contract, run tests, fix any issues
+9. **Deploy and Verify** — Deploy to testnet, call each endpoint via scripts, confirm expected behavior

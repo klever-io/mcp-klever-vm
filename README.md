@@ -378,7 +378,7 @@ Extract and organize contract documentation automatically.
 ## Project Specifications and Examples
 
 For complete project implementation examples and specifications, see:
-- [Project Specification Template](docs/project-specification-template.md) - A comprehensive template/prompt for implementing smart contracts using the MCP knowledge base. This includes the discovery process, implementation gates, and step-by-step guidance for using MCP queries throughout development.
+- [Project Specification Template](docs/project-specification-template.md) - A fill-in template for specifying Klever smart contract projects. Guides AI assistants through MCP knowledge discovery, task tracking, and phased implementation. Includes a KleverDice example.
 
 ## Project Initialization
 
