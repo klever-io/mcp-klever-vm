@@ -1,6 +1,8 @@
 services:
   mcp-klever-vm:
     image: kleverapp/mcp-klever-vm:latest
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     environment:
       - MODE=public
       - PORT=3000
@@ -15,6 +17,16 @@ services:
       timeout: 5s
       start_period: 10s
       retries: 3
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=300
+      - WATCHTOWER_LABEL_ENABLE=true
     restart: unless-stopped
 
   cloudflared:
