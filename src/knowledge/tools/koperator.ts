@@ -1157,10 +1157,16 @@ OS_TYPE=$(uname -s)
 ARCH=$(uname -m)
 case "$OS_TYPE" in
     "Darwin")
-        [ "$ARCH" = "arm64" ] && PLATFORM="darwin-arm64" || PLATFORM="darwin"
+        [ "$ARCH" = "arm64" ] && PLATFORM="darwin-arm64" || PLATFORM="darwin-amd64"
         ;;
-    "Linux")  PLATFORM="linux" ;;
-    MINGW*|CYGWIN*|MSYS*) PLATFORM="win32" ;;
+    "Linux")
+        case "$ARCH" in
+            x86_64) PLATFORM="linux-amd64" ;;
+            arm64|aarch64) PLATFORM="linux-arm64" ;;
+            *) PLATFORM="linux-amd64" ;;
+        esac
+        ;;
+    MINGW*|CYGWIN*|MSYS*) PLATFORM="windows-amd64" ;;
 esac
 
 # 3. Fetch latest version from Klever's CDN
@@ -1219,9 +1225,15 @@ OS_TYPE=$(uname -s)
 ARCH=$(uname -m)
 case "$OS_TYPE" in
     "Darwin")
-        [ "$ARCH" = "arm64" ] && PLATFORM="darwin-arm64" || PLATFORM="darwin"
+        [ "$ARCH" = "arm64" ] && PLATFORM="darwin-arm64" || PLATFORM="darwin-amd64"
         ;;
-    "Linux")  PLATFORM="linux" ;;
+    "Linux")
+        case "$ARCH" in
+            x86_64) PLATFORM="linux-amd64" ;;
+            arm64|aarch64) PLATFORM="linux-arm64" ;;
+            *) PLATFORM="linux-amd64" ;;
+        esac
+        ;;
 esac
 VERSIONS_URL="https://storage.googleapis.com/kleverchain-public/versions.json"
 VERSION=$(curl -s "$VERSIONS_URL" | jq -r ".\\"\${PLATFORM}\\".koperator.version // .koperator")

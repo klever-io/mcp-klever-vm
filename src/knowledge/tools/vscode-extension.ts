@@ -64,10 +64,16 @@ OS_TYPE=$(uname -s)
 ARCH=$(uname -m)
 case "$OS_TYPE" in
     "Darwin")
-        [ "$ARCH" = "arm64" ] && PLATFORM="darwin-arm64" || PLATFORM="darwin"
+        [ "$ARCH" = "arm64" ] && PLATFORM="darwin-arm64" || PLATFORM="darwin-amd64"
         ;;
-    "Linux")  PLATFORM="linux" ;;
-    MINGW*|CYGWIN*|MSYS*) PLATFORM="win32" ;;
+    "Linux")
+        case "$ARCH" in
+            x86_64) PLATFORM="linux-amd64" ;;
+            arm64|aarch64) PLATFORM="linux-arm64" ;;
+            *) PLATFORM="linux-amd64" ;;
+        esac
+        ;;
+    MINGW*|CYGWIN*|MSYS*) PLATFORM="windows-amd64" ;;
 esac
 
 # 3. Fetch latest versions from Klever's CDN
@@ -195,7 +201,7 @@ Create a \`.vscode/mcp.json\` file at the root of your project:
       description:
         'Guide for configuring the klever-vm MCP server in Visual Studio Code - public or local',
       tags: ['vscode', 'mcp', 'setup', 'copilot', 'configuration', 'public-server'],
-      language: 'json',
+      language: 'markdown',
       relevanceScore: 0.9,
       contractType: 'any',
       author: 'klever-mcp',

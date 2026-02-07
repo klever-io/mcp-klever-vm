@@ -77,20 +77,28 @@ fi
 KSC_INSTALLED="false"
 KSC_VERSION=""
 KSC_PATH=""
-if [ -x "$SDK_PATH/ksc" ]; then
+KSC_BIN="$SDK_PATH/ksc"
+if [[ "$PLATFORM" == windows-* ]] && [ -x "$SDK_PATH/ksc.exe" ]; then
+  KSC_BIN="$SDK_PATH/ksc.exe"
+fi
+if [ -x "$KSC_BIN" ]; then
   KSC_INSTALLED="true"
-  KSC_PATH="$SDK_PATH/ksc"
-  KSC_VERSION=$("$SDK_PATH/ksc" --version 2>/dev/null | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+' | head -n1 || echo "")
+  KSC_PATH="$KSC_BIN"
+  KSC_VERSION=$("$KSC_BIN" --version 2>/dev/null | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+' | head -n1 || echo "")
 fi
 
 # Check koperator
 KOPERATOR_INSTALLED="false"
 KOPERATOR_VERSION=""
 KOPERATOR_PATH=""
-if [ -x "$SDK_PATH/koperator" ]; then
+KOPERATOR_BIN="$SDK_PATH/koperator"
+if [[ "$PLATFORM" == windows-* ]] && [ -x "$SDK_PATH/koperator.exe" ]; then
+  KOPERATOR_BIN="$SDK_PATH/koperator.exe"
+fi
+if [ -x "$KOPERATOR_BIN" ]; then
   KOPERATOR_INSTALLED="true"
-  KOPERATOR_PATH="$SDK_PATH/koperator"
-  KOPERATOR_VERSION=$("$SDK_PATH/koperator" --version 2>/dev/null | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+' | head -n1 || echo "")
+  KOPERATOR_PATH="$KOPERATOR_BIN"
+  KOPERATOR_VERSION=$("$KOPERATOR_BIN" --version 2>/dev/null | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+' | head -n1 || echo "")
 fi
 
 # Check VM library
@@ -217,7 +225,7 @@ get_version_info() {
   local temp_file
   temp_file=$(mktemp)
 
-  if curl -s -L -o "$temp_file" "$LATEST_VERSIONS_URL" 2>/dev/null || wget -q -O "$temp_file" "$LATEST_VERSIONS_URL" 2>/dev/null; then
+  if curl -sSf -L -o "$temp_file" "$LATEST_VERSIONS_URL" 2>/dev/null || wget -q -O "$temp_file" "$LATEST_VERSIONS_URL" 2>/dev/null; then
     local version=""
     local dependencies=""
 
@@ -283,7 +291,7 @@ install_one_tool() {
   local download_url="\${BASE_STORAGE_URL}/\${tool_name}/\${PLATFORM}/\${v_version}/\${tool_name}\${EXE_EXT}"
   local temp_path="\${SDK_PATH}/\${tool_name}_temp"
 
-  if ! curl -L -o "$temp_path" "$download_url" 2>/dev/null && ! wget -O "$temp_path" "$download_url" 2>/dev/null; then
+  if ! curl -fSL -o "$temp_path" "$download_url" 2>/dev/null && ! wget -O "$temp_path" "$download_url" 2>/dev/null; then
     echo "FAIL|$tool_name||download failed from $download_url"
     rm -f "$temp_path"
     return 1
@@ -294,7 +302,7 @@ install_one_tool() {
     for dep in $dependencies; do
       local dep_url="\${BASE_STORAGE_URL}/\${tool_name}/\${PLATFORM}/\${v_version}/$dep"
       local dep_path="\${SDK_PATH}/$dep"
-      if ! curl -L -o "$dep_path" "$dep_url" 2>/dev/null && ! wget -O "$dep_path" "$dep_url" 2>/dev/null; then
+      if ! curl -fSL -o "$dep_path" "$dep_url" 2>/dev/null && ! wget -O "$dep_path" "$dep_url" 2>/dev/null; then
         echo "FAIL|$tool_name||dependency download failed: $dep"
         rm -f "$temp_path"
         return 1
@@ -315,16 +323,23 @@ install_one_tool() {
   fi
 }
 
-# Run installation
+# Run installation (disable errexit so failures are captured in results)
 RESULTS=""
+set +e
 
 if [ "$TOOL_TO_INSTALL" = "all" ] || [ "$TOOL_TO_INSTALL" = "ksc" ]; then
   KSC_RESULT=$(install_one_tool "ksc" "$DEFAULT_KSC_VERSION")
+  if [ $? -ne 0 ] && [ -z "$KSC_RESULT" ]; then
+    KSC_RESULT="FAIL|ksc||unexpected error during installation"
+  fi
   RESULTS="$KSC_RESULT"
 fi
 
 if [ "$TOOL_TO_INSTALL" = "all" ] || [ "$TOOL_TO_INSTALL" = "koperator" ]; then
   KOPERATOR_RESULT=$(install_one_tool "koperator" "$DEFAULT_KOPERATOR_VERSION")
+  if [ $? -ne 0 ] && [ -z "$KOPERATOR_RESULT" ]; then
+    KOPERATOR_RESULT="FAIL|koperator||unexpected error during installation"
+  fi
   if [ -n "$RESULTS" ]; then
     RESULTS="$RESULTS
 $KOPERATOR_RESULT"
@@ -332,6 +347,8 @@ $KOPERATOR_RESULT"
     RESULTS="$KOPERATOR_RESULT"
   fi
 fi
+
+set -e
 
 # Build JSON output
 echo "{"

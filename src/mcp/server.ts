@@ -453,13 +453,13 @@ export class KleverMCPServer {
           }
 
           case 'init_klever_project': {
-            const { exec } = await import('child_process');
+            const { execFile } = await import('child_process');
             const { promisify } = await import('util');
-            const { writeFile, chmod, access } = await import('fs/promises');
+            const { writeFile, chmod, access, unlink } = await import('fs/promises');
             const { join } = await import('path');
             const { tmpdir } = await import('os');
             const { createProjectInitScript } = await import('../utils/project-init-script.js');
-            const execAsync = promisify(exec);
+            const execFileAsync = promisify(execFile);
 
             const {
               name: projectName,
@@ -489,20 +489,7 @@ export class KleverMCPServer {
               cmdArgs.push('--no-move');
             }
 
-            // Properly escape arguments for shell
-            const escapedArgs = cmdArgs
-              .map((arg, index) => {
-                // Don't quote flags (arguments starting with --)
-                if (index % 2 === 0 || arg.startsWith('--')) {
-                  return arg;
-                }
-                // Quote values that might contain spaces
-                return `"${arg.replace(/"/g, '\\"')}"`;
-              })
-              .join(' ');
-
-            const cmd = `${scriptPath} ${escapedArgs}`;
-            console.error(`[MCP] Running: ${cmd}`);
+            console.error(`[MCP] Running: ${scriptPath} ${cmdArgs.join(' ')}`);
 
             try {
               console.error(`[MCP] Current working directory: ${process.cwd()}`);
@@ -515,11 +502,10 @@ export class KleverMCPServer {
                 console.error(`[MCP] Script path exists: false`);
               }
 
-              // Execute the script
-              const { stdout, stderr } = await execAsync(cmd, {
+              // Execute the script using execFile to safely handle paths with spaces
+              const { stdout, stderr } = await execFileAsync('/bin/bash', [scriptPath, ...cmdArgs], {
                 cwd: process.cwd(),
                 env: { ...process.env },
-                shell: '/bin/bash',
               });
 
               console.error(`[MCP] Script stdout length: ${stdout.length}`);
@@ -529,12 +515,13 @@ export class KleverMCPServer {
               }
 
               // Clean up temp script
-              await execAsync(`rm -f ${scriptPath}`);
+              await unlink(scriptPath);
 
               // Check if we're in the right directory structure
-              const checkResult = await execAsync(
-                'ls -la scripts/ 2>/dev/null || echo "No scripts directory"'
-              );
+              const checkResult = await execFileAsync('/bin/bash', [
+                '-c',
+                'ls -la scripts/ 2>/dev/null || echo "No scripts directory"',
+              ]);
               console.error(`[MCP] Scripts directory check: ${checkResult.stdout}`);
 
               return {
@@ -574,7 +561,7 @@ export class KleverMCPServer {
               };
             } catch (error: any) {
               // Clean up temp script on error
-              await execAsync(`rm -f ${scriptPath}`).catch(() => {});
+              await unlink(scriptPath).catch(() => {});
 
               console.error(`[MCP] Project init error: ${error.message}`);
               console.error(`[MCP] Error details:`, error);
@@ -589,7 +576,7 @@ export class KleverMCPServer {
                         error: error.message,
                         stderr: error.stderr || '',
                         stdout: error.stdout || '',
-                        command: cmd,
+                        command: `${scriptPath} ${cmdArgs.join(' ')}`,
                         suggestion: 'Please ensure Klever SDK is installed at ~/klever-sdk/',
                       },
                       null,
@@ -602,13 +589,13 @@ export class KleverMCPServer {
           }
 
           case 'add_helper_scripts': {
-            const { exec: execCb } = await import('child_process');
+            const { execFile: execFileCb } = await import('child_process');
             const { promisify: promisifyUtil } = await import('util');
-            const { writeFile: wf, chmod: ch } = await import('fs/promises');
+            const { writeFile: wf, chmod: ch, unlink: ul } = await import('fs/promises');
             const { join: joinPath } = await import('path');
             const { tmpdir: td } = await import('os');
             const { createHelperScriptsScript } = await import('../utils/project-init-script.js');
-            const execHelper = promisifyUtil(execCb);
+            const execFileHelper = promisifyUtil(execFileCb);
 
             console.error(`[MCP] Adding helper scripts to existing project`);
 
@@ -620,18 +607,15 @@ export class KleverMCPServer {
             await wf(helperScriptPath, helperScriptContent, 'utf8');
             await ch(helperScriptPath, '755');
 
-            // Build command
-            const helperCmd = helperScriptPath;
-            console.error(`[MCP] Running: ${helperCmd}`);
+            console.error(`[MCP] Running: ${helperScriptPath}`);
 
             try {
               console.error(`[MCP] Current working directory: ${process.cwd()}`);
 
-              // Execute the script
-              const { stdout, stderr } = await execHelper(helperCmd, {
+              // Execute the script using execFile to safely handle paths with spaces
+              const { stdout, stderr } = await execFileHelper('/bin/bash', [helperScriptPath], {
                 cwd: process.cwd(),
                 env: { ...process.env },
-                shell: '/bin/bash',
               });
 
               console.error(`[MCP] Script stdout: ${stdout}`);
@@ -640,12 +624,13 @@ export class KleverMCPServer {
               }
 
               // Clean up temp script
-              await execHelper(`rm -f ${helperScriptPath}`);
+              await ul(helperScriptPath);
 
               // Check if scripts were created
-              const checkResult = await execHelper(
-                'ls -la scripts/ 2>/dev/null || echo "No scripts directory"'
-              );
+              const checkResult = await execFileHelper('/bin/bash', [
+                '-c',
+                'ls -la scripts/ 2>/dev/null || echo "No scripts directory"',
+              ]);
               console.error(`[MCP] Scripts directory check: ${checkResult.stdout}`);
 
               return {
@@ -682,7 +667,7 @@ export class KleverMCPServer {
               };
             } catch (error: any) {
               // Clean up temp script on error
-              await execHelper(`rm -f ${helperScriptPath}`).catch(() => {});
+              await ul(helperScriptPath).catch(() => {});
 
               console.error(`[MCP] Add helper scripts error: ${error.message}`);
               console.error(`[MCP] Error details:`, error);
@@ -697,7 +682,7 @@ export class KleverMCPServer {
                         error: error.message,
                         stderr: error.stderr || '',
                         stdout: error.stdout || '',
-                        command: helperCmd,
+                        command: helperScriptPath,
                         suggestion:
                           'Please ensure you are in a Klever smart contract project directory',
                       },
@@ -711,13 +696,13 @@ export class KleverMCPServer {
           }
 
           case 'check_sdk_status': {
-            const { exec: execCbSdk } = await import('child_process');
+            const { execFile: execFileSdk } = await import('child_process');
             const { promisify: promisifySdk } = await import('util');
             const { writeFile: wfSdk, chmod: chSdk, unlink: ulSdk } = await import('fs/promises');
             const { join: joinSdk } = await import('path');
             const { tmpdir: tdSdk } = await import('os');
             const { createCheckSdkScript } = await import('../utils/sdk-install-script.js');
-            const execSdkCheck = promisifySdk(execCbSdk);
+            const execFileSdkAsync = promisifySdk(execFileSdk);
 
             console.error(`[MCP] Checking SDK status`);
 
@@ -728,9 +713,8 @@ export class KleverMCPServer {
             await chSdk(scriptPath, '755');
 
             try {
-              const { stdout, stderr } = await execSdkCheck(scriptPath, {
+              const { stdout, stderr } = await execFileSdkAsync('/bin/bash', [scriptPath], {
                 env: { ...process.env },
-                shell: '/bin/bash',
               });
 
               if (stderr) {
@@ -783,13 +767,13 @@ export class KleverMCPServer {
           }
 
           case 'install_klever_sdk': {
-            const { exec: execCbInst } = await import('child_process');
+            const { execFile: execFileInst } = await import('child_process');
             const { promisify: promisifyInst } = await import('util');
             const { writeFile: wfInst, chmod: chInst, unlink: ulInst } = await import('fs/promises');
             const { join: joinInst } = await import('path');
             const { tmpdir: tdInst } = await import('os');
             const { createInstallSdkScript } = await import('../utils/sdk-install-script.js');
-            const execSdkInstall = promisifyInst(execCbInst);
+            const execFileInstAsync = promisifyInst(execFileInst);
 
             const { tool: toolArg = 'all' } = args as { tool?: string };
             const toolChoice = ['ksc', 'koperator', 'all'].includes(toolArg) ? toolArg : 'all';
@@ -803,9 +787,8 @@ export class KleverMCPServer {
             await chInst(scriptPath, '755');
 
             try {
-              const { stdout, stderr } = await execSdkInstall(scriptPath, {
+              const { stdout, stderr } = await execFileInstAsync('/bin/bash', [scriptPath], {
                 env: { ...process.env },
-                shell: '/bin/bash',
                 timeout: 120000,
               });
 
