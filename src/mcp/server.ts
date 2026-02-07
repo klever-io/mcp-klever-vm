@@ -124,6 +124,9 @@ export class KleverMCPServer {
     const { projectInitToolDefinition, addHelperScriptsToolDefinition } = await import(
       '../utils/project-init-script.js'
     );
+    const { checkSdkStatusToolDefinition, installKleverSdkToolDefinition } = await import(
+      '../utils/sdk-install-script.js'
+    );
     return [
       {
         name: 'add_context',
@@ -165,6 +168,8 @@ export class KleverMCPServer {
       },
       projectInitToolDefinition,
       addHelperScriptsToolDefinition,
+      checkSdkStatusToolDefinition,
+      installKleverSdkToolDefinition,
     ];
   }
 
@@ -191,7 +196,7 @@ export class KleverMCPServer {
       // Block local-only tools in public profile
       if (
         this.profile === 'public' &&
-        ['add_context', 'init_klever_project', 'add_helper_scripts'].includes(name)
+        ['add_context', 'init_klever_project', 'add_helper_scripts', 'check_sdk_status', 'install_klever_sdk'].includes(name)
       ) {
         return {
           content: [
@@ -695,6 +700,156 @@ export class KleverMCPServer {
                         command: helperCmd,
                         suggestion:
                           'Please ensure you are in a Klever smart contract project directory',
+                      },
+                      null,
+                      2
+                    ),
+                  },
+                ],
+              };
+            }
+          }
+
+          case 'check_sdk_status': {
+            const { exec: execCbSdk } = await import('child_process');
+            const { promisify: promisifySdk } = await import('util');
+            const { writeFile: wfSdk, chmod: chSdk, unlink: ulSdk } = await import('fs/promises');
+            const { join: joinSdk } = await import('path');
+            const { tmpdir: tdSdk } = await import('os');
+            const { createCheckSdkScript } = await import('../utils/sdk-install-script.js');
+            const execSdkCheck = promisifySdk(execCbSdk);
+
+            console.error(`[MCP] Checking SDK status`);
+
+            const scriptContent = createCheckSdkScript();
+            const scriptPath = joinSdk(tdSdk(), `check-sdk-${Date.now()}.sh`);
+
+            await wfSdk(scriptPath, scriptContent, 'utf8');
+            await chSdk(scriptPath, '755');
+
+            try {
+              const { stdout, stderr } = await execSdkCheck(scriptPath, {
+                env: { ...process.env },
+                shell: '/bin/bash',
+              });
+
+              if (stderr) {
+                console.error(`[MCP] Check SDK stderr: ${stderr}`);
+              }
+
+              await ulSdk(scriptPath);
+
+              const status = JSON.parse(stdout.trim());
+              console.error(`[MCP] SDK status: ksc=${status.ksc?.installed}, koperator=${status.koperator?.installed}`);
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify(
+                      {
+                        success: true,
+                        ...status,
+                      },
+                      null,
+                      2
+                    ),
+                  },
+                ],
+              };
+            } catch (error: any) {
+              await ulSdk(scriptPath).catch(() => {});
+
+              console.error(`[MCP] Check SDK error: ${error.message}`);
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify(
+                      {
+                        success: false,
+                        error: error.message,
+                        stderr: error.stderr || '',
+                        stdout: error.stdout || '',
+                      },
+                      null,
+                      2
+                    ),
+                  },
+                ],
+              };
+            }
+          }
+
+          case 'install_klever_sdk': {
+            const { exec: execCbInst } = await import('child_process');
+            const { promisify: promisifyInst } = await import('util');
+            const { writeFile: wfInst, chmod: chInst, unlink: ulInst } = await import('fs/promises');
+            const { join: joinInst } = await import('path');
+            const { tmpdir: tdInst } = await import('os');
+            const { createInstallSdkScript } = await import('../utils/sdk-install-script.js');
+            const execSdkInstall = promisifyInst(execCbInst);
+
+            const { tool: toolArg = 'all' } = args as { tool?: string };
+            const toolChoice = ['ksc', 'koperator', 'all'].includes(toolArg) ? toolArg : 'all';
+
+            console.error(`[MCP] Installing SDK: ${toolChoice}`);
+
+            const scriptContent = createInstallSdkScript(toolChoice);
+            const scriptPath = joinInst(tdInst(), `install-sdk-${Date.now()}.sh`);
+
+            await wfInst(scriptPath, scriptContent, 'utf8');
+            await chInst(scriptPath, '755');
+
+            try {
+              const { stdout, stderr } = await execSdkInstall(scriptPath, {
+                env: { ...process.env },
+                shell: '/bin/bash',
+                timeout: 120000,
+              });
+
+              if (stderr) {
+                console.error(`[MCP] Install SDK stderr: ${stderr}`);
+              }
+
+              await ulInst(scriptPath);
+
+              const result = JSON.parse(stdout.trim());
+              console.error(`[MCP] Install SDK result: ${JSON.stringify(result)}`);
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify(
+                      {
+                        success: true,
+                        ...result,
+                      },
+                      null,
+                      2
+                    ),
+                  },
+                ],
+              };
+            } catch (error: any) {
+              await ulInst(scriptPath).catch(() => {});
+
+              console.error(`[MCP] Install SDK error: ${error.message}`);
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify(
+                      {
+                        success: false,
+                        error: error.message,
+                        stderr: error.stderr || '',
+                        stdout: error.stdout || '',
+                        suggestion:
+                          'Ensure you have curl or wget installed and internet connectivity',
                       },
                       null,
                       2
