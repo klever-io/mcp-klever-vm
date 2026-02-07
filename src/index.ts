@@ -138,9 +138,12 @@ async function startPublicServer() {
 
   // CORS — restrict to necessary headers
   const corsOrigins = process.env.CORS_ORIGINS;
+  const corsOriginConfig = !corsOrigins || corsOrigins === '*'
+    ? true
+    : corsOrigins.split(',').map(o => o.trim());
   app.use(
     cors({
-      origin: corsOrigins ? corsOrigins.split(',').map(o => o.trim()) : true,
+      origin: corsOriginConfig,
       allowedHeaders: ['Content-Type', 'mcp-session-id', 'Last-Event-ID'],
       exposedHeaders: ['mcp-session-id'],
     })
@@ -151,20 +154,22 @@ async function startPublicServer() {
   app.use(express.json({ limit: bodyLimit }));
 
   // Rate limiting for MCP endpoint
-  const mcpRateLimit = parseInt(process.env.RATE_LIMIT_MCP || '60');
+  const parsedMcpRate = parseInt(process.env.RATE_LIMIT_MCP || '60');
+  const mcpRateLimitValue = Number.isFinite(parsedMcpRate) ? parsedMcpRate : 60;
   const mcpLimiter = rateLimit({
     windowMs: 60 * 1000,
-    limit: mcpRateLimit,
+    limit: mcpRateLimitValue,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     message: { error: 'Too many requests, please try again later' },
   });
 
   // Rate limiting for API endpoints
-  const apiRateLimit = parseInt(process.env.RATE_LIMIT_API || '30');
+  const parsedApiRate = parseInt(process.env.RATE_LIMIT_API || '30');
+  const apiRateLimitValue = Number.isFinite(parsedApiRate) ? parsedApiRate : 30;
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
-    limit: apiRateLimit,
+    limit: apiRateLimitValue,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     message: { error: 'Too many requests, please try again later' },
@@ -294,8 +299,8 @@ async function startPublicServer() {
         },
       });
     } catch {
-      res.json({
-        status: 'ok',
+      res.status(503).json({
+        status: 'error',
         timestamp: new Date().toISOString(),
         mode: 'public',
         uptime: process.uptime(),

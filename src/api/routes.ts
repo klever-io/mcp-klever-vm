@@ -43,8 +43,8 @@ export function createRoutes(contextService: ContextService, options?: RouteOpti
 
       res.json(response);
     } catch {
-      res.json({
-        status: 'ok',
+      res.status(503).json({
+        status: 'error',
         timestamp: new Date().toISOString(),
         mode: readOnly ? 'public' : 'local',
         uptime: process.uptime(),

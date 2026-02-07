@@ -197,7 +197,7 @@ pnpm run start:public
 |----------|---------|-------------|
 | `MODE` | `http` | Set to `public` for hosted mode |
 | `PORT` | `3000` | Server port |
-| `CORS_ORIGINS` | `*` | Comma-separated allowed origins |
+| `CORS_ORIGINS` | _(unset)_ | Comma-separated allowed origins. Unset or `*` allows all origins |
 | `RATE_LIMIT_MCP` | `60` | MCP endpoint requests/min per IP |
 | `RATE_LIMIT_API` | `30` | API endpoint requests/min per IP |
 | `BODY_SIZE_LIMIT` | `1mb` | Max request body size |

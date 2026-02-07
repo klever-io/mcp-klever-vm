@@ -605,8 +605,6 @@ export class KleverMCPServer {
             const { createHelperScriptsScript } = await import('../utils/project-init-script.js');
             const execHelper = promisifyUtil(execCb);
 
-            const { contractName } = args as { contractName?: string };
-
             console.error(`[MCP] Adding helper scripts to existing project`);
 
             // Create the helper scripts generation script

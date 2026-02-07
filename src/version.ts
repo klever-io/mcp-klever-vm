@@ -16,7 +16,7 @@ function loadPackageVersion(): string {
 
 export const VERSION = loadPackageVersion();
 export const GIT_SHA = process.env.GIT_SHA || 'dev';
-export const BUILD_TIME = process.env.BUILD_TIME || new Date().toISOString();
+export const BUILD_TIME = process.env.BUILD_TIME || 'dev';
 
 export function getVersionInfo() {
   return {
