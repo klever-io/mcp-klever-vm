@@ -242,7 +242,7 @@ echo ""
 echo -e "\${CYAN}Configuration:\${RESET}"
 echo "  Create a .env file to set defaults:"
 echo "    NETWORK=testnet"
-echo "    KEY_FILE=\$HOME/klever-sdk/walletKey.pem"
+echo "    KEY_FILE=$HOME/klever-sdk/walletKey.pem"
 `;
   } catch (error) {
     console.error('Error creating helper scripts script:', error);

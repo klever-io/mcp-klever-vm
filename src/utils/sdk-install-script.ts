@@ -40,7 +40,7 @@ SDK_PATH="\${KLEVER_SDK_PATH:-$HOME/klever-sdk}"
 json_escape() {
   local s="$1"
   s="\${s//\\\\/\\\\\\\\}"
-  s="\${s//\\"/\\\\\\\"}"
+  s="\${s//\\"/\\\\\\"}"
   printf '%s' "$s"
 }
 
@@ -189,7 +189,7 @@ TOOL_TO_INSTALL="${tool}"
 json_escape() {
   local s="$1"
   s="\${s//\\\\/\\\\\\\\}"
-  s="\${s//\\"/\\\\\\\"}"
+  s="\${s//\\"/\\\\\\"}"
   printf '%s' "$s"
 }
 

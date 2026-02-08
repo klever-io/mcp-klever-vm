@@ -56,7 +56,7 @@ async function startHTTPServer() {
   app.use('/api', createRoutes(contextService));
 
   // Global error handling
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error('[ERROR]', new Date().toISOString(), err.stack);
 
     // Don't leak error details in production
@@ -310,7 +310,7 @@ async function startPublicServer() {
   });
 
   // Global error handling
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error('[ERROR]', new Date().toISOString(), err.stack);
     res.status(err.status || 500).json({
       success: false,

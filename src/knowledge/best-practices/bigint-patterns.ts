@@ -118,8 +118,8 @@ require!(balance >= 1000u32, "Too low");  // Type mismatch
 | Operation | Correct Pattern | Notes |
 |-----------|----------------|-------|
 | Compare | \`&a >= &b\` | Use references |
-| Add to storage | \`update(\|x\| *x += &amount)\` | Reference avoids clone |
-| Subtract from storage | \`update(\|x\| *x -= &amount)\` | Reference avoids clone |
+| Add to storage | \`update(|x| *x += &amount)\` | Reference avoids clone |
+| Subtract from storage | \`update(|x| *x -= &amount)\` | Reference avoids clone |
 | Initialize | \`BigUint::from(1000u32)\` | Use appropriate integer type |
 | Zero check | \`value == 0u32\` or \`&value == &BigUint::zero()\` | Both work |`,
     {

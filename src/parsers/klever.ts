@@ -1,4 +1,4 @@
-import { ContextPayload, ContextType } from '../types/index.js';
+import { ContextPayload } from '../types/index.js';
 
 export interface KleverContractInfo {
   name: string;
