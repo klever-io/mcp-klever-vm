@@ -69,7 +69,8 @@ When using koperator in automated/unattended scripts, you MUST use these three f
 Without these flags, scripts will hang waiting for user input or produce unparseable output!`,
     {
       title: 'CRITICAL: Correct Koperator Syntax - READ THIS FIRST',
-      description: 'The ONLY correct way to use koperator sc invoke - NEVER use --contract, --function, --value. Always include --result-only for clean output',
+      description:
+        'The ONLY correct way to use koperator sc invoke - NEVER use --contract, --function, --value. Always include --result-only for clean output',
       tags: ['koperator', 'critical', 'syntax', 'sc-invoke', 'commands'],
       language: 'bash',
       relevanceScore: 1.0,
@@ -319,7 +320,8 @@ sc invoke klv1abc... transfer
 \`\`\``,
     {
       title: 'Klever Argument Types for Koperator',
-      description: 'Complete reference for argument types and formatting when using Koperator CLI tool',
+      description:
+        'Complete reference for argument types and formatting when using Koperator CLI tool',
       tags: ['koperator', 'arguments', 'types', 'documentation', 'cli', 'reference'],
       language: 'bash',
       relevanceScore: 1.0,
@@ -669,7 +671,8 @@ KLEVER_NODE=https://node.testnet.klever.org \\
 The koperator query command exists but the API is the recommended approach for production systems.`,
     {
       title: 'API vs Koperator - When to Use Each',
-      description: 'Clear guidance on using the API for contract queries vs koperator for transactions',
+      description:
+        'Clear guidance on using the API for contract queries vs koperator for transactions',
       tags: ['api', 'koperator', 'view', 'query', 'invoke', 'best-practice', 'contract'],
       language: 'bash',
       relevanceScore: 1.0,
@@ -720,8 +723,18 @@ KLEVER_NODE=https://node.testnet.klever.org \\
 # Or: koperator account info | grep -A 100 "^{" | jq .`,
     {
       title: 'Koperator Account Utilities',
-      description: 'Developer utilities for fetching account information - address, balance, nonce, and other details',
-      tags: ['koperator', 'account', 'balance', 'address', 'nonce', 'info', 'developer-tools', 'utilities'],
+      description:
+        'Developer utilities for fetching account information - address, balance, nonce, and other details',
+      tags: [
+        'koperator',
+        'account',
+        'balance',
+        'address',
+        'nonce',
+        'info',
+        'developer-tools',
+        'utilities',
+      ],
       language: 'bash',
       relevanceScore: 0.95,
       contractType: 'any',
@@ -1066,8 +1079,185 @@ export KEY_FILE="$HOME/klever-sdk/walletKey.pem"
 - **Set -e**: Use \`set -e\` in bash scripts to exit on errors`,
     {
       title: 'Using Koperator in Unattended/Automated Scripts',
-      description: 'CRITICAL: How to use koperator in CI/CD, automated scripts, and unattended environments',
-      tags: ['koperator', 'automation', 'scripts', 'ci-cd', 'unattended', 'sign', 'await', 'result-only', 'critical'],
+      description:
+        'CRITICAL: How to use koperator in CI/CD, automated scripts, and unattended environments',
+      tags: [
+        'koperator',
+        'automation',
+        'scripts',
+        'ci-cd',
+        'unattended',
+        'sign',
+        'await',
+        'result-only',
+        'critical',
+      ],
+      language: 'bash',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
+
+  // Koperator Missing Detection and Installation
+  createKnowledgeEntry(
+    'error_pattern',
+    `# Koperator Not Found - Detection and Installation Guide
+
+## Detecting Missing Koperator
+
+### Common Error Symptoms
+\`\`\`bash
+# Error 1: Command not found
+$ ~/klever-sdk/koperator --version
+bash: /Users/username/klever-sdk/koperator: No such file or directory
+
+# Error 2: Permission denied
+$ ~/klever-sdk/koperator --version
+bash: /Users/username/klever-sdk/koperator: Permission denied
+
+# Error 3: Directory doesn't exist
+$ ls ~/klever-sdk/
+ls: /Users/username/klever-sdk/: No such file or directory
+\`\`\`
+
+### How to Check if Koperator is Installed
+\`\`\`bash
+# Method 1: Check if binary exists
+if [ -x "$HOME/klever-sdk/koperator" ]; then
+    echo "koperator is installed"
+    ~/klever-sdk/koperator --version
+else
+    echo "koperator is NOT installed"
+fi
+
+# Method 2: Check SDK directory
+ls -la ~/klever-sdk/koperator 2>/dev/null || echo "koperator not found"
+
+# Method 3: Check version
+~/klever-sdk/koperator --version 2>/dev/null || echo "koperator is not available"
+\`\`\`
+
+## Installation Methods
+
+### Method 1: Install via Klever VSCode Extension (Recommended)
+1. Open Visual Studio Code
+2. Go to Extensions (Ctrl+Shift+X / Cmd+Shift+X)
+3. Search for "Klever Blockchain"
+4. Install the extension
+5. The extension automatically installs koperator at \`~/klever-sdk/koperator\`
+
+### Method 2: Manual Download
+\`\`\`bash
+# 1. Create SDK directory
+mkdir -p ~/klever-sdk
+
+# 2. Detect platform (must match Klever CDN paths)
+OS_TYPE=$(uname -s)
+ARCH=$(uname -m)
+case "$OS_TYPE" in
+    "Darwin")
+        [ "$ARCH" = "arm64" ] && PLATFORM="darwin-arm64" || PLATFORM="darwin-amd64"
+        ;;
+    "Linux")
+        case "$ARCH" in
+            x86_64) PLATFORM="linux-amd64" ;;
+            arm64|aarch64) PLATFORM="linux-arm64" ;;
+            *) PLATFORM="linux-amd64" ;;
+        esac
+        ;;
+    MINGW*|CYGWIN*|MSYS*) PLATFORM="windows-amd64" ;;
+esac
+
+# 3. Fetch latest version from Klever's CDN
+VERSIONS_URL="https://storage.googleapis.com/kleverchain-public/versions.json"
+VERSION=$(curl -s "$VERSIONS_URL" | jq -r ".\\"\${PLATFORM}\\".koperator.version // .koperator")
+
+# 4. Download koperator and VM dependencies
+BASE_URL="https://storage.googleapis.com/kleverchain-public/koperator/\${PLATFORM}/v\${VERSION}"
+curl -L -o ~/klever-sdk/koperator "\${BASE_URL}/koperator"
+
+# 5. Download VM dependencies listed in versions.json
+# macOS arm64: libvmexeccapi_arm.dylib
+# macOS amd64: libvmexeccapi.dylib
+# Linux: libvmexeccapi.so
+DEPS=$(curl -s "$VERSIONS_URL" | jq -r ".\\"\${PLATFORM}\\".koperator.dependencies[]? // empty")
+for DEP in $DEPS; do
+    curl -L -o ~/klever-sdk/"$DEP" "\${BASE_URL}/$DEP"
+done
+
+# 6. Make executable
+chmod +x ~/klever-sdk/koperator
+
+# 7. Verify
+~/klever-sdk/koperator --version
+\`\`\`
+
+**Note:** Requires \`jq\` for JSON parsing. If not available, check https://storage.googleapis.com/kleverchain-public/versions.json manually for the latest version.
+
+## Post-Installation Verification
+\`\`\`bash
+# Verify koperator works
+~/klever-sdk/koperator --version
+
+# Verify ksc is also installed
+~/klever-sdk/ksc --version
+
+# Check wallet key exists (generated on first use)
+ls ~/klever-sdk/walletKey.pem 2>/dev/null || echo "No wallet key yet - will be generated on first use"
+\`\`\`
+
+## Fixing Permission Issues
+\`\`\`bash
+# If koperator exists but isn't executable
+chmod +x ~/klever-sdk/koperator
+
+# If there are macOS Gatekeeper issues
+xattr -d com.apple.quarantine ~/klever-sdk/koperator 2>/dev/null
+\`\`\`
+
+## Fixing Missing VM Library
+\`\`\`bash
+# If you get "dylib not found" or "shared library" errors, download the VM dependency:
+
+# Detect platform and get latest version
+OS_TYPE=$(uname -s)
+ARCH=$(uname -m)
+case "$OS_TYPE" in
+    "Darwin")
+        [ "$ARCH" = "arm64" ] && PLATFORM="darwin-arm64" || PLATFORM="darwin-amd64"
+        ;;
+    "Linux")
+        case "$ARCH" in
+            x86_64) PLATFORM="linux-amd64" ;;
+            arm64|aarch64) PLATFORM="linux-arm64" ;;
+            *) PLATFORM="linux-amd64" ;;
+        esac
+        ;;
+esac
+VERSIONS_URL="https://storage.googleapis.com/kleverchain-public/versions.json"
+VERSION=$(curl -s "$VERSIONS_URL" | jq -r ".\\"\${PLATFORM}\\".koperator.version // .koperator")
+BASE_URL="https://storage.googleapis.com/kleverchain-public/koperator/\${PLATFORM}/v\${VERSION}"
+
+# Download dependencies listed in versions.json for your platform
+DEPS=$(curl -s "$VERSIONS_URL" | jq -r ".\\"\${PLATFORM}\\".koperator.dependencies[]? // empty")
+for DEP in $DEPS; do
+    curl -L -o ~/klever-sdk/"$DEP" "\${BASE_URL}/$DEP"
+done
+\`\`\``,
+    {
+      title: 'Koperator Not Found - Detection and Installation Guide',
+      description: 'How to detect when koperator is missing and step-by-step installation methods',
+      tags: [
+        'koperator',
+        'installation',
+        'missing',
+        'not-found',
+        'error',
+        'setup',
+        'troubleshooting',
+        'klever-sdk',
+      ],
       language: 'bash',
       relevanceScore: 1.0,
       contractType: 'any',
