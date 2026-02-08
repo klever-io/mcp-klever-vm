@@ -67,9 +67,9 @@ export class InMemoryStorage implements StorageBackend {
       results = results.filter(ctx => ctx.metadata.contractType === params.contractType);
     }
 
-    // Search in content and metadata
+    // Search in content and metadata using token-based matching
     if (params.query) {
-      const query = params.query.toLowerCase();
+      const queryTokens = params.query.toLowerCase().split(/\s+/).filter(Boolean);
       results = results.filter(ctx => {
         const searchable = [
           ctx.content,
@@ -80,7 +80,7 @@ export class InMemoryStorage implements StorageBackend {
           .join(' ')
           .toLowerCase();
 
-        return searchable.includes(query);
+        return queryTokens.every(token => searchable.includes(token));
       });
     }
 

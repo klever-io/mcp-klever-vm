@@ -132,7 +132,7 @@ export class RedisStorage implements StorageBackend {
     }
 
     if (params.query) {
-      const query = params.query.toLowerCase();
+      const queryTokens = params.query.toLowerCase().split(/\s+/).filter(Boolean);
       results = results.filter(ctx => {
         const searchable = [
           ctx.content,
@@ -143,7 +143,7 @@ export class RedisStorage implements StorageBackend {
           .join(' ')
           .toLowerCase();
 
-        return searchable.includes(query);
+        return queryTokens.every(token => searchable.includes(token));
       });
     }
 
