@@ -1,20 +1,45 @@
-# 🚀 Setting up `klever-vm` MCP Server in Visual Studio Code
+# Setting up `klever-vm` MCP Server in Visual Studio Code
 
-This guide walks through installing and configuring your local `klever-vm` MCP server in VS Code so other users can follow it easily.
+This guide walks through configuring the `klever-vm` MCP server in VS Code. You can either connect to the **public server** (no setup required) or run it **locally**.
 
 ---
 
-## 1. Prerequisites ✅
+## 1. Prerequisites
 
 - **Visual Studio Code 1.102 or newer**, with built-in support for MCP fully available ([VS Code MCP Docs](https://code.visualstudio.com/docs/copilot/chat/mcp-servers))
 - **GitHub Copilot Chat** extension installed and enabled (used to access Agent Mode and MCP tools)
-- Locally built `klever-vm` server executable (e.g. via `node dist/index.js`)
 
 ---
 
-## 2. Configuration File (`.vscode/mcp.json`)
+## 2. Option A: Connect to the Public Server (Recommended)
 
-Create a `.vscode/mcp.json` file at the root of your project. This file defines your `klever-vm` MCP server:
+The fastest way to get started. No local build or installation required.
+
+Create a `.vscode/mcp.json` file at the root of your project:
+
+```json
+{
+  "inputs": [],
+  "servers": {
+    "klever-vm": {
+      "type": "http",
+      "url": "https://mcp.klever.org/mcp"
+    }
+  }
+}
+```
+
+This connects to the hosted Klever MCP server with read-only access to the full knowledge base.
+
+---
+
+## 2. Option B: Run Locally (Full Access)
+
+For full access including write operations and project initialization tools, run the server locally.
+
+**Additional prerequisite:** Locally built `klever-vm` server executable (see [Installation](../README.md#installation))
+
+Create a `.vscode/mcp.json` file at the root of your project:
 
 ```json
 {
@@ -25,7 +50,7 @@ Create a `.vscode/mcp.json` file at the root of your project. This file defines 
       "command": "node",
       "args": [
         "--experimental-vm-modules",
-        "./dist/index.js" // use your full path to the mcp-klever-vm dist/index.js
+        "/path/to/mcp-klever-vm/dist/index.js"
       ],
       "env": {
         "MODE": "mcp",
@@ -34,6 +59,11 @@ Create a `.vscode/mcp.json` file at the root of your project. This file defines 
     }
   }
 }
+```
+
+Replace `/path/to/mcp-klever-vm/dist/index.js` with the actual path to your built server.
+
+---
 
 ## 3. Run the MCP Server in VS Code
 

@@ -14,6 +14,8 @@
     "ingest": "tsx src/scripts/ingest-knowledge.ts",
     "mcp": "MODE=mcp node --experimental-vm-modules dist/index.js",
     "dev:mcp": "MODE=mcp STORAGE_TYPE=memory tsx watch src/index.ts",
+    "start:public": "MODE=public node dist/index.js",
+    "dev:public": "MODE=public STORAGE_TYPE=memory tsx watch src/index.ts",
     "install-sdk": "./scripts/install-sdk.sh"
   },
   "keywords": [
@@ -48,6 +50,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
     "redis": "^5.5.6",
     "zod": "^3.25.56"
   }

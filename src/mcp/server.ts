@@ -1,30 +1,26 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { ContextService } from '../context/service.js';
 import { QueryContextSchema, ContextPayloadSchema } from '../types/index.js';
-import {
-  createProjectInitScript,
-  createHelperScriptsScript,
-  projectInitToolDefinition,
-  addHelperScriptsToolDefinition,
-} from '../utils/project-init-script.js';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { writeFile, chmod, access } from 'fs/promises';
-import { join } from 'path';
-import { tmpdir } from 'os';
+import { VERSION, GIT_SHA } from '../version.js';
 
-const execAsync = promisify(exec);
+export type ServerProfile = 'local' | 'public';
 
 export class KleverMCPServer {
   private server: Server;
+  private profile: ServerProfile;
 
-  constructor(private contextService: ContextService) {
+  constructor(
+    private contextService: ContextService,
+    profile: ServerProfile = 'local'
+  ) {
+    this.profile = profile;
     this.server = new Server(
       {
         name: 'klever-vm-mcp',
-        version: '1.0.0',
+        version: `${VERSION}+${GIT_SHA}`,
       },
       {
         capabilities: {
@@ -36,50 +32,18 @@ export class KleverMCPServer {
     this.setupHandlers();
   }
 
-  private setupHandlers() {
-    // List available tools
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [
-        {
-          name: 'query_context',
-          description: 'Query Klever VM smart contract development context',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              query: { type: 'string', description: 'Search query' },
-              types: {
-                type: 'array',
-                items: {
-                  type: 'string',
-                  enum: [
-                    'code_example',
-                    'best_practice',
-                    'security_tip',
-                    'optimization',
-                    'documentation',
-                    'error_pattern',
-                    'deployment_tool',
-                    'runtime_behavior',
-                  ],
-                },
-              },
-              tags: {
-                type: 'array',
-                items: { type: 'string' },
-              },
-              contractType: { type: 'string' },
-              limit: { type: 'number', default: 10 },
-              offset: { type: 'number', default: 0 },
-            },
-          },
-        },
-        {
-          name: 'add_context',
-          description: 'Add new context for Klever VM development',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              type: {
+  private getReadOnlyToolDefinitions() {
+    return [
+      {
+        name: 'query_context',
+        description: 'Query Klever VM smart contract development context',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            query: { type: 'string', description: 'Search query' },
+            types: {
+              type: 'array',
+              items: {
                 type: 'string',
                 enum: [
                   'code_example',
@@ -92,79 +56,130 @@ export class KleverMCPServer {
                   'runtime_behavior',
                 ],
               },
-              content: { type: 'string' },
-              metadata: {
-                type: 'object',
-                properties: {
-                  title: { type: 'string' },
-                  description: { type: 'string' },
-                  tags: {
-                    type: 'array',
-                    items: { type: 'string' },
-                  },
-                  contractType: { type: 'string' },
-                  author: { type: 'string' },
+            },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+            contractType: { type: 'string' },
+            limit: { type: 'number', default: 10 },
+            offset: { type: 'number', default: 0 },
+          },
+        },
+      },
+      {
+        name: 'get_context',
+        description: 'Retrieve specific context by ID',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            id: { type: 'string' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'find_similar',
+        description: 'Find contexts similar to a given context',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            id: { type: 'string' },
+            limit: { type: 'number', default: 5 },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'get_knowledge_stats',
+        description: 'Get statistics about the knowledge base',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {},
+        },
+      },
+      {
+        name: 'enhance_with_context',
+        description: 'Enhance a query with relevant Klever VM context before processing',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            query: {
+              type: 'string',
+              description: 'The user query to enhance with context',
+            },
+            autoInclude: {
+              type: 'boolean',
+              default: true,
+              description: 'Automatically include the most relevant contexts',
+            },
+          },
+          required: ['query'],
+        },
+      },
+    ];
+  }
+
+  private async getLocalOnlyToolDefinitions() {
+    const { projectInitToolDefinition, addHelperScriptsToolDefinition } = await import(
+      '../utils/project-init-script.js'
+    );
+    return [
+      {
+        name: 'add_context',
+        description: 'Add new context for Klever VM development',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            type: {
+              type: 'string',
+              enum: [
+                'code_example',
+                'best_practice',
+                'security_tip',
+                'optimization',
+                'documentation',
+                'error_pattern',
+                'deployment_tool',
+                'runtime_behavior',
+              ],
+            },
+            content: { type: 'string' },
+            metadata: {
+              type: 'object',
+              properties: {
+                title: { type: 'string' },
+                description: { type: 'string' },
+                tags: {
+                  type: 'array',
+                  items: { type: 'string' },
                 },
-                required: ['title'],
+                contractType: { type: 'string' },
+                author: { type: 'string' },
               },
+              required: ['title'],
             },
-            required: ['type', 'content', 'metadata'],
           },
+          required: ['type', 'content', 'metadata'],
         },
-        {
-          name: 'get_context',
-          description: 'Retrieve specific context by ID',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-            },
-            required: ['id'],
-          },
-        },
-        {
-          name: 'find_similar',
-          description: 'Find contexts similar to a given context',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              limit: { type: 'number', default: 5 },
-            },
-            required: ['id'],
-          },
-        },
-        {
-          name: 'get_knowledge_stats',
-          description: 'Get statistics about the knowledge base',
-          inputSchema: {
-            type: 'object',
-            properties: {},
-          },
-        },
-        projectInitToolDefinition,
-        addHelperScriptsToolDefinition,
-        {
-          name: 'enhance_with_context',
-          description: 'Enhance a query with relevant Klever VM context before processing',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              query: {
-                type: 'string',
-                description: 'The user query to enhance with context',
-              },
-              autoInclude: {
-                type: 'boolean',
-                default: true,
-                description: 'Automatically include the most relevant contexts',
-              },
-            },
-            required: ['query'],
-          },
-        },
-      ],
-    }));
+      },
+      projectInitToolDefinition,
+      addHelperScriptsToolDefinition,
+    ];
+  }
+
+  private setupHandlers() {
+    // List available tools
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      const tools: Array<Record<string, unknown>> = [...this.getReadOnlyToolDefinitions()];
+
+      if (this.profile === 'local') {
+        const localTools = await this.getLocalOnlyToolDefinitions();
+        tools.push(...localTools);
+      }
+
+      return { tools };
+    });
 
     // Handle tool calls
     this.server.setRequestHandler(CallToolRequestSchema, async request => {
@@ -172,6 +187,28 @@ export class KleverMCPServer {
 
       // Debug logging to stderr
       console.error(`[MCP] Tool called: ${name}`, JSON.stringify(args));
+
+      // Block local-only tools in public profile
+      if (
+        this.profile === 'public' &&
+        ['add_context', 'init_klever_project', 'add_helper_scripts'].includes(name)
+      ) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  success: false,
+                  error: 'This tool is not available in public mode',
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
 
       try {
         switch (name) {
@@ -411,8 +448,16 @@ export class KleverMCPServer {
           }
 
           case 'init_klever_project': {
+            const { exec } = await import('child_process');
+            const { promisify } = await import('util');
+            const { writeFile, chmod, access } = await import('fs/promises');
+            const { join } = await import('path');
+            const { tmpdir } = await import('os');
+            const { createProjectInitScript } = await import('../utils/project-init-script.js');
+            const execAsync = promisify(exec);
+
             const {
-              name,
+              name: projectName,
               template = 'empty',
               noMove = false,
             } = args as {
@@ -421,7 +466,9 @@ export class KleverMCPServer {
               noMove?: boolean;
             };
 
-            console.error(`[MCP] Initializing project: ${name} with template: ${template}`);
+            console.error(
+              `[MCP] Initializing project: ${projectName} with template: ${template}`
+            );
 
             // Create the initialization script
             const scriptContent = createProjectInitScript();
@@ -432,7 +479,7 @@ export class KleverMCPServer {
             await chmod(scriptPath, '755');
 
             // Build command with arguments
-            const cmdArgs = ['--name', name, '--template', template];
+            const cmdArgs = ['--name', projectName, '--template', template];
             if (noMove) {
               cmdArgs.push('--no-move');
             }
@@ -492,7 +539,7 @@ export class KleverMCPServer {
                     text: JSON.stringify(
                       {
                         success: true,
-                        message: `Project ${name} initialized successfully`,
+                        message: `Project ${projectName} initialized successfully`,
                         output: stdout,
                         workingDirectory: process.cwd(),
                         projectStructure: {
@@ -550,27 +597,33 @@ export class KleverMCPServer {
           }
 
           case 'add_helper_scripts': {
-            const { contractName } = args as { contractName?: string };
+            const { exec: execCb } = await import('child_process');
+            const { promisify: promisifyUtil } = await import('util');
+            const { writeFile: wf, chmod: ch } = await import('fs/promises');
+            const { join: joinPath } = await import('path');
+            const { tmpdir: td } = await import('os');
+            const { createHelperScriptsScript } = await import('../utils/project-init-script.js');
+            const execHelper = promisifyUtil(execCb);
 
             console.error(`[MCP] Adding helper scripts to existing project`);
 
             // Create the helper scripts generation script
-            const scriptContent = createHelperScriptsScript();
-            const scriptPath = join(tmpdir(), `add-helper-scripts-${Date.now()}.sh`);
+            const helperScriptContent = createHelperScriptsScript();
+            const helperScriptPath = joinPath(td(), `add-helper-scripts-${Date.now()}.sh`);
 
             // Write script to temp file
-            await writeFile(scriptPath, scriptContent, 'utf8');
-            await chmod(scriptPath, '755');
+            await wf(helperScriptPath, helperScriptContent, 'utf8');
+            await ch(helperScriptPath, '755');
 
             // Build command
-            const cmd = scriptPath;
-            console.error(`[MCP] Running: ${cmd}`);
+            const helperCmd = helperScriptPath;
+            console.error(`[MCP] Running: ${helperCmd}`);
 
             try {
               console.error(`[MCP] Current working directory: ${process.cwd()}`);
 
               // Execute the script
-              const { stdout, stderr } = await execAsync(cmd, {
+              const { stdout, stderr } = await execHelper(helperCmd, {
                 cwd: process.cwd(),
                 env: { ...process.env },
                 shell: '/bin/bash',
@@ -582,10 +635,10 @@ export class KleverMCPServer {
               }
 
               // Clean up temp script
-              await execAsync(`rm -f ${scriptPath}`);
+              await execHelper(`rm -f ${helperScriptPath}`);
 
               // Check if scripts were created
-              const checkResult = await execAsync(
+              const checkResult = await execHelper(
                 'ls -la scripts/ 2>/dev/null || echo "No scripts directory"'
               );
               console.error(`[MCP] Scripts directory check: ${checkResult.stdout}`);
@@ -624,7 +677,7 @@ export class KleverMCPServer {
               };
             } catch (error: any) {
               // Clean up temp script on error
-              await execAsync(`rm -f ${scriptPath}`).catch(() => {});
+              await execHelper(`rm -f ${helperScriptPath}`).catch(() => {});
 
               console.error(`[MCP] Add helper scripts error: ${error.message}`);
               console.error(`[MCP] Error details:`, error);
@@ -639,7 +692,7 @@ export class KleverMCPServer {
                         error: error.message,
                         stderr: error.stderr || '',
                         stdout: error.stdout || '',
-                        command: cmd,
+                        command: helperCmd,
                         suggestion:
                           'Please ensure you are in a Klever smart contract project directory',
                       },
@@ -675,9 +728,14 @@ export class KleverMCPServer {
     });
   }
 
+  async connectTransport(transport: Transport) {
+    await this.server.connect(transport);
+    console.error(`[MCP] Klever MCP Server connected (profile: ${this.profile})`);
+  }
+
   async start() {
     const transport = new StdioServerTransport();
-    await this.server.connect(transport);
+    await this.connectTransport(transport);
     // Log to stderr to avoid interfering with MCP protocol on stdout
     console.error('[MCP] Klever MCP Server started with knowledge base');
   }

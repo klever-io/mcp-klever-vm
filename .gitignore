@@ -36,5 +36,4 @@ dump.rdb
 tmp/
 temp/
 
-# pnpm
-pnpm-lock.yaml
+# pnpm (lock file is tracked for reproducible Docker builds)
