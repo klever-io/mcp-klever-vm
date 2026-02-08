@@ -36,6 +36,14 @@ set -e
 
 SDK_PATH="\${KLEVER_SDK_PATH:-$HOME/klever-sdk}"
 
+# JSON escape function
+json_escape() {
+  local s="$1"
+  s="\${s//\\\\/\\\\\\\\}"
+  s="\${s//\\"/\\\\\\\"}"
+  printf '%s' "$s"
+}
+
 # Detect platform
 get_platform() {
   local os_type=$(uname -s)
@@ -137,27 +145,27 @@ fi
 # Output JSON
 cat <<EOF
 {
-  "sdkPath": "$SDK_PATH",
+  "sdkPath": "$(json_escape "$SDK_PATH")",
   "sdkExists": $SDK_EXISTS,
   "ksc": {
     "installed": $KSC_INSTALLED,
-    "version": "$KSC_VERSION",
-    "path": "$KSC_PATH"
+    "version": "$(json_escape "$KSC_VERSION")",
+    "path": "$(json_escape "$KSC_PATH")"
   },
   "koperator": {
     "installed": $KOPERATOR_INSTALLED,
-    "version": "$KOPERATOR_VERSION",
-    "path": "$KOPERATOR_PATH"
+    "version": "$(json_escape "$KOPERATOR_VERSION")",
+    "path": "$(json_escape "$KOPERATOR_PATH")"
   },
   "vmLibrary": {
     "installed": $VM_INSTALLED,
-    "file": "$VM_FILE"
+    "file": "$(json_escape "$VM_FILE")"
   },
   "walletKey": {
     "exists": $WALLET_EXISTS,
-    "path": "$WALLET_PATH"
+    "path": "$(json_escape "$WALLET_PATH")"
   },
-  "platform": "$PLATFORM"
+  "platform": "$(json_escape "$PLATFORM")"
 }
 EOF
 `;
@@ -176,6 +184,14 @@ LATEST_VERSIONS_URL="https://storage.googleapis.com/kleverchain-public/versions.
 BASE_STORAGE_URL="https://storage.googleapis.com/kleverchain-public"
 SDK_PATH="\${KLEVER_SDK_PATH:-$HOME/klever-sdk}"
 TOOL_TO_INSTALL="${tool}"
+
+# JSON escape function
+json_escape() {
+  local s="$1"
+  s="\${s//\\\\/\\\\\\\\}"
+  s="\${s//\\"/\\\\\\\"}"
+  printf '%s' "$s"
+}
 
 # Detect platform
 get_platform() {
@@ -354,8 +370,8 @@ set -e
 
 # Build JSON output
 echo "{"
-echo "  \\"platform\\": \\"$PLATFORM\\","
-echo "  \\"sdkPath\\": \\"$SDK_PATH\\","
+echo "  \\"platform\\": \\"$(json_escape "$PLATFORM")\\","
+echo "  \\"sdkPath\\": \\"$(json_escape "$SDK_PATH")\\","
 echo "  \\"results\\": ["
 
 FIRST="true"
@@ -381,7 +397,7 @@ while IFS= read -r line; do
     SKIPPED="true"
   fi
 
-  printf '    { "tool": "%s", "success": %s, "skipped": %s, "version": "%s", "message": "%s" }' "$TOOL" "$SUCCESS" "$SKIPPED" "$VER" "$MSG"
+  printf '    { "tool": "%s", "success": %s, "skipped": %s, "version": "%s", "message": "%s" }' "$(json_escape "$TOOL")" "$SUCCESS" "$SKIPPED" "$(json_escape "$VER")" "$(json_escape "$MSG")"
 done <<< "$RESULTS"
 
 echo ""
