@@ -52,6 +52,7 @@ get_platform() {
       case "$arch" in
         "x86_64") echo "linux-amd64" ;;
         "i386"|"i686") echo "linux-386" ;;
+        "arm64"|"aarch64") echo "linux-arm64" ;;
         *) echo "linux-amd64" ;;
       esac
       ;;
@@ -192,6 +193,7 @@ get_platform() {
       case "$arch" in
         "x86_64") echo "linux-amd64" ;;
         "i386"|"i686") echo "linux-386" ;;
+        "arm64"|"aarch64") echo "linux-arm64" ;;
         *) echo "linux-amd64" ;;
       esac
       ;;
@@ -271,7 +273,7 @@ install_one_tool() {
   local dependencies=$(echo "$version_info" | cut -d'|' -f2)
   local tool_path="\${SDK_PATH}/\${tool_name}\${EXE_EXT}"
 
-  # Check if already installed with same or newer version
+  # Check if already installed with same version
   if [ -x "$tool_path" ]; then
     local installed_version
     installed_version=$("$tool_path" --version 2>/dev/null | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+' | head -n1 || echo "")
