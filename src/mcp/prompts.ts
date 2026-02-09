@@ -77,7 +77,7 @@ Follow each phase below in order. Do NOT skip phases or proceed until the curren
 
 ## Phase 0 — Knowledge Discovery
 
-Before writing any code, query the MCP knowledge base for each topic below using the \`query_context\` tool. Document all findings before moving on.
+Before writing any code, query the MCP knowledge base for each topic below using the \`query_context\` tool or \`search_documentation\` tool. Use \`search_documentation\` for "how do I..." style lookups and \`query_context\` for precise type/tag filtering. Document all findings before moving on.
 
 1. **Token System** — Query for token precision, decimal places, unit conversions, and KDA naming conventions.
    - Example query: \`query_context({ query: "token system KLV precision decimals" })\`
@@ -132,12 +132,13 @@ Work through features one at a time. Confirm each feature with the user before m
    - Integrate PauseModule if the contract needs pause/resume capability
    - Query MCP: \`query_context({ query: "owner admin module pause" })\`
 
-## Phase 4 — Scripts & Testing
+## Phase 4 — Analysis, Scripts & Testing
 
-1. ${scriptsToolNote}
-2. Update interact.sh and query.sh with all contract endpoints, using correct \`--args\` type prefixes and \`--values\` for payments.
-3. Build the contract and fix any compilation errors.
-4. Run tests and verify all endpoints work correctly.
+1. Run \`analyze_contract\` on your contract source code to check for common issues (missing imports, annotations, storage patterns, event emissions). Fix any findings before proceeding.
+2. ${scriptsToolNote}
+3. Update interact.sh and query.sh with all contract endpoints, using correct \`--args\` type prefixes and \`--values\` for payments.
+4. Build the contract and fix any compilation errors.
+5. Run tests and verify all endpoints work correctly.
 
 ## Summary
 
@@ -174,8 +175,8 @@ Follow these steps in order:
 
 Query the MCP knowledge base for patterns related to this feature:
 
-- \`query_context({ query: "${featureName} pattern implementation" })\`
-- \`query_context({ query: "${featureName} storage events" })\`
+- \`search_documentation({ query: "${featureName} pattern implementation" })\` — for human-readable docs
+- \`query_context({ query: "${featureName} storage events" })\` — for detailed context entries
 - \`find_similar\` on any relevant context IDs returned
 
 Document what patterns, storage types, and annotations are recommended.
@@ -197,12 +198,13 @@ Based on MCP knowledge and user answers:
 3. Implement validation and business logic following patterns from the knowledge base
 4. Add events for state-changing operations
 
-## Step 4 — Update Scripts & Test
+## Step 4 — Analysis, Scripts & Test
 
-1. ${scriptsNote}
-2. Add the new endpoint to interact.sh and/or query.sh with correct \`--args\` type prefixes
-3. Build the contract and verify compilation succeeds
-4. Test the new feature and confirm it works as expected`;
+1. Run \`analyze_contract\` on the updated contract source to check for common issues. Fix any findings.
+2. ${scriptsNote}
+3. Add the new endpoint to interact.sh and/or query.sh with correct \`--args\` type prefixes
+4. Build the contract and verify compilation succeeds
+5. Test the new feature and confirm it works as expected`;
 
   return {
     description: `Add feature "${featureName}" to ${contractName}`,

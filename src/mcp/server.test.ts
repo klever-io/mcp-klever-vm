@@ -63,6 +63,14 @@ describe('KleverMCPServer (public mode)', () => {
       expect(names).toContain('get_knowledge_stats');
       expect(names).toContain('enhance_with_context');
     });
+
+    it('lists search_documentation and analyze_contract tools', async () => {
+      const { tools } = await client.listTools();
+      const names = tools.map(t => t.name);
+
+      expect(names).toContain('search_documentation');
+      expect(names).toContain('analyze_contract');
+    });
   });
 
   describe('init_klever_project (public mode)', () => {
@@ -157,6 +165,121 @@ describe('KleverMCPServer (public mode)', () => {
       const parsed = JSON.parse(content[0].text);
       expect(parsed.success).toBe(false);
       expect(parsed.error).toContain('not available in public mode');
+    });
+  });
+
+  describe('resources', () => {
+    it('lists static resources via client.listResources()', async () => {
+      const { resources } = await client.listResources();
+      expect(resources).toHaveLength(1);
+      expect(resources[0].uri).toBe('klever://knowledge/index');
+      expect(resources[0].mimeType).toBe('text/markdown');
+    });
+
+    it('lists resource templates via client.listResourceTemplates()', async () => {
+      const { resourceTemplates } = await client.listResourceTemplates();
+      expect(resourceTemplates).toHaveLength(1);
+      expect(resourceTemplates[0].uriTemplate).toBe('klever://knowledge/{category}');
+    });
+
+    it('reads the knowledge index resource', async () => {
+      const result = await client.readResource({ uri: 'klever://knowledge/index' });
+      expect(result.contents).toHaveLength(1);
+      expect(result.contents[0].mimeType).toBe('text/markdown');
+      expect(result.contents[0].text).toContain('Klever VM Knowledge Base');
+    });
+
+    it('reads a category resource', async () => {
+      const result = await client.readResource({ uri: 'klever://knowledge/core' });
+      expect(result.contents).toHaveLength(1);
+      expect(result.contents[0].mimeType).toBe('text/markdown');
+      expect(result.contents[0].text).toContain('# Klever Knowledge: core');
+    });
+  });
+
+  describe('search_documentation', () => {
+    it('returns markdown-formatted documentation results', async () => {
+      const result = await client.callTool({
+        name: 'search_documentation',
+        arguments: { query: 'storage mapper' },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      expect(content).toHaveLength(1);
+      expect(content[0].text).toContain('# Documentation Search');
+      expect(content[0].text).toContain('storage mapper');
+    });
+
+    it('accepts an optional category filter', async () => {
+      const result = await client.callTool({
+        name: 'search_documentation',
+        arguments: { query: 'import', category: 'core' },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      expect(content[0].text).toContain('**Category**: core');
+    });
+  });
+
+  describe('analyze_contract', () => {
+    it('detects missing imports', async () => {
+      const result = await client.callTool({
+        name: 'analyze_contract',
+        arguments: {
+          sourceCode: '#[klever_sc::contract]\npub trait MyContract {}',
+          contractName: 'TestContract',
+        },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      const parsed = JSON.parse(content[0].text);
+      expect(parsed.success).toBe(true);
+      expect(parsed.contractName).toBe('TestContract');
+      expect(parsed.findings.some((f: { pattern: string }) => f.pattern === 'missing_imports')).toBe(
+        true
+      );
+    });
+
+    it('detects missing contract macro', async () => {
+      const result = await client.callTool({
+        name: 'analyze_contract',
+        arguments: {
+          sourceCode: 'use klever_sc::imports::*;\npub trait MyContract {}',
+        },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      const parsed = JSON.parse(content[0].text);
+      expect(
+        parsed.findings.some((f: { pattern: string }) => f.pattern === 'missing_contract_macro')
+      ).toBe(true);
+    });
+
+    it('returns no_issues for well-formed contract', async () => {
+      const validContract = `use klever_sc::imports::*;
+
+#[klever_sc::contract]
+pub trait MyContract {
+    #[init]
+    fn init(&self) {}
+
+    #[endpoint]
+    fn do_something(&self) {}
+
+    #[event("something_done")]
+    fn something_done_event(&self);
+}`;
+
+      const result = await client.callTool({
+        name: 'analyze_contract',
+        arguments: { sourceCode: validContract },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      const parsed = JSON.parse(content[0].text);
+      expect(parsed.findings.some((f: { pattern: string }) => f.pattern === 'no_issues')).toBe(
+        true
+      );
     });
   });
 });

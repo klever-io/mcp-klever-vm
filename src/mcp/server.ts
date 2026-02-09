@@ -5,6 +5,9 @@ import {
   ListToolsRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
+  ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
+  ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { ContextService } from '../context/service.js';
@@ -36,6 +39,7 @@ export class KleverMCPServer {
         capabilities: {
           tools: {},
           prompts: {},
+          resources: {},
         },
       }
     );
@@ -126,6 +130,57 @@ export class KleverMCPServer {
             },
           },
           required: ['query'],
+        },
+      },
+      {
+        name: 'search_documentation',
+        description:
+          'Search Klever VM documentation and knowledge base. Optimized for "how do I..." questions — returns human-readable markdown with titles, descriptions, and code snippets. Use this instead of query_context when looking for developer documentation.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            query: {
+              type: 'string',
+              description: 'Search query (e.g. "how to use storage mappers", "deploy contract")',
+            },
+            category: {
+              type: 'string',
+              enum: [
+                'core',
+                'storage',
+                'events',
+                'tokens',
+                'modules',
+                'tools',
+                'scripts',
+                'examples',
+                'errors',
+                'best-practices',
+                'documentation',
+              ],
+              description: 'Optional category filter to narrow search results',
+            },
+          },
+          required: ['query'],
+        },
+      },
+      {
+        name: 'analyze_contract',
+        description:
+          'Analyze Klever smart contract source code for common issues. Performs pattern-matching checks for missing imports, annotations, storage patterns, and best practices. Returns findings with severity levels and links to relevant knowledge base entries.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            sourceCode: {
+              type: 'string',
+              description: 'The Rust source code of the Klever smart contract to analyze',
+            },
+            contractName: {
+              type: 'string',
+              description: 'Optional name of the contract being analyzed',
+            },
+          },
+          required: ['sourceCode'],
         },
       },
     ];
@@ -468,6 +523,96 @@ export class KleverMCPServer {
                         title: r.metadata.title,
                         relevance: r.metadata.relevanceScore,
                       })),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'search_documentation': {
+            const { query, category } = args as { query: string; category?: string };
+            console.error(`[MCP] Documentation search: "${query}" (category: ${category || 'all'})`);
+
+            const { KNOWLEDGE_CATEGORIES } = await import('./resources.js');
+
+            // Build tag filter from category if provided
+            const categoryTagMap: Record<string, string[]> = {
+              core: ['core', 'contract-structure', 'imports'],
+              storage: ['storage', 'mapper'],
+              events: ['events', 'event'],
+              tokens: ['tokens', 'token', 'KLV', 'KDA'],
+              modules: ['modules', 'module', 'admin', 'pause'],
+              tools: ['tools', 'koperator', 'ksc', 'CLI'],
+              scripts: ['scripts', 'bash', 'build', 'deploy'],
+              examples: ['examples', 'example', 'template'],
+              errors: ['errors', 'error', 'common-mistakes'],
+              'best-practices': ['best-practices', 'best_practice', 'security'],
+              documentation: ['documentation', 'docs', 'guide'],
+            };
+
+            const tags =
+              category && KNOWLEDGE_CATEGORIES.includes(category as (typeof KNOWLEDGE_CATEGORIES)[number])
+                ? categoryTagMap[category]
+                : undefined;
+
+            const searchResult = await this.contextService.query({
+              query,
+              tags,
+              limit: 10,
+              offset: 0,
+            });
+
+            // Re-rank by relevance to the search query
+            const ranked = await this.contextService.rankByRelevance(searchResult.results, query);
+
+            // Format as human-readable markdown
+            let markdown = `# Documentation Search: "${query}"\n\n`;
+            if (category) {
+              markdown += `**Category**: ${category}\n\n`;
+            }
+            markdown += `Found ${ranked.length} result(s).\n\n`;
+
+            for (const entry of ranked) {
+              markdown += `## ${entry.metadata.title}\n\n`;
+              if (entry.metadata.description) {
+                markdown += `${entry.metadata.description}\n\n`;
+              }
+              const lang = entry.metadata.language || 'rust';
+              markdown += `\`\`\`${lang}\n${entry.content}\n\`\`\`\n\n`;
+              if (entry.metadata.tags.length > 0) {
+                markdown += `**Tags**: ${entry.metadata.tags.join(', ')}\n\n`;
+              }
+              markdown += '---\n\n';
+            }
+
+            return {
+              content: [{ type: 'text', text: markdown }],
+            };
+          }
+
+          case 'analyze_contract': {
+            const { sourceCode, contractName } = args as {
+              sourceCode: string;
+              contractName?: string;
+            };
+            const label = contractName || 'contract';
+            console.error(`[MCP] Analyzing contract: ${label} (${sourceCode.length} chars)`);
+
+            const findings = await this.analyzeContractSource(sourceCode);
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      contractName: label,
+                      totalFindings: findings.length,
+                      findings,
                     },
                     null,
                     2
@@ -953,6 +1098,23 @@ export class KleverMCPServer {
       const { name, arguments: promptArgs } = request.params;
       return getPromptMessages(name, promptArgs, this.profile);
     });
+
+    // Resource handlers
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+      const { getStaticResources } = await import('./resources.js');
+      return { resources: getStaticResources(this.profile) };
+    });
+
+    this.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+      const { getResourceTemplates } = await import('./resources.js');
+      return { resourceTemplates: getResourceTemplates(this.profile) };
+    });
+
+    this.server.setRequestHandler(ReadResourceRequestSchema, async request => {
+      const { readResource } = await import('./resources.js');
+      const result = await readResource(request.params.uri, this.contextService);
+      return { contents: [result] };
+    });
   }
 
   async connectTransport(transport: Transport) {
@@ -1047,5 +1209,143 @@ export class KleverMCPServer {
     );
 
     return [...new Set([...found, ...additionalWords.slice(0, 3)])];
+  }
+
+  private async analyzeContractSource(sourceCode: string): Promise<
+    Array<{
+      severity: 'error' | 'warning' | 'info';
+      pattern: string;
+      message: string;
+      suggestion: string;
+      relatedKnowledge: Array<{ title: string; id: string }>;
+    }>
+  > {
+    const findings: Array<{
+      severity: 'error' | 'warning' | 'info';
+      pattern: string;
+      message: string;
+      suggestion: string;
+      relatedKnowledge: Array<{ title: string; id: string }>;
+    }> = [];
+
+    // Pattern checks
+    const checks: Array<{
+      test: () => boolean;
+      severity: 'error' | 'warning' | 'info';
+      pattern: string;
+      message: string;
+      suggestion: string;
+      searchQuery: string;
+    }> = [
+      {
+        test: () => !sourceCode.includes('use klever_sc::imports::*'),
+        severity: 'error',
+        pattern: 'missing_imports',
+        message: 'Missing required import: use klever_sc::imports::*',
+        suggestion: 'Add `use klever_sc::imports::*;` at the top of your contract file.',
+        searchQuery: 'imports klever_sc',
+      },
+      {
+        test: () => !sourceCode.includes('#[klever_sc::contract]'),
+        severity: 'error',
+        pattern: 'missing_contract_macro',
+        message: 'Missing #[klever_sc::contract] attribute macro',
+        suggestion:
+          'Add `#[klever_sc::contract]` above your contract trait definition.',
+        searchQuery: 'contract macro attribute',
+      },
+      {
+        test: () => {
+          const hasPubFns = sourceCode.match(/fn\s+\w+\s*\(/g);
+          const hasEndpoints = sourceCode.match(/#\[(endpoint|view|init)\]/g);
+          return !!(hasPubFns && hasPubFns.length > 0 && !hasEndpoints);
+        },
+        severity: 'warning',
+        pattern: 'missing_endpoint_annotations',
+        message: 'Functions found without #[endpoint], #[view], or #[init] annotations',
+        suggestion:
+          'Add `#[endpoint]` for state-changing functions, `#[view]` for read-only functions, or `#[init]` for the constructor.',
+        searchQuery: 'endpoint view annotation',
+      },
+      {
+        test: () => {
+          const payableMatch = sourceCode.match(/#\[payable\([^)]*\)]/g);
+          if (!payableMatch) return false;
+          // Check if there's payment handling nearby (call_value)
+          return !sourceCode.includes('call_value');
+        },
+        severity: 'warning',
+        pattern: 'payable_without_handling',
+        message: '#[payable] annotation found but no call_value() usage detected',
+        suggestion:
+          'Use `self.call_value().klv_value()` or `self.call_value().single_kda()` to handle incoming payments in payable endpoints.',
+        searchQuery: 'payable payment handling call_value',
+      },
+      {
+        test: () => {
+          const hasMappers = sourceCode.match(
+            /(SingleValueMapper|MapMapper|SetMapper|VecMapper|OptionMapper)/g
+          );
+          if (!hasMappers) return false;
+          return !sourceCode.includes('#[storage_mapper');
+        },
+        severity: 'warning',
+        pattern: 'storage_without_annotation',
+        message: 'Storage mapper types used without #[storage_mapper] annotations',
+        suggestion:
+          'Declare storage mappers with `#[storage_mapper("key_name")]` to properly initialize them.',
+        searchQuery: 'storage mapper initialization annotation',
+      },
+      {
+        test: () => {
+          // Check for state-changing functions (endpoints that aren't views)
+          const endpoints = sourceCode.match(/#\[endpoint\]/g);
+          const events = sourceCode.match(/#\[event\(/g);
+          return !!(endpoints && endpoints.length > 0 && !events);
+        },
+        severity: 'info',
+        pattern: 'no_event_emissions',
+        message:
+          'State-changing endpoints found but no event definitions detected',
+        suggestion:
+          'Consider adding events for state-changing operations to enable off-chain tracking. Define events with `#[event("event_name")]`.',
+        searchQuery: 'event definition emission',
+      },
+    ];
+
+    for (const check of checks) {
+      if (check.test()) {
+        // Query knowledge base for related entries
+        const related = await this.contextService.query({
+          query: check.searchQuery,
+          limit: 3,
+          offset: 0,
+        });
+
+        findings.push({
+          severity: check.severity,
+          pattern: check.pattern,
+          message: check.message,
+          suggestion: check.suggestion,
+          relatedKnowledge: related.results.map(r => ({
+            title: r.metadata.title,
+            id: r.id || '',
+          })),
+        });
+      }
+    }
+
+    // If no issues found, return a positive finding
+    if (findings.length === 0) {
+      findings.push({
+        severity: 'info',
+        pattern: 'no_issues',
+        message: 'No common issues detected in the contract source code',
+        suggestion: 'The contract passes basic pattern checks. Consider a thorough manual review.',
+        relatedKnowledge: [],
+      });
+    }
+
+    return findings;
   }
 }
