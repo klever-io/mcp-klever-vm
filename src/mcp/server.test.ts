@@ -113,10 +113,12 @@ describe('KleverMCPServer (public mode)', () => {
   describe('prompt listing', () => {
     it('lists prompts via client.listPrompts()', async () => {
       const { prompts } = await client.listPrompts();
-      expect(prompts).toHaveLength(2);
+      expect(prompts).toHaveLength(4);
       const names = prompts.map(p => p.name);
       expect(names).toContain('create_smart_contract');
       expect(names).toContain('add_feature');
+      expect(names).toContain('debug_error');
+      expect(names).toContain('review_contract');
     });
   });
 
@@ -147,6 +149,31 @@ describe('KleverMCPServer (public mode)', () => {
       const text = (result.messages[0].content as { type: 'text'; text: string }).text;
       expect(text).toContain('staking');
       expect(text).toContain('query_context');
+    });
+
+    it('returns messages for debug_error', async () => {
+      const result = await client.getPrompt({
+        name: 'debug_error',
+        arguments: { errorMessage: 'error[E0308]: mismatched types' },
+      });
+
+      expect(result.messages).toHaveLength(1);
+      const text = (result.messages[0].content as { type: 'text'; text: string }).text;
+      expect(text).toContain('error[E0308]: mismatched types');
+      expect(text).toContain('search_documentation');
+      expect(text).toContain('query_context');
+    });
+
+    it('returns messages for review_contract', async () => {
+      const result = await client.getPrompt({
+        name: 'review_contract',
+      });
+
+      expect(result.messages).toHaveLength(1);
+      const text = (result.messages[0].content as { type: 'text'; text: string }).text;
+      expect(text).toContain('analyze_contract');
+      expect(text).toContain('Security Review');
+      expect(text).toContain('Code Quality');
     });
   });
 

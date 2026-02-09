@@ -36,6 +36,33 @@ export function getPromptDefinitions(_profile: ServerProfile): Prompt[] {
         },
       ],
     },
+    {
+      name: 'debug_error',
+      description: 'Diagnose and fix a Klever smart contract compiler or runtime error',
+      arguments: [
+        {
+          name: 'errorMessage',
+          description: 'The error message or compiler output',
+          required: true,
+        },
+        {
+          name: 'sourceCode',
+          description: 'The contract source code producing the error',
+          required: false,
+        },
+      ],
+    },
+    {
+      name: 'review_contract',
+      description: 'Comprehensive security and quality review of a Klever smart contract',
+      arguments: [
+        {
+          name: 'contractName',
+          description: 'Name of the contract to review',
+          required: false,
+        },
+      ],
+    },
   ];
 }
 
@@ -49,6 +76,10 @@ export function getPromptMessages(
       return buildCreateSmartContractPrompt(args, profile);
     case 'add_feature':
       return buildAddFeaturePrompt(args, profile);
+    case 'debug_error':
+      return buildDebugErrorPrompt(args);
+    case 'review_contract':
+      return buildReviewContractPrompt(args);
     default:
       throw new Error(`Unknown prompt: ${name}`);
   }
@@ -208,6 +239,154 @@ Based on MCP knowledge and user answers:
 
   return {
     description: `Add feature "${featureName}" to ${contractName}`,
+    messages: [{ role: 'user', content: { type: 'text', text } }],
+  };
+}
+
+function buildDebugErrorPrompt(args: Record<string, string> | undefined): GetPromptResult {
+  const errorMessage = args?.errorMessage || 'unknown error';
+  const sourceCode = args?.sourceCode;
+
+  const analyzeNote = sourceCode
+    ? `
+3. **Analyze Contract** — If the error may relate to contract structure, run:
+   - \`analyze_contract({ sourceCode: "<the provided source code>" })\` to check for structural issues that may cause or contribute to the error`
+    : '';
+
+  const text = `You are helping the user diagnose and fix a Klever smart contract error.
+
+**Error message:**
+\`\`\`
+${errorMessage}
+\`\`\`
+${sourceCode ? `\n**Source code:**\n\`\`\`rust\n${sourceCode}\n\`\`\`\n` : ''}
+Follow these steps in order:
+
+## Step 1 — Classify the Error
+
+Parse the error message and classify it into one of these categories:
+- **Compiler error (rustc)** — type mismatches, missing imports, trait bounds, lifetime issues
+- **Linker error** — unresolved symbols, ABI mismatches
+- **Runtime/VM error** — execution failures, out-of-gas, storage access errors
+- **koperator CLI error** — deployment failures, argument formatting issues
+- **Deployment error** — contract too large, missing init function, network issues
+
+Extract key identifiers: error codes (e.g. E0308, E0599), type names, function names, and any Klever-specific terms.
+
+## Step 2 — Search Knowledge Base
+
+Query the MCP knowledge base for matching error patterns and relevant documentation:
+
+1. **Error patterns** — Search for known error entries:
+   - \`search_documentation({ query: "${errorMessage.slice(0, 80)}", category: "errors" })\`
+   - \`query_context({ query: "${errorMessage.slice(0, 80)}", types: ["error_pattern"] })\`
+
+2. **Related documentation** — Search for relevant concepts mentioned in the error:
+   - \`search_documentation({ query: "<key terms from the error>" })\`
+   - \`query_context({ query: "<key terms from the error>" })\`
+${analyzeNote}
+
+Document all relevant knowledge base entries found.
+
+## Step 3 — Diagnose
+
+Based on the knowledge base results and error classification:
+
+1. **Explain** what the error means in the context of Klever smart contracts
+2. **Highlight Klever differences** — If the error is due to a Klever/KVM difference from MultiversX or standard Rust, explain the specific difference
+3. **Identify root cause** — Pinpoint the exact cause and the relevant code section
+4. **Reference** matching knowledge base entries that explain the underlying concept
+
+## Step 4 — Fix
+
+Provide a concrete fix:
+
+1. **Before/After** — Show the problematic code and the corrected version side by side
+2. **Explanation** — Explain why the fix works and what was wrong
+3. **Related patterns** — If the fix involves a common pattern (payment handling, event params, storage mappers, type conversions), link to the relevant best practice from the knowledge base
+4. **Prevention** — Suggest how to avoid this error in the future`;
+
+  return {
+    description: `Debug Klever smart contract error: ${errorMessage.slice(0, 60)}`,
+    messages: [{ role: 'user', content: { type: 'text', text } }],
+  };
+}
+
+function buildReviewContractPrompt(args: Record<string, string> | undefined): GetPromptResult {
+  const contractName = args?.contractName || 'the contract';
+
+  const text = `You are performing a comprehensive security and quality review of a Klever smart contract${contractName !== 'the contract' ? ` ("${contractName}")` : ''}.
+
+Follow each phase below in order. Do NOT skip phases.
+
+## Phase 1 — Automated Analysis
+
+Run \`analyze_contract\` on the contract source code to get automated findings:
+- \`analyze_contract({ sourceCode: "<contract source>" })\`
+
+Document all errors, warnings, and info items returned by the analysis.
+
+## Phase 2 — Security Review
+
+Query the knowledge base for security-related patterns and best practices:
+
+1. **Access control** — Search for ownership and admin patterns:
+   - \`search_documentation({ query: "access control owner admin", category: "modules" })\`
+   - \`query_context({ query: "only_owner only_admin access control" })\`
+
+2. **Payment security** — Search for payment validation patterns:
+   - \`search_documentation({ query: "payment validation security", category: "best-practices" })\`
+   - \`query_context({ query: "payable payment validation" })\`
+
+3. **Security tips** — Search for general security guidance:
+   - \`query_context({ query: "security", types: ["security_tip"] })\`
+
+Check for the following issues:
+- **Access control**: Are sensitive endpoints protected with \`#[only_owner]\` or \`#[only_admin]\`?
+- **Payment validation**: Do payable endpoints validate payment amounts and token types?
+- **Reentrancy**: Are there potential reentrancy risks in external calls?
+- **Integer overflow/underflow**: Are BigUint operations used safely?
+
+## Phase 3 — Code Quality Review
+
+Query the knowledge base for quality and optimization patterns:
+
+1. **Gas optimization** — Search for storage and gas best practices:
+   - \`search_documentation({ query: "gas optimization storage", category: "best-practices" })\`
+   - \`query_context({ query: "gas optimization performance" })\`
+
+2. **Optimization patterns** — Search for optimization entries:
+   - \`query_context({ query: "optimization", types: ["optimization"] })\`
+
+Check for the following:
+- **Event emissions**: Do all state-changing endpoints emit events?
+- **Storage mapper selection**: Is the correct mapper type used for each use case (SingleValueMapper, MapMapper, SetMapper, VecMapper)?
+- **Error messages**: Do all \`require!\` calls include descriptive error messages?
+- **Code organization**: Is the contract well-organized with modules and separation of concerns?
+
+## Phase 4 — Summary & Recommendations
+
+Produce a structured review report with these sections:
+
+### Critical Issues (must fix before deployment)
+- Issues that could lead to loss of funds, unauthorized access, or contract bricking
+
+### Warnings (should fix)
+- Issues that could lead to unexpected behavior or reduced security
+
+### Suggestions (nice to have)
+- Improvements for code quality, gas optimization, or maintainability
+
+### Positive Observations
+- Things done well that should be maintained
+
+For each finding:
+1. Describe the issue clearly
+2. Reference the relevant knowledge base entry
+3. Provide a concrete fix or recommendation`;
+
+  return {
+    description: `Security and quality review of ${contractName}`,
     messages: [{ role: 'user', content: { type: 'text', text } }],
   };
 }
