@@ -242,7 +242,7 @@ echo ""
 echo -e "\${CYAN}Configuration:\${RESET}"
 echo "  Create a .env file to set defaults:"
 echo "    NETWORK=testnet"
-echo "    KEY_FILE=$HOME/klever-sdk/walletKey.pem"
+echo "    KEY_FILE=\\$HOME/klever-sdk/walletKey.pem"
 `;
   } catch (error) {
     console.error('Error creating helper scripts script:', error);
@@ -324,11 +324,9 @@ export const getHelperScriptTemplateFiles = (
     instructions: [
       'Write each file below into the current project directory.',
       'Make all scripts/*.sh files executable (chmod +x).',
-      contractName !== 'my-contract'
-        ? `Contract name "${contractName}" has been applied to all scripts.`
-        : 'Replace $CONTRACT_NAME in scripts if needed, or detect from Cargo.toml.',
+      `Contract name "${contractName}" has been applied to all scripts.`,
     ].join('\n'),
-    placeholders: contractName === 'my-contract' ? ['$CONTRACT_NAME'] : [],
+    placeholders: [],
     projectStructure: ['scripts/'],
   };
 };

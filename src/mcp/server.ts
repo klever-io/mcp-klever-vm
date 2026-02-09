@@ -13,12 +13,26 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { ContextService } from '../context/service.js';
 import { QueryContextSchema, ContextPayloadSchema } from '../types/index.js';
 import { VERSION, GIT_SHA } from '../version.js';
+import { KNOWLEDGE_CATEGORIES } from './resources.js';
 
 export type ServerProfile = 'local' | 'public';
 
-interface ExecError extends Error {
-  stderr?: string;
-  stdout?: string;
+interface ExecError {
+  message: string;
+  stderr: string;
+  stdout: string;
+}
+
+function toExecError(error: unknown): ExecError {
+  if (error instanceof Error) {
+    const e = error as Error & { stderr?: string; stdout?: string };
+    return {
+      message: e.message,
+      stderr: e.stderr || '',
+      stdout: e.stdout || '',
+    };
+  }
+  return { message: String(error), stderr: '', stdout: '' };
 }
 
 export class KleverMCPServer {
@@ -145,19 +159,7 @@ export class KleverMCPServer {
             },
             category: {
               type: 'string',
-              enum: [
-                'core',
-                'storage',
-                'events',
-                'tokens',
-                'modules',
-                'tools',
-                'scripts',
-                'examples',
-                'errors',
-                'best-practices',
-                'documentation',
-              ],
+              enum: [...KNOWLEDGE_CATEGORIES],
               description: 'Optional category filter to narrow search results',
             },
           },
@@ -536,7 +538,7 @@ export class KleverMCPServer {
             const { query, category } = args as { query: string; category?: string };
             console.error(`[MCP] Documentation search: "${query}" (category: ${category || 'all'})`);
 
-            const { KNOWLEDGE_CATEGORIES, CATEGORY_TAG_MAP } = await import('./resources.js');
+            const { CATEGORY_TAG_MAP } = await import('./resources.js');
 
             // Build tag filter from category if provided
             const tags =
@@ -740,7 +742,7 @@ export class KleverMCPServer {
                 ],
               };
             } catch (error: unknown) {
-              const err = error as ExecError;
+              const err = toExecError(error);
               // Clean up temp script on error
               await unlink(scriptPath).catch(() => {});
 
@@ -755,8 +757,8 @@ export class KleverMCPServer {
                       {
                         success: false,
                         error: err.message,
-                        stderr: err.stderr || '',
-                        stdout: err.stdout || '',
+                        stderr: err.stderr,
+                        stdout: err.stdout,
                         command: `${scriptPath} ${cmdArgs.join(' ')}`,
                         suggestion: 'Please ensure Klever SDK is installed at ~/klever-sdk/',
                       },
@@ -872,7 +874,7 @@ export class KleverMCPServer {
                 ],
               };
             } catch (error: unknown) {
-              const err = error as ExecError;
+              const err = toExecError(error);
               // Clean up temp script on error
               await ul(helperScriptPath).catch(() => {});
 
@@ -887,8 +889,8 @@ export class KleverMCPServer {
                       {
                         success: false,
                         error: err.message,
-                        stderr: err.stderr || '',
-                        stdout: err.stdout || '',
+                        stderr: err.stderr,
+                        stdout: err.stdout,
                         command: helperScriptPath,
                         suggestion:
                           'Please ensure you are in a Klever smart contract project directory',
@@ -949,7 +951,7 @@ export class KleverMCPServer {
                 ],
               };
             } catch (error: unknown) {
-              const err = error as ExecError;
+              const err = toExecError(error);
               await ulSdk(scriptPath).catch(() => {});
 
               console.error(`[MCP] Check SDK error: ${err.message}`);
@@ -962,8 +964,8 @@ export class KleverMCPServer {
                       {
                         success: false,
                         error: err.message,
-                        stderr: err.stderr || '',
-                        stdout: err.stdout || '',
+                        stderr: err.stderr,
+                        stdout: err.stdout,
                       },
                       null,
                       2
@@ -1025,7 +1027,7 @@ export class KleverMCPServer {
                 ],
               };
             } catch (error: unknown) {
-              const err = error as ExecError;
+              const err = toExecError(error);
               await ulInst(scriptPath).catch(() => {});
 
               console.error(`[MCP] Install SDK error: ${err.message}`);
@@ -1038,8 +1040,8 @@ export class KleverMCPServer {
                       {
                         success: false,
                         error: err.message,
-                        stderr: err.stderr || '',
-                        stdout: err.stdout || '',
+                        stderr: err.stderr,
+                        stdout: err.stdout,
                         suggestion:
                           'Ensure you have curl or wget installed and internet connectivity',
                       },
@@ -1307,6 +1309,7 @@ export class KleverMCPServer {
           query: check.searchQuery,
           limit: 3,
           offset: 0,
+          includeTotal: false,
         });
 
         findings.push({

@@ -57,8 +57,8 @@ describe('getHelperScriptTemplateFiles', () => {
 
   it('uses default contract name when none provided', () => {
     const result = getHelperScriptTemplateFiles();
-    expect(result.placeholders).toContain('$CONTRACT_NAME');
-    expect(result.instructions).toContain('Replace $CONTRACT_NAME');
+    expect(result.placeholders).toHaveLength(0);
+    expect(result.instructions).toContain('my-contract');
   });
 
   it('applies custom contract name to scripts', () => {

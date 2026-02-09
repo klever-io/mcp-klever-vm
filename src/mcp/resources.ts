@@ -173,12 +173,16 @@ async function buildCategoryContent(
   contextService: ContextService
 ): Promise<string> {
   const tags = CATEGORY_TAG_MAP[category];
-  const result = await contextService.query({ tags, limit: 100, offset: 0 });
+  const total = await contextService.count({ tags });
+  const limit = 100;
+  const result = await contextService.query({ tags, limit, offset: 0, includeTotal: false });
 
   const lines: string[] = [
     `# Klever Knowledge: ${category}`,
     '',
-    `${result.total} entries in this category.`,
+    total > limit
+      ? `Showing ${result.results.length} of ${total} entries in this category.`
+      : `${total} entries in this category.`,
     '',
   ];
 
