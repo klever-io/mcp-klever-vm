@@ -263,7 +263,7 @@ export function createRoutes(contextService: ContextService, options?: RouteOpti
 
         const payloads = z.array(ContextPayloadSchema).parse(req.body);
         const ids: string[] = [];
-        const errors: any[] = [];
+        const errors: Array<{ index: number; error: string }> = [];
 
         for (let i = 0; i < payloads.length; i++) {
           try {

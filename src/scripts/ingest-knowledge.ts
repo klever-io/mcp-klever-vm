@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { StorageFactory } from '../storage/index.js';
+import { StorageFactory, type StorageType } from '../storage/index.js';
 import { ContextService } from '../context/service.js';
 import { ContractIngester } from '../utils/ingest.js';
 import { kleverKnowledge } from '../knowledge/index.js';
@@ -14,7 +14,7 @@ async function ingestKleverKnowledge() {
   console.log('🚀 Starting Klever knowledge ingestion...\n');
 
   // Create storage and context service
-  const storageType = (process.env.STORAGE_TYPE as any) || 'memory';
+  const storageType = (process.env.STORAGE_TYPE as StorageType) || 'memory';
   const storage = StorageFactory.create(storageType, {
     redis: {
       url: process.env.REDIS_URL,

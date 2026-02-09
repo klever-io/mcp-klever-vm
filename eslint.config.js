@@ -22,7 +22,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/scripts/**/*.ts'],
+    files: ['src/scripts/**/*.ts', 'src/index.ts', 'src/utils/ingest.ts'],
     rules: {
       'no-console': 'off',
     },

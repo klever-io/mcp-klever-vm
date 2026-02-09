@@ -263,6 +263,76 @@ exit 1
 export const projectInitScript = createProjectInitScript();
 export const helperScriptsScript = createHelperScriptsScript();
 
+// --- Public mode: template file map (no shell execution) ---
+
+export interface TemplateFileMap {
+  [relativePath: string]: string;
+}
+
+export interface ProjectTemplateResult {
+  files: TemplateFileMap;
+  instructions: string;
+  placeholders: string[];
+  projectStructure: string[];
+}
+
+export const getProjectTemplateFiles = (projectName: string): ProjectTemplateResult => {
+  const replace = (content: string) => content.replace(/\$CONTRACT_NAME/g, projectName);
+
+  const files: TemplateFileMap = {
+    'scripts/common.sh': replace(readTemplate('scripts/common.sh')),
+    'scripts/deploy.sh': replace(readTemplate('scripts/deploy.sh')),
+    'scripts/upgrade.sh': replace(readTemplate('scripts/upgrade.sh')),
+    'scripts/query.sh': replace(readTemplate('scripts/query.sh')),
+    'scripts/build.sh': replace(readTemplate('scripts/build.sh')),
+    'scripts/test.sh': replace(readTemplate('scripts/test.sh')),
+    'scripts/interact.sh': replace(readTemplate('scripts/interact.sh')),
+    '.gitignore': readTemplate('.gitignore'),
+  };
+
+  return {
+    files,
+    instructions: [
+      `Create a new directory called "${projectName}" and write each file below into it.`,
+      'Make all scripts/*.sh files executable (chmod +x).',
+      'Initialize a Rust project with: ~/klever-sdk/ksc new --template empty --name ' + projectName,
+      'Edit src/lib.rs to implement your contract.',
+    ].join('\n'),
+    placeholders: ['$CONTRACT_NAME'],
+    projectStructure: ['src/', 'tests/', 'scripts/', 'output/'],
+  };
+};
+
+export const getHelperScriptTemplateFiles = (
+  contractName: string = 'my-contract'
+): ProjectTemplateResult => {
+  const replace = (content: string) => content.replace(/\$CONTRACT_NAME/g, contractName);
+
+  const files: TemplateFileMap = {
+    'scripts/common.sh': replace(readTemplate('scripts/common.sh')),
+    'scripts/deploy.sh': replace(readTemplate('scripts/deploy.sh')),
+    'scripts/upgrade.sh': replace(readTemplate('scripts/upgrade.sh')),
+    'scripts/query.sh': replace(readTemplate('scripts/query.sh')),
+    'scripts/build.sh': replace(readTemplate('scripts/build.sh')),
+    'scripts/test.sh': replace(readTemplate('scripts/test.sh')),
+    'scripts/interact.sh': replace(readTemplate('scripts/interact.sh')),
+    '.gitignore': readTemplate('.gitignore'),
+  };
+
+  return {
+    files,
+    instructions: [
+      'Write each file below into the current project directory.',
+      'Make all scripts/*.sh files executable (chmod +x).',
+      contractName !== 'my-contract'
+        ? `Contract name "${contractName}" has been applied to all scripts.`
+        : 'Replace $CONTRACT_NAME in scripts if needed, or detect from Cargo.toml.',
+    ].join('\n'),
+    placeholders: contractName === 'my-contract' ? ['$CONTRACT_NAME'] : [],
+    projectStructure: ['scripts/'],
+  };
+};
+
 // Tool definition for MCP - Full project initialization
 export const projectInitToolDefinition = {
   name: 'init_klever_project',

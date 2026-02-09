@@ -8,6 +8,11 @@ import { VERSION, GIT_SHA } from '../version.js';
 
 export type ServerProfile = 'local' | 'public';
 
+interface ExecError extends Error {
+  stderr?: string;
+  stdout?: string;
+}
+
 export class KleverMCPServer {
   private server: Server;
   private profile: ServerProfile;
@@ -120,6 +125,13 @@ export class KleverMCPServer {
     ];
   }
 
+  private async getPublicModeToolDefinitions() {
+    const { projectInitToolDefinition, addHelperScriptsToolDefinition } = await import(
+      '../utils/project-init-script.js'
+    );
+    return [projectInitToolDefinition, addHelperScriptsToolDefinition];
+  }
+
   private async getLocalOnlyToolDefinitions() {
     const { projectInitToolDefinition, addHelperScriptsToolDefinition } = await import(
       '../utils/project-init-script.js'
@@ -178,7 +190,10 @@ export class KleverMCPServer {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       const tools: Array<Record<string, unknown>> = [...this.getReadOnlyToolDefinitions()];
 
-      if (this.profile === 'local') {
+      if (this.profile === 'public') {
+        const publicTools = await this.getPublicModeToolDefinitions();
+        tools.push(...publicTools);
+      } else {
         const localTools = await this.getLocalOnlyToolDefinitions();
         tools.push(...localTools);
       }
@@ -196,7 +211,7 @@ export class KleverMCPServer {
       // Block local-only tools in public profile
       if (
         this.profile === 'public' &&
-        ['add_context', 'init_klever_project', 'add_helper_scripts', 'check_sdk_status', 'install_klever_sdk'].includes(name)
+        ['add_context', 'check_sdk_status', 'install_klever_sdk'].includes(name)
       ) {
         return {
           content: [
@@ -341,7 +356,11 @@ export class KleverMCPServer {
               'deployment_tool',
               'runtime_behavior',
             ] as const;
-            const stats: any = {
+            const stats: {
+              total: number;
+              byType: Record<string, number>;
+              examples: Array<{ type: string; title: string; tags: string[] }>;
+            } = {
               total: 0,
               byType: {},
               examples: [],
@@ -453,6 +472,29 @@ export class KleverMCPServer {
           }
 
           case 'init_klever_project': {
+            if (this.profile === 'public') {
+              const { getProjectTemplateFiles } = await import('../utils/project-init-script.js');
+              const { name: projectName } = args as { name: string };
+              const result = getProjectTemplateFiles(projectName);
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify(
+                      {
+                        success: true,
+                        mode: 'template',
+                        message: `Project template for "${projectName}" generated`,
+                        ...result,
+                      },
+                      null,
+                      2
+                    ),
+                  },
+                ],
+              };
+            }
+
             const { execFile } = await import('child_process');
             const { promisify } = await import('util');
             const { writeFile, chmod, access, unlink } = await import('fs/promises');
@@ -559,12 +601,13 @@ export class KleverMCPServer {
                   },
                 ],
               };
-            } catch (error: any) {
+            } catch (error: unknown) {
+              const err = error as ExecError;
               // Clean up temp script on error
               await unlink(scriptPath).catch(() => {});
 
-              console.error(`[MCP] Project init error: ${error.message}`);
-              console.error(`[MCP] Error details:`, error);
+              console.error(`[MCP] Project init error: ${err.message}`);
+              console.error(`[MCP] Error details:`, err);
 
               return {
                 content: [
@@ -573,9 +616,9 @@ export class KleverMCPServer {
                     text: JSON.stringify(
                       {
                         success: false,
-                        error: error.message,
-                        stderr: error.stderr || '',
-                        stdout: error.stdout || '',
+                        error: err.message,
+                        stderr: err.stderr || '',
+                        stdout: err.stdout || '',
                         command: `${scriptPath} ${cmdArgs.join(' ')}`,
                         suggestion: 'Please ensure Klever SDK is installed at ~/klever-sdk/',
                       },
@@ -589,6 +632,31 @@ export class KleverMCPServer {
           }
 
           case 'add_helper_scripts': {
+            if (this.profile === 'public') {
+              const { getHelperScriptTemplateFiles } = await import(
+                '../utils/project-init-script.js'
+              );
+              const { contractName } = args as { contractName?: string };
+              const result = getHelperScriptTemplateFiles(contractName);
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify(
+                      {
+                        success: true,
+                        mode: 'template',
+                        message: 'Helper script templates generated',
+                        ...result,
+                      },
+                      null,
+                      2
+                    ),
+                  },
+                ],
+              };
+            }
+
             const { execFile: execFileCb } = await import('child_process');
             const { promisify: promisifyUtil } = await import('util');
             const { writeFile: wf, chmod: ch, unlink: ul } = await import('fs/promises');
@@ -665,12 +733,13 @@ export class KleverMCPServer {
                   },
                 ],
               };
-            } catch (error: any) {
+            } catch (error: unknown) {
+              const err = error as ExecError;
               // Clean up temp script on error
               await ul(helperScriptPath).catch(() => {});
 
-              console.error(`[MCP] Add helper scripts error: ${error.message}`);
-              console.error(`[MCP] Error details:`, error);
+              console.error(`[MCP] Add helper scripts error: ${err.message}`);
+              console.error(`[MCP] Error details:`, err);
 
               return {
                 content: [
@@ -679,9 +748,9 @@ export class KleverMCPServer {
                     text: JSON.stringify(
                       {
                         success: false,
-                        error: error.message,
-                        stderr: error.stderr || '',
-                        stdout: error.stdout || '',
+                        error: err.message,
+                        stderr: err.stderr || '',
+                        stdout: err.stdout || '',
                         command: helperScriptPath,
                         suggestion:
                           'Please ensure you are in a Klever smart contract project directory',
@@ -741,10 +810,11 @@ export class KleverMCPServer {
                   },
                 ],
               };
-            } catch (error: any) {
+            } catch (error: unknown) {
+              const err = error as ExecError;
               await ulSdk(scriptPath).catch(() => {});
 
-              console.error(`[MCP] Check SDK error: ${error.message}`);
+              console.error(`[MCP] Check SDK error: ${err.message}`);
 
               return {
                 content: [
@@ -753,9 +823,9 @@ export class KleverMCPServer {
                     text: JSON.stringify(
                       {
                         success: false,
-                        error: error.message,
-                        stderr: error.stderr || '',
-                        stdout: error.stdout || '',
+                        error: err.message,
+                        stderr: err.stderr || '',
+                        stdout: err.stdout || '',
                       },
                       null,
                       2
@@ -816,10 +886,11 @@ export class KleverMCPServer {
                   },
                 ],
               };
-            } catch (error: any) {
+            } catch (error: unknown) {
+              const err = error as ExecError;
               await ulInst(scriptPath).catch(() => {});
 
-              console.error(`[MCP] Install SDK error: ${error.message}`);
+              console.error(`[MCP] Install SDK error: ${err.message}`);
 
               return {
                 content: [
@@ -828,9 +899,9 @@ export class KleverMCPServer {
                     text: JSON.stringify(
                       {
                         success: false,
-                        error: error.message,
-                        stderr: error.stderr || '',
-                        stdout: error.stdout || '',
+                        error: err.message,
+                        stderr: err.stderr || '',
+                        stdout: err.stdout || '',
                         suggestion:
                           'Ensure you have curl or wget installed and internet connectivity',
                       },
