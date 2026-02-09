@@ -15,6 +15,7 @@ const QueryContextResponseSchema = z.object({
         description: z.string().optional(),
         tags: z.array(z.string()),
         relevanceScore: z.number(),
+        language: z.string().optional(),
       }),
       score: z.number().optional(),
     })
@@ -25,6 +26,8 @@ const QueryContextResponseSchema = z.object({
     limit: z.number(),
   }),
 });
+
+type ContextResult = z.infer<typeof QueryContextResponseSchema>['results'][number];
 
 export class KleverContextClient {
   private client: Client;
@@ -82,7 +85,7 @@ export class KleverContextClient {
       });
 
       // Parse the response
-      const content = (result as any).content[0];
+      const content = (result as { content: Array<{ type: string; text: string }> }).content[0];
       if (content?.type === 'text') {
         const parsed = JSON.parse(content.text);
         return QueryContextResponseSchema.parse(parsed);
@@ -155,7 +158,7 @@ export class KleverContextClient {
     return [...new Set([...found, ...additionalWords.slice(0, 3)])];
   }
 
-  private formatContexts(contexts: any[]): string {
+  private formatContexts(contexts: ContextResult[]): string {
     let formatted = '\n## Relevant Klever VM Context:\n\n';
 
     for (const ctx of contexts) {

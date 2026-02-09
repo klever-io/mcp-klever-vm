@@ -32,7 +32,7 @@ echo -e "\${YELLOW}Building contract...\${RESET}"
 ~/klever-sdk/ksc all build
 
 # Check if build succeeded
-if [ \$? -eq 0 ]; then
+if [ $? -eq 0 ]; then
     echo -e "\${GREEN}✅ Build successful!\${RESET}"
     
     # Show output files
@@ -41,7 +41,7 @@ if [ \$? -eq 0 ]; then
     
     # Show WASM size
     if [ -f "output/*.wasm" ]; then
-        WASM_SIZE=\$(ls -lh output/*.wasm | awk '{print \$5}')
+        WASM_SIZE=$(ls -lh output/*.wasm | awk '{print $5}')
         echo -e "\${BLUE}WASM size: \${WASM_SIZE}\${RESET}"
     fi
 else
@@ -66,14 +66,14 @@ deploy_contract() {
     echo -e "\${BLUE}Deploying contract to \${NETWORK}...\${RESET}"
     
     # Check if WASM exists
-    if [ ! -f "\$CONTRACT_WASM" ]; then
-        echo -e "\${RED}❌ WASM file not found: \$CONTRACT_WASM\${RESET}"
+    if [ ! -f "$CONTRACT_WASM" ]; then
+        echo -e "\${RED}❌ WASM file not found: $CONTRACT_WASM\${RESET}"
         echo -e "\${YELLOW}Run ./scripts/build.sh first\${RESET}"
         exit 1
     fi
     
     # Set node URL based on network
-    case \$NETWORK in
+    case $NETWORK in
         "testnet")
             KLEVER_NODE="https://node.testnet.klever.org"
             ;;
@@ -87,30 +87,30 @@ deploy_contract() {
             KLEVER_NODE="http://localhost:8080"
             ;;
         *)
-            echo -e "\${RED}❌ Invalid network: \$NETWORK\${RESET}"
+            echo -e "\${RED}❌ Invalid network: $NETWORK\${RESET}"
             exit 1
             ;;
     esac
     
     # Deploy contract
-    KLEVER_NODE=\$KLEVER_NODE \\\\
+    KLEVER_NODE=$KLEVER_NODE \\\\
         ~/klever-sdk/koperator \\\\
-        --key-file="\$HOME/klever-sdk/walletKey.pem" \\\\
+        --key-file="$HOME/klever-sdk/walletKey.pem" \\\\
         sc create \\\\
-        --wasm="\$CONTRACT_WASM" \\\\
+        --wasm="$CONTRACT_WASM" \\\\
         --upgradeable --readable --payable --payableBySC \\\\
         --await --sign --result-only
 }
 
 # Main execution
 echo -e "\${BLUE}Klever Contract Deployment\${RESET}"
-echo -e "\${YELLOW}Network: \$NETWORK\${RESET}"
-echo -e "\${YELLOW}WASM: \$CONTRACT_WASM\${RESET}"
+echo -e "\${YELLOW}Network: $NETWORK\${RESET}"
+echo -e "\${YELLOW}WASM: $CONTRACT_WASM\${RESET}"
 
 # Confirm deployment
 read -p "Deploy contract? (y/N): " -n 1 -r
 echo
-if [[ \$REPLY =~ ^[Yy]\$ ]]; then
+if [[ $REPLY =~ ^[Yy]$ ]]; then
     deploy_contract
 else
     echo -e "\${YELLOW}Deployment cancelled\${RESET}"
@@ -130,34 +130,34 @@ CONTRACT_WASM="output/contract.wasm"
 
 # Function to upgrade contract
 upgrade_contract() {
-    if [ -z "\$CONTRACT_ADDRESS" ]; then
+    if [ -z "$CONTRACT_ADDRESS" ]; then
         echo -e "\${RED}❌ CONTRACT_ADDRESS not set\${RESET}"
         echo -e "\${YELLOW}Edit this script and set CONTRACT_ADDRESS\${RESET}"
         exit 1
     fi
     
-    echo -e "\${BLUE}Upgrading contract \$CONTRACT_ADDRESS...\${RESET}"
+    echo -e "\${BLUE}Upgrading contract $CONTRACT_ADDRESS...\${RESET}"
     
     # Set node URL
-    case \$NETWORK in
+    case $NETWORK in
         "testnet") KLEVER_NODE="https://node.testnet.klever.org" ;;
         "mainnet") KLEVER_NODE="https://node.mainnet.klever.org" ;;
         *) echo -e "\${RED}❌ Invalid network\${RESET}"; exit 1 ;;
     esac
     
     # Upgrade contract
-    KLEVER_NODE=\$KLEVER_NODE \\\\
+    KLEVER_NODE=$KLEVER_NODE \\\\
         ~/klever-sdk/koperator \\\\
-        --key-file="\$HOME/klever-sdk/walletKey.pem" \\\\
-        sc upgrade "\$CONTRACT_ADDRESS" \\\\
-        --wasm="\$CONTRACT_WASM" \\\\
+        --key-file="$HOME/klever-sdk/walletKey.pem" \\\\
+        sc upgrade "$CONTRACT_ADDRESS" \\\\
+        --wasm="$CONTRACT_WASM" \\\\
         --await --sign --result-only
 }
 
 # Main execution
 echo -e "\${BLUE}Contract Upgrade\${RESET}"
-echo -e "\${YELLOW}Network: \$NETWORK\${RESET}"
-echo -e "\${YELLOW}Contract: \$CONTRACT_ADDRESS\${RESET}"
+echo -e "\${YELLOW}Network: $NETWORK\${RESET}"
+echo -e "\${YELLOW}Contract: $CONTRACT_ADDRESS\${RESET}"
 
 upgrade_contract
 \`\`\`
@@ -178,7 +178,7 @@ else
 fi
 
 # Check 2: Wallet key exists
-if [ -f "\$HOME/klever-sdk/walletKey.pem" ]; then
+if [ -f "$HOME/klever-sdk/walletKey.pem" ]; then
     echo "✅ Wallet key found"
 else
     echo "❌ Wallet key missing"

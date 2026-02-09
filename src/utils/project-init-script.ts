@@ -242,7 +242,7 @@ echo ""
 echo -e "\${CYAN}Configuration:\${RESET}"
 echo "  Create a .env file to set defaults:"
 echo "    NETWORK=testnet"
-echo "    KEY_FILE=\$HOME/klever-sdk/walletKey.pem"
+echo "    KEY_FILE=\\$HOME/klever-sdk/walletKey.pem"
 `;
   } catch (error) {
     console.error('Error creating helper scripts script:', error);
@@ -262,6 +262,78 @@ exit 1
 // Export the main function
 export const projectInitScript = createProjectInitScript();
 export const helperScriptsScript = createHelperScriptsScript();
+
+// --- Public mode: template file map (no shell execution) ---
+
+export interface TemplateFileMap {
+  [relativePath: string]: string;
+}
+
+export interface ProjectTemplateResult {
+  files: TemplateFileMap;
+  instructions: string;
+  placeholders: string[];
+  projectStructure: string[];
+}
+
+export const getProjectTemplateFiles = (projectName: string): ProjectTemplateResult => {
+  const replace = (content: string) =>
+    content.replace(/\$CONTRACT_NAME/g, () => projectName);
+
+  const files: TemplateFileMap = {
+    'scripts/common.sh': replace(readTemplate('scripts/common.sh')),
+    'scripts/deploy.sh': replace(readTemplate('scripts/deploy.sh')),
+    'scripts/upgrade.sh': replace(readTemplate('scripts/upgrade.sh')),
+    'scripts/query.sh': replace(readTemplate('scripts/query.sh')),
+    'scripts/build.sh': replace(readTemplate('scripts/build.sh')),
+    'scripts/test.sh': replace(readTemplate('scripts/test.sh')),
+    'scripts/interact.sh': replace(readTemplate('scripts/interact.sh')),
+    '.gitignore': readTemplate('.gitignore'),
+  };
+
+  return {
+    files,
+    instructions: [
+      'From the directory where you want your project, run:',
+      `  ~/klever-sdk/ksc new --template empty --name ${projectName}`,
+      `Change into the new project directory: cd "${projectName}".`,
+      'Write each file below into the project directory.',
+      'Make all scripts/*.sh files executable (chmod +x).',
+      'Edit src/lib.rs to implement your contract.',
+    ].join('\n'),
+    placeholders: [],
+    projectStructure: ['src/', 'tests/', 'scripts/', 'output/'],
+  };
+};
+
+export const getHelperScriptTemplateFiles = (
+  contractName: string = 'my-contract'
+): ProjectTemplateResult => {
+  const replace = (content: string) =>
+    content.replace(/\$CONTRACT_NAME/g, () => contractName);
+
+  const files: TemplateFileMap = {
+    'scripts/common.sh': replace(readTemplate('scripts/common.sh')),
+    'scripts/deploy.sh': replace(readTemplate('scripts/deploy.sh')),
+    'scripts/upgrade.sh': replace(readTemplate('scripts/upgrade.sh')),
+    'scripts/query.sh': replace(readTemplate('scripts/query.sh')),
+    'scripts/build.sh': replace(readTemplate('scripts/build.sh')),
+    'scripts/test.sh': replace(readTemplate('scripts/test.sh')),
+    'scripts/interact.sh': replace(readTemplate('scripts/interact.sh')),
+    '.gitignore': readTemplate('.gitignore'),
+  };
+
+  return {
+    files,
+    instructions: [
+      'Write each file below into the current project directory.',
+      'Make all scripts/*.sh files executable (chmod +x).',
+      `Contract name "${contractName}" has been applied to all scripts.`,
+    ].join('\n'),
+    placeholders: [],
+    projectStructure: ['scripts/'],
+  };
+};
 
 // Tool definition for MCP - Full project initialization
 export const projectInitToolDefinition = {

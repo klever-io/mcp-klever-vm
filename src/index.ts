@@ -56,19 +56,21 @@ async function startHTTPServer() {
   app.use('/api', createRoutes(contextService));
 
   // Global error handling
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error('[ERROR]', new Date().toISOString(), err.stack);
+  app.use(
+    (err: Error & { status?: number }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      console.error('[ERROR]', new Date().toISOString(), err.stack);
 
-    // Don't leak error details in production
-    const isDev = process.env.NODE_ENV === 'development';
+      // Don't leak error details in production
+      const isDev = process.env.NODE_ENV === 'development';
 
-    res.status(err.status || 500).json({
-      success: false,
-      error: err.name || 'Internal server error',
-      message: isDev ? err.message : 'An error occurred processing your request',
-      ...(isDev && { stack: err.stack }),
-    });
-  });
+      res.status(err.status || 500).json({
+        success: false,
+        error: err.name || 'Internal server error',
+        message: isDev ? err.message : 'An error occurred processing your request',
+        ...(isDev && { stack: err.stack }),
+      });
+    }
+  );
 
   // Start server
   app.listen(port, () => {
@@ -310,13 +312,15 @@ async function startPublicServer() {
   });
 
   // Global error handling
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error('[ERROR]', new Date().toISOString(), err.stack);
-    res.status(err.status || 500).json({
-      success: false,
-      error: 'Internal server error',
-    });
-  });
+  app.use(
+    (err: Error & { status?: number }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      console.error('[ERROR]', new Date().toISOString(), err.stack);
+      res.status(err.status || 500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  );
 
   // Start server
   const server = app.listen(port, () => {

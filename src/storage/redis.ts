@@ -66,7 +66,7 @@ export class RedisStorage implements StorageBackend {
     await this.createIndexesTransaction(multi, id, storedPayload);
 
     const results = await multi.exec();
-    if (!results || results.some((r: any) => r && r[0] !== null)) {
+    if (!results || results.some(r => r instanceof Error)) {
       throw new Error('Failed to store context atomically');
     }
 
@@ -211,7 +211,7 @@ export class RedisStorage implements StorageBackend {
     }
 
     const results = await multi.exec();
-    return results !== null && results.every((r: any) => r && r[0] === null);
+    return results !== null && results.every(r => !(r instanceof Error));
   }
 
   async delete(id: string): Promise<boolean> {
@@ -239,7 +239,7 @@ export class RedisStorage implements StorageBackend {
     }
 
     const results = await multi.exec();
-    return results !== null && results.every((r: any) => r && r[0] === null);
+    return results !== null && results.every(r => !(r instanceof Error));
   }
 
   async count(params?: Partial<QueryContext>): Promise<number> {
@@ -257,7 +257,7 @@ export class RedisStorage implements StorageBackend {
    * Create indexes in a transaction for atomic operations
    */
   private async createIndexesTransaction(
-    multi: any,
+    multi: ReturnType<RedisClientType['multi']>,
     id: string,
     payload: ContextPayload
   ): Promise<void> {
