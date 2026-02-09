@@ -1,6 +1,11 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { ContextService } from '../context/service.js';
 import { QueryContextSchema, ContextPayloadSchema } from '../types/index.js';
@@ -30,6 +35,7 @@ export class KleverMCPServer {
       {
         capabilities: {
           tools: {},
+          prompts: {},
         },
       }
     );
@@ -934,6 +940,18 @@ export class KleverMCPServer {
           ],
         };
       }
+    });
+
+    // Prompt handlers
+    this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+      const { getPromptDefinitions } = await import('./prompts.js');
+      return { prompts: getPromptDefinitions(this.profile) };
+    });
+
+    this.server.setRequestHandler(GetPromptRequestSchema, async request => {
+      const { getPromptMessages } = await import('./prompts.js');
+      const { name, arguments: promptArgs } = request.params;
+      return getPromptMessages(name, promptArgs, this.profile);
     });
   }
 

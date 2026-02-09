@@ -102,6 +102,46 @@ describe('KleverMCPServer (public mode)', () => {
     });
   });
 
+  describe('prompt listing', () => {
+    it('lists prompts via client.listPrompts()', async () => {
+      const { prompts } = await client.listPrompts();
+      expect(prompts).toHaveLength(2);
+      const names = prompts.map(p => p.name);
+      expect(names).toContain('create_smart_contract');
+      expect(names).toContain('add_feature');
+    });
+  });
+
+  describe('get prompt', () => {
+    it('returns messages for create_smart_contract', async () => {
+      const result = await client.getPrompt({
+        name: 'create_smart_contract',
+        arguments: { contractName: 'MyToken' },
+      });
+
+      expect(result.description).toContain('MyToken');
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0].role).toBe('user');
+
+      const content = result.messages[0].content;
+      expect(content.type).toBe('text');
+      expect((content as { type: 'text'; text: string }).text).toContain('MyToken');
+      expect((content as { type: 'text'; text: string }).text).toContain('query_context');
+    });
+
+    it('returns messages for add_feature', async () => {
+      const result = await client.getPrompt({
+        name: 'add_feature',
+        arguments: { featureName: 'staking' },
+      });
+
+      expect(result.messages).toHaveLength(1);
+      const text = (result.messages[0].content as { type: 'text'; text: string }).text;
+      expect(text).toContain('staking');
+      expect(text).toContain('query_context');
+    });
+  });
+
   describe('blocked tools (public mode)', () => {
     it('blocks add_context', async () => {
       const result = await client.callTool({
