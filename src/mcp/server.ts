@@ -536,26 +536,12 @@ export class KleverMCPServer {
             const { query, category } = args as { query: string; category?: string };
             console.error(`[MCP] Documentation search: "${query}" (category: ${category || 'all'})`);
 
-            const { KNOWLEDGE_CATEGORIES } = await import('./resources.js');
+            const { KNOWLEDGE_CATEGORIES, CATEGORY_TAG_MAP } = await import('./resources.js');
 
             // Build tag filter from category if provided
-            const categoryTagMap: Record<string, string[]> = {
-              core: ['core', 'contract-structure', 'imports'],
-              storage: ['storage', 'mapper'],
-              events: ['events', 'event'],
-              tokens: ['tokens', 'token', 'KLV', 'KDA'],
-              modules: ['modules', 'module', 'admin', 'pause'],
-              tools: ['tools', 'koperator', 'ksc', 'CLI'],
-              scripts: ['scripts', 'bash', 'build', 'deploy'],
-              examples: ['examples', 'example', 'template'],
-              errors: ['errors', 'error', 'common-mistakes'],
-              'best-practices': ['best-practices', 'best_practice', 'security'],
-              documentation: ['documentation', 'docs', 'guide'],
-            };
-
             const tags =
               category && KNOWLEDGE_CATEGORIES.includes(category as (typeof KNOWLEDGE_CATEGORIES)[number])
-                ? categoryTagMap[category]
+                ? CATEGORY_TAG_MAP[category as keyof typeof CATEGORY_TAG_MAP]
                 : undefined;
 
             const searchResult = await this.contextService.query({

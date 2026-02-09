@@ -25,7 +25,7 @@ export type KnowledgeCategory = (typeof KNOWLEDGE_CATEGORIES)[number];
  * Maps knowledge category names to tags used in the knowledge base.
  * Categories use kebab-case in URIs but knowledge entries use varied tag forms.
  */
-const CATEGORY_TAG_MAP: Record<KnowledgeCategory, string[]> = {
+export const CATEGORY_TAG_MAP: Record<KnowledgeCategory, string[]> = {
   core: ['core', 'contract-structure', 'imports', 'critical-differences'],
   storage: ['storage', 'mapper', 'singlemapper', 'mapmapper', 'setmapper', 'vecmapper'],
   events: ['events', 'event', 'indexed'],
