@@ -192,7 +192,12 @@ export class KleverMCPServer {
     const { projectInitToolDefinition, addHelperScriptsToolDefinition } = await import(
       '../utils/project-init-script.js'
     );
-    return [projectInitToolDefinition, addHelperScriptsToolDefinition];
+    const publicNote =
+      ' NOTE: In public profile, this tool returns a project template JSON and does not perform any filesystem changes.';
+    return [
+      { ...projectInitToolDefinition, description: projectInitToolDefinition.description + publicNote },
+      { ...addHelperScriptsToolDefinition, description: addHelperScriptsToolDefinition.description + publicNote },
+    ];
   }
 
   private async getLocalOnlyToolDefinitions() {

@@ -277,7 +277,8 @@ export interface ProjectTemplateResult {
 }
 
 export const getProjectTemplateFiles = (projectName: string): ProjectTemplateResult => {
-  const replace = (content: string) => content.replace(/\$CONTRACT_NAME/g, projectName);
+  const replace = (content: string) =>
+    content.replace(/\$CONTRACT_NAME/g, () => projectName);
 
   const files: TemplateFileMap = {
     'scripts/common.sh': replace(readTemplate('scripts/common.sh')),
@@ -293,9 +294,11 @@ export const getProjectTemplateFiles = (projectName: string): ProjectTemplateRes
   return {
     files,
     instructions: [
-      `Create a new directory called "${projectName}" and write each file below into it.`,
+      'From the directory where you want your project, run:',
+      `  ~/klever-sdk/ksc new --template empty --name ${projectName}`,
+      `Change into the new project directory: cd "${projectName}".`,
+      'Write each file below into the project directory.',
       'Make all scripts/*.sh files executable (chmod +x).',
-      'Initialize a Rust project with: ~/klever-sdk/ksc new --template empty --name ' + projectName,
       'Edit src/lib.rs to implement your contract.',
     ].join('\n'),
     placeholders: [],
@@ -306,7 +309,8 @@ export const getProjectTemplateFiles = (projectName: string): ProjectTemplateRes
 export const getHelperScriptTemplateFiles = (
   contractName: string = 'my-contract'
 ): ProjectTemplateResult => {
-  const replace = (content: string) => content.replace(/\$CONTRACT_NAME/g, contractName);
+  const replace = (content: string) =>
+    content.replace(/\$CONTRACT_NAME/g, () => contractName);
 
   const files: TemplateFileMap = {
     'scripts/common.sh': replace(readTemplate('scripts/common.sh')),
