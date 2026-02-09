@@ -549,6 +549,7 @@ export class KleverMCPServer {
               tags,
               limit: 10,
               offset: 0,
+              includeTotal: false,
             });
 
             // Re-rank by relevance to the search query

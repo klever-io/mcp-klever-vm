@@ -40,9 +40,9 @@ describe('getProjectTemplateFiles', () => {
     );
   });
 
-  it('lists $CONTRACT_NAME as a placeholder', () => {
+  it('reports no unresolved placeholders after replacement', () => {
     const result = getProjectTemplateFiles('test');
-    expect(result.placeholders).toContain('$CONTRACT_NAME');
+    expect(result.placeholders).toHaveLength(0);
   });
 });
 

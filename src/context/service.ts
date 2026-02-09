@@ -34,14 +34,19 @@ export class ContextService {
     return await this.storage.retrieve(id);
   }
 
-  async query(params: QueryContext): Promise<{
+  async count(params?: Partial<QueryContext>): Promise<number> {
+    return this.storage.count(params);
+  }
+
+  async query(params: QueryContext & { includeTotal?: boolean }): Promise<{
     results: ContextPayload[];
     total: number;
     offset: number;
     limit: number;
   }> {
     const results = await this.storage.query(params);
-    const total = await this.storage.count(params);
+    const total =
+      params.includeTotal === false ? results.length : await this.storage.count(params);
 
     return {
       results,

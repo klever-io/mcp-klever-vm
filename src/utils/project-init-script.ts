@@ -298,7 +298,7 @@ export const getProjectTemplateFiles = (projectName: string): ProjectTemplateRes
       'Initialize a Rust project with: ~/klever-sdk/ksc new --template empty --name ' + projectName,
       'Edit src/lib.rs to implement your contract.',
     ].join('\n'),
-    placeholders: ['$CONTRACT_NAME'],
+    placeholders: [],
     projectStructure: ['src/', 'tests/', 'scripts/', 'output/'],
   };
 };

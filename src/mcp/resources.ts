@@ -151,8 +151,7 @@ async function buildKnowledgeIndex(contextService: ContextService): Promise<stri
 
   for (const category of KNOWLEDGE_CATEGORIES) {
     const tags = CATEGORY_TAG_MAP[category];
-    const result = await contextService.query({ tags, limit: 1, offset: 0 });
-    const count = result.total;
+    const count = await contextService.count({ tags });
     const desc = categoryDescriptions[category];
     lines.push(`| [${category}](klever://knowledge/${category}) | ${count} | ${desc} |`);
   }
