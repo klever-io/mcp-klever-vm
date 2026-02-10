@@ -70,6 +70,43 @@ The MCP server (`src/mcp/server.ts`) exposes: `query_context`, `add_context`, `g
 - `MEMORY_MAX_SIZE`: Max contexts in memory storage (default: 10000)
 - `NODE_ENV`: `development` or `production` (affects error detail in responses)
 
+## Branching & Release Process
+
+### Branch Model (GitFlow-lite)
+
+- **`develop`** — Integration branch. All feature PRs merge here. Staging deployments use the `:dev` Docker image.
+- **`main`** — Production branch. Only receives merges from `develop` when code is ready for release.
+- **Feature branches** — Created from `develop`, merged back via PR.
+
+### Docker Tag Strategy
+
+| Trigger | Docker Tags | Environment |
+|---|---|---|
+| Manual dispatch from `develop` | `:dev`, `:dev-<sha>` | Staging (`dev-mcp.klever.org`) |
+| Release tag `v1.2.3` | `:1.2.3`, `:1.2`, `:1`, `:latest` | Production (`mcp.klever.org`) |
+| Pre-release tag `v1.2.3-rc.1` | `:1.2.3-rc.1` (no `:latest`) | Testing |
+| Manual dispatch from other branch | `:sha-<sha>` | Ad-hoc |
+
+### Creating a Release
+
+1. Merge `develop` → `main` via PR
+2. Go to **Actions** → **Release** → **Run workflow** on `main`
+3. Select bump type: `patch`, `minor`, or `major`
+4. The workflow will: validate code, bump `package.json`, create git tag, push, create GitHub Release, and sync version back to `develop`
+5. The tag push triggers the Docker build workflow automatically
+
+### Deploying :dev to Staging
+
+1. Go to **Actions** → **Build and Push Docker Image** → **Run workflow**
+2. Select the `develop` branch
+3. Watchtower on staging auto-deploys the new `:dev` image
+
+### Deployment Files
+
+- `docker-compose.deploy.yml` — Production (`mcp.klever.org`, uses `:latest`)
+- `docker-compose.staging.yml` — Staging (`dev-mcp.klever.org`, uses `:dev`)
+- `docker-compose.yml` — Local development (builds from source)
+
 ## Important Notes
 
 - ESM-only project (`"type": "module"` in package.json, `NodeNext` module resolution)

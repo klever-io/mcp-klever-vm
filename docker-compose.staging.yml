@@ -1,9 +1,9 @@
-# Production deployment for mcp.klever.org
-# The :latest tag is ONLY set on non-prerelease semver tags (via release workflow),
-# so Watchtower will only auto-deploy actual releases — never unreleased code.
+# Staging deployment for dev-mcp.klever.org
+# Uses :dev Docker tag, updated manually via workflow_dispatch on develop branch.
+# Watchtower monitors :dev tag and auto-deploys when a new :dev image is pushed.
 services:
   mcp-klever-vm:
-    image: kleverapp/mcp-klever-vm:latest
+    image: kleverapp/mcp-klever-vm:dev
     labels:
       - com.centurylinklabs.watchtower.enable=true
     environment:
@@ -11,7 +11,7 @@ services:
       - PORT=3000
       - NODE_ENV=production
       - TRUST_PROXY=true
-      # - CORS_ORIGINS=https://mcp.klever.org
+      # - CORS_ORIGINS=https://dev-mcp.klever.org
       # - RATE_LIMIT_MCP=60
       # - RATE_LIMIT_API=30
       # - BODY_SIZE_LIMIT=1mb
