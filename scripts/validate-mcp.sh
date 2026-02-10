@@ -17,13 +17,31 @@ BOLD='\033[1m'
 RESET='\033[0m'
 
 RESULTS_FILE=$(mktemp)
-trap 'rm -f "$RESULTS_FILE"' EXIT
+STDERR_FILE=$(mktemp)
+trap 'rm -f "$RESULTS_FILE" "$STDERR_FILE"' EXIT
+
+# Run an inspector command, capturing stderr. Show stderr only on failure.
+run_inspector() {
+  local result
+  if result=$($INSPECTOR "$@" $SERVER_CMD 2>"$STDERR_FILE"); then
+    echo "$result"
+  else
+    echo -e "${RED}Inspector command failed: $INSPECTOR $*${RESET}" >&2
+    cat "$STDERR_FILE" >&2
+    return 1
+  fi
+}
 
 log_pass() { echo "PASS" >> "$RESULTS_FILE"; echo -e "  ${GREEN}✓${RESET} $1"; }
 log_fail() { echo "FAIL" >> "$RESULTS_FILE"; echo -e "  ${RED}✗${RESET} $1"; }
 log_warn() { echo "WARN" >> "$RESULTS_FILE"; echo -e "  ${YELLOW}!${RESET} $1"; }
 
-# --- Check build exists ---
+# --- Preflight checks ---
+if ! command -v python3 >/dev/null 2>&1; then
+  echo -e "${RED}Error: python3 is required for JSON parsing. Install Python 3 or use 'brew install python3'.${RESET}"
+  exit 1
+fi
+
 if [ ! -f "dist/index.js" ]; then
   echo -e "${RED}Error: dist/index.js not found. Run 'pnpm run build' first.${RESET}"
   exit 1
@@ -35,7 +53,7 @@ echo ""
 # --- 1. Tools ---
 echo -e "${BOLD}Tools${RESET}"
 
-TOOLS_JSON=$($INSPECTOR --method tools/list $SERVER_CMD 2>/dev/null)
+TOOLS_JSON=$(run_inspector --method tools/list)
 TOOL_COUNT=$(echo "$TOOLS_JSON" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['tools']))")
 
 if [ "$TOOL_COUNT" -gt 0 ]; then
@@ -93,7 +111,7 @@ done <<< "$TOOL_ISSUES"
 echo ""
 echo -e "${BOLD}Prompts${RESET}"
 
-PROMPTS_JSON=$($INSPECTOR --method prompts/list $SERVER_CMD 2>/dev/null)
+PROMPTS_JSON=$(run_inspector --method prompts/list)
 PROMPT_COUNT=$(echo "$PROMPTS_JSON" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['prompts']))")
 
 if [ "$PROMPT_COUNT" -gt 0 ]; then
@@ -126,7 +144,7 @@ done <<< "$PROMPT_CHECKS"
 echo ""
 echo -e "${BOLD}Resources${RESET}"
 
-RESOURCES_JSON=$($INSPECTOR --method resources/list $SERVER_CMD 2>/dev/null)
+RESOURCES_JSON=$(run_inspector --method resources/list)
 RESOURCE_COUNT=$(echo "$RESOURCES_JSON" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['resources']))")
 
 if [ "$RESOURCE_COUNT" -gt 0 ]; then
@@ -135,7 +153,7 @@ else
   log_warn "resources/list returned 0 resources"
 fi
 
-TEMPLATES_JSON=$($INSPECTOR --method resources/templates/list $SERVER_CMD 2>/dev/null)
+TEMPLATES_JSON=$(run_inspector --method resources/templates/list)
 TEMPLATE_COUNT=$(echo "$TEMPLATES_JSON" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['resourceTemplates']))")
 
 if [ "$TEMPLATE_COUNT" -gt 0 ]; then
@@ -148,7 +166,7 @@ fi
 echo ""
 echo -e "${BOLD}Smoke Test${RESET}"
 
-STATS_RESULT=$($INSPECTOR --method tools/call --tool-name get_knowledge_stats $SERVER_CMD 2>/dev/null | python3 -c "
+STATS_RESULT=$(run_inspector --method tools/call --tool-name get_knowledge_stats | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
 text = json.loads(data['content'][0]['text'])

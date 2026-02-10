@@ -258,7 +258,7 @@ describe('KleverMCPServer (public mode)', () => {
       for (const tool of tools) {
         expect(tool.description).toBeDefined();
         expect(tool.description!.length).toBeGreaterThan(0);
-        const wordCount = tool.description!.split(/\s+/).length;
+        const wordCount = tool.description!.trim().split(/\s+/).filter(Boolean).length;
         expect(wordCount).toBeLessThanOrEqual(100);
       }
     });

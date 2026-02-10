@@ -162,7 +162,8 @@ export class KleverMCPServer {
                 'The context ID to find similar entries for. Obtain from query_context or get_context results.',
             },
             limit: {
-              type: 'number',
+              type: 'integer',
+              minimum: 1,
               default: 5,
               description:
                 'Maximum number of similar entries to return. Typical range is 1-20; higher values may be slower. Default: 5.',
