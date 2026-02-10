@@ -22,7 +22,8 @@
     "dev:mcp": "MODE=mcp STORAGE_TYPE=memory tsx watch src/index.ts",
     "start:public": "MODE=public node dist/index.js",
     "dev:public": "MODE=public STORAGE_TYPE=memory tsx watch src/index.ts",
-    "install-sdk": "./scripts/install-sdk.sh"
+    "install-sdk": "./scripts/install-sdk.sh",
+    "validate:mcp": "./scripts/validate-mcp.sh"
   },
   "keywords": [
     "mcp",
