@@ -50,6 +50,7 @@ export const QueryContextSchema = z.object({
   contractType: z.string().optional(),
   limit: z.number().int().positive().default(10),
   offset: z.number().int().nonnegative().default(0),
+  includeTotal: z.boolean().optional(),
 });
 
 export type QueryContext = z.infer<typeof QueryContextSchema>;

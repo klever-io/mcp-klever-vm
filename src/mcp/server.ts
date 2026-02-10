@@ -105,12 +105,15 @@ export class KleverMCPServer {
                 'Filter by contract type (e.g. "token", "nft", "defi", "dao"). Only returns entries tagged for this contract category.',
             },
             limit: {
-              type: 'number',
+              type: 'integer',
+              minimum: 1,
+              maximum: 100,
               default: 10,
               description: 'Maximum number of results to return (1-100). Default: 10.',
             },
             offset: {
-              type: 'number',
+              type: 'integer',
+              minimum: 0,
               default: 0,
               description:
                 'Number of results to skip for pagination. Use with limit to page through results. Default: 0.',
@@ -161,7 +164,8 @@ export class KleverMCPServer {
             limit: {
               type: 'number',
               default: 5,
-              description: 'Maximum number of similar entries to return (1-20). Default: 5.',
+              description:
+                'Maximum number of similar entries to return. Typical range is 1-20; higher values may be slower. Default: 5.',
             },
           },
           required: ['id'],
@@ -323,6 +327,8 @@ export class KleverMCPServer {
             },
             metadata: {
               type: 'object',
+              description:
+                'Entry metadata including title, tags, and categorization. At minimum, provide a title.',
               properties: {
                 title: {
                   type: 'string',
@@ -405,9 +411,9 @@ export class KleverMCPServer {
               text: JSON.stringify(
                 {
                   success: false,
-                  error: `Tool "${name}" is not available in public mode. Public mode only supports read-only tools.`,
+                  error: `Tool "${name}" is not available in public mode. Public mode does not allow local-only or environment-modifying tools.`,
                   suggestion:
-                    'Use query_context, search_documentation, or analyze_contract to explore the knowledge base. For project scaffolding, init_klever_project and add_helper_scripts return template files in public mode.',
+                    'Use query_context, search_documentation, or analyze_contract to explore the knowledge base. For project scaffolding in public mode, init_klever_project and add_helper_scripts return template files instead of modifying your local environment.',
                   availableTools: [
                     'query_context',
                     'get_context',
@@ -1201,7 +1207,7 @@ export class KleverMCPServer {
                       success: false,
                       error: `Unknown tool: "${name}". This tool does not exist.`,
                       suggestion:
-                        'Call the list_tools endpoint to see all available tools and their descriptions.',
+                        'Use the MCP tools/list method to see all available tools and their descriptions.',
                     },
                     null,
                     2

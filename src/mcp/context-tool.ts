@@ -36,12 +36,20 @@ export const contextAwareToolDefinition = {
           'Filter results to specific context types. Omit to include all types. Example: ["code_example", "best_practice"] for implementation guidance.',
       },
       maxResults: {
-        type: 'number',
+        type: 'integer',
+        minimum: 1,
+        maximum: 20,
         default: 5,
         description: 'Maximum number of context entries to return (1-20). Default: 5.',
       },
     },
     required: ['query'],
+  },
+  annotations: {
+    title: 'Get Klever Context',
+    readOnlyHint: true,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
