@@ -51,6 +51,6 @@ EXPOSE 3000
 
 # Health check only applies in public (HTTP) mode; stdio mode has no HTTP server.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD if [ "$MODE" = "public" ] || [ "$MODE" = "http" ]; then wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1; else exit 0; fi
+  CMD if [ "$MODE" = "public" ] || [ "$MODE" = "http" ]; then wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/health || exit 1; else exit 0; fi
 
 CMD ["node", "dist/index.js"]
