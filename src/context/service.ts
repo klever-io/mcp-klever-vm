@@ -38,7 +38,7 @@ export class ContextService {
     return this.storage.count(params);
   }
 
-  async query(params: QueryContext & { includeTotal?: boolean }): Promise<{
+  async query(params: QueryContext): Promise<{
     results: ContextPayload[];
     total: number;
     offset: number;

@@ -339,26 +339,37 @@ export const getHelperScriptTemplateFiles = (
 export const projectInitToolDefinition = {
   name: 'init_klever_project',
   description:
-    'Initialize a new Klever smart contract project with helper scripts (build, deploy, upgrade, query with returnData parsing, test, and interactive management)',
+    'Scaffold a new Klever smart contract project using the SDK. Creates the Rust project structure via `ksc new` and generates automation scripts (build, deploy, upgrade, query, test, interact). Requires Klever SDK installed at ~/klever-sdk/. Run check_sdk_status first to verify.',
   inputSchema: {
     type: 'object',
     properties: {
       name: {
         type: 'string',
-        description: 'The name of the contract',
+        description:
+          'The contract project name in kebab-case (e.g. "my-token", "nft-marketplace"). Used as the Cargo package name and directory name.',
       },
       template: {
         type: 'string',
-        description: 'Template to use (default: empty)',
+        enum: ['empty', 'adder'],
+        description:
+          'Project template to scaffold from. "empty" creates a blank contract with just an init function. "adder" creates a simple counter example. Default: "empty".',
         default: 'empty',
       },
       noMove: {
         type: 'boolean',
-        description: 'Do not move project files to current directory',
+        description:
+          'When true, keeps the project in the SDK output directory instead of moving it to the current working directory. Default: false.',
         default: false,
       },
     },
     required: ['name'],
+  },
+  annotations: {
+    title: 'Initialize Klever Project',
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false,
   },
 };
 
@@ -366,14 +377,22 @@ export const projectInitToolDefinition = {
 export const addHelperScriptsToolDefinition = {
   name: 'add_helper_scripts',
   description:
-    'Add helper scripts to an existing Klever smart contract project (build, deploy, upgrade, query, test, interact)',
+    'Add build, deploy, upgrade, query, test, and interact automation scripts to an existing Klever smart contract project. Creates a scripts/ directory with bash scripts and updates .gitignore. Run this from the project root directory (where Cargo.toml is located).',
   inputSchema: {
     type: 'object',
     properties: {
       contractName: {
         type: 'string',
-        description: 'Optional contract name (will try to detect from Cargo.toml if not provided)',
+        description:
+          'The contract name to embed in scripts (e.g. "my-token"). If omitted, auto-detected from the `name` field in Cargo.toml.',
       },
     },
+  },
+  annotations: {
+    title: 'Add Helper Scripts',
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };

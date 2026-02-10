@@ -8,13 +8,14 @@
 export const contextAwareToolDefinition = {
   name: 'get_klever_context',
   description:
-    'Automatically retrieve relevant Klever VM development context based on the user query',
+    'Retrieve relevant Klever VM development context for a given query. Searches the knowledge base and returns matching entries with code examples, best practices, and documentation. Designed as a drop-in tool for external MCP servers that need Klever context.',
   inputSchema: {
     type: 'object',
     properties: {
       query: {
         type: 'string',
-        description: 'The user query or topic to get context for',
+        description:
+          'Natural-language query or topic to find context for (e.g. "storage mapper patterns", "deploy contract to testnet", "handle KDA token payments").',
       },
       includeTypes: {
         type: 'array',
@@ -31,15 +32,24 @@ export const contextAwareToolDefinition = {
             'runtime_behavior',
           ],
         },
-        description: 'Specific context types to include (optional)',
+        description:
+          'Filter results to specific context types. Omit to include all types. Example: ["code_example", "best_practice"] for implementation guidance.',
       },
       maxResults: {
-        type: 'number',
+        type: 'integer',
+        minimum: 1,
+        maximum: 20,
         default: 5,
-        description: 'Maximum number of contexts to return',
+        description: 'Maximum number of context entries to return (1-20). Default: 5.',
       },
     },
     required: ['query'],
+  },
+  annotations: {
+    title: 'Get Klever Context',
+    readOnlyHint: true,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 

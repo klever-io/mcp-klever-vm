@@ -2,10 +2,16 @@
 export const checkSdkStatusToolDefinition = {
   name: 'check_sdk_status',
   description:
-    'Check the installation status of the Klever SDK (ksc, koperator, VM libraries, wallet key)',
+    'Check whether the Klever SDK is installed and report the status of each component. Returns JSON with installation state and versions for: ksc (smart contract compiler), koperator (blockchain CLI), VM library (libvmexeccapi), and wallet key file. Run this before init_klever_project or install_klever_sdk to verify prerequisites.',
   inputSchema: {
     type: 'object',
     properties: {},
+  },
+  annotations: {
+    title: 'Check SDK Status',
+    readOnlyHint: true,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -13,17 +19,25 @@ export const checkSdkStatusToolDefinition = {
 export const installKleverSdkToolDefinition = {
   name: 'install_klever_sdk',
   description:
-    'Install or update the Klever SDK tools (ksc, koperator, or both) with required VM dependencies',
+    'Download and install Klever SDK tools to ~/klever-sdk/. Fetches the latest versions from the Klever CDN, installs binaries, and downloads required VM library dependencies. Supports macOS (arm64/amd64) and Linux. Run check_sdk_status first to see what is already installed.',
   inputSchema: {
     type: 'object',
     properties: {
       tool: {
         type: 'string',
         enum: ['ksc', 'koperator', 'all'],
-        description: 'Which tool to install (default: all)',
+        description:
+          'Which SDK component to install. "ksc" = smart contract compiler only, "koperator" = blockchain operator CLI + VM library, "all" = both ksc and koperator. Default: "all".',
         default: 'all',
       },
     },
+  },
+  annotations: {
+    title: 'Install Klever SDK',
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: true,
   },
 };
 
