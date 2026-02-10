@@ -1,6 +1,6 @@
 {
   "name": "mcp-klever-vm",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "MCP server for Klever blockchain smart contract development",
   "main": "dist/index.js",
   "type": "module",
