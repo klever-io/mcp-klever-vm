@@ -38,3 +38,14 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  docker-build:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Verify Docker build
+        run: docker build -t test-build .
