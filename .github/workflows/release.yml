@@ -29,7 +29,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
 
       - name: Setup pnpm
@@ -51,6 +50,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config url."https://${{ secrets.GIT_USER }}:${{ secrets.GIT_PASS }}@github.com/".insteadOf "https://github.com/"
 
       - name: Bump version and create tag
         id: version
@@ -60,10 +60,7 @@ jobs:
           echo "tag=v$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
 
       - name: Push version commit and tag
-        run: |
-          git push origin main --follow-tags
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: git push origin main --follow-tags
 
       - name: Create GitHub Release
         run: |
@@ -72,13 +69,11 @@ jobs:
             --generate-notes \
             --target main
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.GIT_PASS }}
 
       - name: Sync version bump back to develop
         run: |
           git checkout develop
           git pull origin develop
-          git merge main --no-edit
+          git merge main --no-edit --strategy-option theirs
           git push origin develop
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
