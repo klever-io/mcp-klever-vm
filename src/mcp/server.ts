@@ -65,11 +65,16 @@ export class KleverMCPServer {
     return [
       {
         name: 'query_context',
-        description: 'Query Klever VM smart contract development context',
+        description:
+          'Search the Klever VM knowledge base for smart contract development context. Returns structured JSON with matching entries, scores, and pagination. Use this for precise filtering by type or tags; use search_documentation for human-readable "how do I..." answers.',
         inputSchema: {
           type: 'object' as const,
           properties: {
-            query: { type: 'string', description: 'Search query' },
+            query: {
+              type: 'string',
+              description:
+                'Free-text search query. Use Klever-specific terms for best results (e.g. "storage mapper SingleValueMapper", "payable endpoint KLV", "deploy contract testnet").',
+            },
             types: {
               type: 'array',
               items: {
@@ -85,104 +90,185 @@ export class KleverMCPServer {
                   'runtime_behavior',
                 ],
               },
+              description:
+                'Filter results by context type. Omit to search all types. Common combinations: ["code_example", "documentation"] for learning, ["error_pattern"] for debugging, ["security_tip", "best_practice"] for reviews.',
             },
             tags: {
               type: 'array',
               items: { type: 'string' },
+              description:
+                'Filter by tags (e.g. ["storage", "mapper"], ["tokens", "KLV"], ["events"]). Tags are matched with OR logic — any matching tag includes the entry.',
             },
-            contractType: { type: 'string' },
-            limit: { type: 'number', default: 10 },
-            offset: { type: 'number', default: 0 },
+            contractType: {
+              type: 'string',
+              description:
+                'Filter by contract type (e.g. "token", "nft", "defi", "dao"). Only returns entries tagged for this contract category.',
+            },
+            limit: {
+              type: 'number',
+              default: 10,
+              description: 'Maximum number of results to return (1-100). Default: 10.',
+            },
+            offset: {
+              type: 'number',
+              default: 0,
+              description:
+                'Number of results to skip for pagination. Use with limit to page through results. Default: 0.',
+            },
           },
+        },
+        annotations: {
+          title: 'Query Knowledge Base',
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
       {
         name: 'get_context',
-        description: 'Retrieve specific context by ID',
+        description:
+          'Retrieve a single knowledge base entry by its unique ID. Returns the full entry including content, metadata, tags, and related context IDs. Use this after query_context or find_similar to get complete details for a specific entry.',
         inputSchema: {
           type: 'object' as const,
           properties: {
-            id: { type: 'string' },
+            id: {
+              type: 'string',
+              description:
+                'The unique context ID (UUID format). Obtain IDs from query_context or find_similar results.',
+            },
           },
           required: ['id'],
+        },
+        annotations: {
+          title: 'Get Context by ID',
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
       {
         name: 'find_similar',
-        description: 'Find contexts similar to a given context',
+        description:
+          'Find knowledge base entries similar to a given entry by comparing tags and content. Returns related contexts ranked by similarity score. Useful for discovering related patterns, examples, or documentation after finding one relevant entry.',
         inputSchema: {
           type: 'object' as const,
           properties: {
-            id: { type: 'string' },
-            limit: { type: 'number', default: 5 },
+            id: {
+              type: 'string',
+              description:
+                'The context ID to find similar entries for. Obtain from query_context or get_context results.',
+            },
+            limit: {
+              type: 'number',
+              default: 5,
+              description: 'Maximum number of similar entries to return (1-20). Default: 5.',
+            },
           },
           required: ['id'],
+        },
+        annotations: {
+          title: 'Find Similar Contexts',
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
       {
         name: 'get_knowledge_stats',
-        description: 'Get statistics about the knowledge base',
+        description:
+          'Get summary statistics of the Klever VM knowledge base. Returns total entry count, counts broken down by context type (code_example, best_practice, security_tip, etc.), and a sample entry title for each type. Useful for understanding what knowledge is available before querying.',
         inputSchema: {
           type: 'object' as const,
           properties: {},
         },
+        annotations: {
+          title: 'Knowledge Base Stats',
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'enhance_with_context',
-        description: 'Enhance a query with relevant Klever VM context before processing',
+        description:
+          'Augment a natural-language query with relevant Klever VM knowledge base context. Extracts Klever-specific keywords, finds matching entries, and returns the original query combined with relevant code examples and documentation in markdown. Use this to enrich a user prompt before answering Klever development questions.',
         inputSchema: {
           type: 'object' as const,
           properties: {
             query: {
               type: 'string',
-              description: 'The user query to enhance with context',
+              description:
+                'The user\'s natural-language question or prompt to enhance (e.g. "How do I handle KLV payments in my contract?").',
             },
             autoInclude: {
               type: 'boolean',
               default: true,
-              description: 'Automatically include the most relevant contexts',
+              description:
+                'When true (default), automatically appends the most relevant knowledge base entries to the response. Set to false to only return metadata without injecting context.',
             },
           },
           required: ['query'],
+        },
+        annotations: {
+          title: 'Enhance Query with Context',
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
       {
         name: 'search_documentation',
         description:
-          'Search Klever VM documentation and knowledge base. Optimized for "how do I..." questions — returns human-readable markdown with titles, descriptions, and code snippets. Use this instead of query_context when looking for developer documentation.',
+          'Search Klever VM documentation and knowledge base. Returns human-readable markdown with titles, descriptions, and code snippets. Optimized for "how do I..." questions. Use this instead of query_context when you need formatted developer documentation.',
         inputSchema: {
           type: 'object' as const,
           properties: {
             query: {
               type: 'string',
-              description: 'Search query (e.g. "how to use storage mappers", "deploy contract")',
+              description:
+                'Search query in natural language (e.g. "how to use storage mappers", "deploy contract to testnet", "handle KDA token transfers").',
             },
             category: {
               type: 'string',
               enum: [...KNOWLEDGE_CATEGORIES],
-              description: 'Optional category filter to narrow search results',
+              description:
+                'Narrow results to a specific knowledge category. Available: core, storage, events, tokens, modules, tools, scripts, examples, errors, best-practices, documentation.',
             },
           },
           required: ['query'],
+        },
+        annotations: {
+          title: 'Search Documentation',
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
       {
         name: 'analyze_contract',
         description:
-          'Analyze Klever smart contract source code for common issues. Performs pattern-matching checks for missing imports, annotations, storage patterns, and best practices. Returns findings with severity levels and links to relevant knowledge base entries.',
+          'Analyze Klever smart contract Rust source code for common issues. Checks for missing imports, missing #[klever_sc::contract] macro, missing endpoint annotations, payable handlers without call_value usage, storage mappers without #[storage_mapper], and missing event definitions. Returns findings with severity (error/warning/info) and links to relevant knowledge base entries.',
         inputSchema: {
           type: 'object' as const,
           properties: {
             sourceCode: {
               type: 'string',
-              description: 'The Rust source code of the Klever smart contract to analyze',
+              description:
+                'The full Rust source code of the Klever smart contract to analyze. Must be valid Rust code using klever_sc imports.',
             },
             contractName: {
               type: 'string',
-              description: 'Optional name of the contract being analyzed',
+              description:
+                'Human-readable name for the contract (used in output labeling). Defaults to "contract" if omitted.',
             },
           },
           required: ['sourceCode'],
+        },
+        annotations: {
+          title: 'Analyze Contract',
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
     ];
@@ -210,7 +296,8 @@ export class KleverMCPServer {
     return [
       {
         name: 'add_context',
-        description: 'Add new context for Klever VM development',
+        description:
+          'Add a new knowledge entry to the Klever VM context store. Use this to save code examples, best practices, security tips, or documentation that can later be retrieved via query_context or search_documentation. Returns the generated ID of the new entry.',
         inputSchema: {
           type: 'object' as const,
           properties: {
@@ -226,24 +313,54 @@ export class KleverMCPServer {
                 'deployment_tool',
                 'runtime_behavior',
               ],
+              description:
+                'The category of this knowledge entry. Choose the most specific type: "code_example" for Rust snippets, "best_practice" for recommended patterns, "security_tip" for vulnerability guidance, "error_pattern" for known error solutions.',
             },
-            content: { type: 'string' },
+            content: {
+              type: 'string',
+              description:
+                'The main content body — typically Rust source code, a CLI command, or a detailed explanation. For code, include the full working snippet.',
+            },
             metadata: {
               type: 'object',
               properties: {
-                title: { type: 'string' },
-                description: { type: 'string' },
+                title: {
+                  type: 'string',
+                  description:
+                    'A concise, descriptive title (e.g. "SingleValueMapper Storage Pattern", "KLV Payment Handling").',
+                },
+                description: {
+                  type: 'string',
+                  description:
+                    'A 1-2 sentence summary of what this entry covers and when to use it.',
+                },
                 tags: {
                   type: 'array',
                   items: { type: 'string' },
+                  description:
+                    'Searchable tags for discovery (e.g. ["storage", "mapper", "singlemapper"], ["tokens", "KLV", "payment"]). Use lowercase.',
                 },
-                contractType: { type: 'string' },
-                author: { type: 'string' },
+                contractType: {
+                  type: 'string',
+                  description:
+                    'The contract category this applies to (e.g. "token", "nft", "defi", "dao"). Omit if generally applicable.',
+                },
+                author: {
+                  type: 'string',
+                  description: 'Author name or identifier for attribution.',
+                },
               },
               required: ['title'],
             },
           },
           required: ['type', 'content', 'metadata'],
+        },
+        annotations: {
+          title: 'Add Knowledge Entry',
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
         },
       },
       projectInitToolDefinition,
@@ -288,7 +405,20 @@ export class KleverMCPServer {
               text: JSON.stringify(
                 {
                   success: false,
-                  error: 'This tool is not available in public mode',
+                  error: `Tool "${name}" is not available in public mode. Public mode only supports read-only tools.`,
+                  suggestion:
+                    'Use query_context, search_documentation, or analyze_contract to explore the knowledge base. For project scaffolding, init_klever_project and add_helper_scripts return template files in public mode.',
+                  availableTools: [
+                    'query_context',
+                    'get_context',
+                    'find_similar',
+                    'get_knowledge_stats',
+                    'enhance_with_context',
+                    'search_documentation',
+                    'analyze_contract',
+                    'init_klever_project',
+                    'add_helper_scripts',
+                  ],
                 },
                 null,
                 2
@@ -364,7 +494,9 @@ export class KleverMCPServer {
                     text: JSON.stringify(
                       {
                         success: false,
-                        error: 'Context not found',
+                        error: `Context with ID "${id}" not found. The ID may be invalid or the entry may have been deleted.`,
+                        suggestion:
+                          'Use query_context to search for entries and obtain valid IDs from the results. Each result includes an "id" field you can pass to get_context.',
                       },
                       null,
                       2
@@ -1060,9 +1192,26 @@ export class KleverMCPServer {
           }
 
           default:
-            throw new Error(`Unknown tool: ${name}`);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: false,
+                      error: `Unknown tool: "${name}". This tool does not exist.`,
+                      suggestion:
+                        'Call the list_tools endpoint to see all available tools and their descriptions.',
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
         }
       } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
         return {
           content: [
             {
@@ -1070,7 +1219,10 @@ export class KleverMCPServer {
               text: JSON.stringify(
                 {
                   success: false,
-                  error: error instanceof Error ? error.message : 'Unknown error',
+                  error: message,
+                  tool: name,
+                  suggestion:
+                    'Check that all required parameters are provided and correctly typed. You can retry the call with corrected arguments. If the error persists, try a different approach or use search_documentation to find relevant guidance.',
                 },
                 null,
                 2

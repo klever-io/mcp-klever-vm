@@ -178,7 +178,7 @@ describe('KleverMCPServer (public mode)', () => {
   });
 
   describe('blocked tools (public mode)', () => {
-    it('blocks add_context', async () => {
+    it('blocks add_context with actionable error', async () => {
       const result = await client.callTool({
         name: 'add_context',
         arguments: {
@@ -192,6 +192,9 @@ describe('KleverMCPServer (public mode)', () => {
       const parsed = JSON.parse(content[0].text);
       expect(parsed.success).toBe(false);
       expect(parsed.error).toContain('not available in public mode');
+      expect(parsed.suggestion).toBeDefined();
+      expect(parsed.availableTools).toBeDefined();
+      expect(parsed.availableTools).toContain('query_context');
     });
   });
 
@@ -245,6 +248,69 @@ describe('KleverMCPServer (public mode)', () => {
 
       const content = result.content as Array<{ type: string; text: string }>;
       expect(content[0].text).toContain('**Category**: core');
+    });
+  });
+
+  describe('tool description quality', () => {
+    it('all tools have non-empty descriptions under 100 words', async () => {
+      const { tools } = await client.listTools();
+
+      for (const tool of tools) {
+        expect(tool.description).toBeDefined();
+        expect(tool.description!.length).toBeGreaterThan(0);
+        const wordCount = tool.description!.split(/\s+/).length;
+        expect(wordCount).toBeLessThanOrEqual(100);
+      }
+    });
+
+    it('all tools have annotations with readOnlyHint', async () => {
+      const { tools } = await client.listTools();
+
+      for (const tool of tools) {
+        expect(tool.annotations).toBeDefined();
+        expect(tool.annotations!.readOnlyHint).toBeDefined();
+      }
+    });
+
+    it('read-only tools are marked with readOnlyHint: true', async () => {
+      const { tools } = await client.listTools();
+      const readOnlyToolNames = [
+        'query_context',
+        'get_context',
+        'find_similar',
+        'get_knowledge_stats',
+        'enhance_with_context',
+        'search_documentation',
+        'analyze_contract',
+      ];
+
+      for (const name of readOnlyToolNames) {
+        const tool = tools.find(t => t.name === name);
+        expect(tool).toBeDefined();
+        expect(tool!.annotations!.readOnlyHint).toBe(true);
+      }
+    });
+
+    it('all tool parameters have descriptions', async () => {
+      const { tools } = await client.listTools();
+
+      for (const tool of tools) {
+        const schema = tool.inputSchema as {
+          properties?: Record<string, { description?: string }>;
+        };
+        if (schema.properties) {
+          for (const [paramName, paramSchema] of Object.entries(schema.properties)) {
+            // Skip nested object properties (like metadata sub-fields)
+            if (typeof paramSchema === 'object' && !('properties' in paramSchema)) {
+              expect(paramSchema.description).toBeDefined();
+              expect(paramSchema.description!.length).toBeGreaterThan(0);
+            } else if (typeof paramSchema === 'object' && paramName !== 'metadata') {
+              // Top-level non-object params should have descriptions
+              expect(paramSchema.description).toBeDefined();
+            }
+          }
+        }
+      }
     });
   });
 
