@@ -8,7 +8,7 @@ import { ContextPayload } from '../types/index.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ quiet: true });
 
 async function ingestKleverKnowledge() {
   console.log('🚀 Starting Klever knowledge ingestion...\n');

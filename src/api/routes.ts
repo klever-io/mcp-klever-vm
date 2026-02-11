@@ -73,7 +73,7 @@ export function createRoutes(contextService: ContextService, options?: RouteOpti
         res.status(400).json({
           success: false,
           error: 'Validation error',
-          details: error.errors,
+          details: error.issues,
         });
       } else {
         res.status(500).json({
@@ -162,7 +162,7 @@ export function createRoutes(contextService: ContextService, options?: RouteOpti
           res.status(400).json({
             success: false,
             error: 'Validation error',
-            details: error.errors,
+            details: error.issues,
           });
         } else {
           res.status(500).json({
@@ -198,7 +198,7 @@ export function createRoutes(contextService: ContextService, options?: RouteOpti
           res.status(400).json({
             success: false,
             error: 'Validation error',
-            details: error.errors,
+            details: error.issues,
           });
         } else {
           res.status(500).json({
@@ -288,7 +288,7 @@ export function createRoutes(contextService: ContextService, options?: RouteOpti
           res.status(400).json({
             success: false,
             error: 'Validation error',
-            details: error.errors,
+            details: error.issues,
           });
         } else {
           res.status(500).json({
