@@ -31,7 +31,7 @@ export class ContractIngester {
         ids.push(id);
       }
 
-      console.log(`Ingested ${ids.length} contexts from ${fileName}`);
+      console.error(`Ingested ${ids.length} contexts from ${fileName}`);
       return ids;
     } catch (error) {
       console.error(`Error ingesting contract ${filePath}:`, error);
@@ -164,6 +164,6 @@ let result = a.checked_add(&b).ok_or("Overflow")?;`,
       });
     }
 
-    console.log(`Ingested ${commonPatterns.length} common patterns`);
+    console.error(`Ingested ${commonPatterns.length} common patterns`);
   }
 }

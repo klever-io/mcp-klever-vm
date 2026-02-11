@@ -15,6 +15,22 @@ A Model Context Protocol (MCP) server tailored for Klever blockchain smart contr
 - 🔧 **Contract Validation**: Automatic detection of common issues and anti-patterns
 - 🚀 **Deployment Scripts**: Ready-to-use scripts for contract deployment, upgrade, and querying
 
+## Quick Start
+
+Install and run instantly via npx — no cloning required:
+
+```bash
+npx -y @klever/mcp-server
+```
+
+Or connect to the hosted public server:
+
+```bash
+claude mcp add -t http klever-vm https://mcp.klever.org/mcp
+```
+
+See [MCP Client Integration](#mcp-client-integration) for client-specific configuration.
+
 ## Architecture
 
 ```
@@ -123,21 +139,65 @@ NODE_ENV=development
 
 ## MCP Client Integration
 
-The Klever MCP Server can be integrated with different MCP-compatible clients. We provide detailed setup guides for:
+### Claude Code
 
-### Visual Studio Code
-Follow the [VS Code Installation Guide](docs/install-vscode.md) to:
-- Configure the MCP server in VS Code with GitHub Copilot Chat
-- Set up the `.vscode/mcp.json` configuration file
-- Use Klever blockchain knowledge in your development workflow
+```bash
+# Add via npx (recommended)
+claude mcp add klever-vm -- npx -y @klever/mcp-server
+
+# Or connect to the public hosted server
+claude mcp add -t http klever-vm https://mcp.klever.org/mcp
+```
 
 ### Claude Desktop
-Follow the [Claude Desktop Installation Guide](docs/install-claude.md) to:
-- Configure the MCP server with Claude Desktop application
-- Set up the `mcp.json` configuration file
-- Access Klever development context through Claude's interface
 
-Both guides include troubleshooting tips and verification steps to ensure the MCP server is working correctly with your chosen client.
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "klever-vm": {
+      "command": "npx",
+      "args": ["-y", "@klever/mcp-server"]
+    }
+  }
+}
+```
+
+For detailed setup, see the [Claude Desktop Installation Guide](docs/install-claude.md).
+
+### Cursor
+
+Add to your Cursor MCP settings (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "klever-vm": {
+      "command": "npx",
+      "args": ["-y", "@klever/mcp-server"]
+    }
+  }
+}
+```
+
+### VS Code (GitHub Copilot)
+
+Add to `.vscode/mcp.json` in your project:
+
+```json
+{
+  "servers": {
+    "klever-vm": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@klever/mcp-server"]
+    }
+  }
+}
+```
+
+For detailed setup, see the [VS Code Installation Guide](docs/install-vscode.md).
 
 ## Public MCP Server
 
