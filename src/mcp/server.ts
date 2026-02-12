@@ -292,9 +292,23 @@ export class KleverMCPServer {
     );
     const publicNote =
       ' NOTE: In public profile, this tool returns a project template JSON and does not perform any filesystem changes.';
+    const publicAnnotations = {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    };
     return [
-      { ...projectInitToolDefinition, description: projectInitToolDefinition.description + publicNote },
-      { ...addHelperScriptsToolDefinition, description: addHelperScriptsToolDefinition.description + publicNote },
+      {
+        ...projectInitToolDefinition,
+        description: projectInitToolDefinition.description + publicNote,
+        annotations: { ...projectInitToolDefinition.annotations, ...publicAnnotations },
+      },
+      {
+        ...addHelperScriptsToolDefinition,
+        description: addHelperScriptsToolDefinition.description + publicNote,
+        annotations: { ...addHelperScriptsToolDefinition.annotations, ...publicAnnotations },
+      },
     ];
   }
 
