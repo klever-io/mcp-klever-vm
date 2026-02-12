@@ -1,16 +1,9 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      bump:
-        description: 'Version bump type'
-        required: true
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
+  push:
+    tags:
+      - 'v*'
 
 concurrency:
   group: release
@@ -19,8 +12,6 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    # Only allow releases from main branch
-    if: github.ref == 'refs/heads/main'
 
     permissions:
       contents: write
@@ -28,8 +19,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -47,22 +44,6 @@ jobs:
       - name: Validate (typecheck + lint + test)
         run: pnpm validate
 
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config url."https://${{ secrets.GIT_USER }}:${{ secrets.GIT_PASS }}@github.com/".insteadOf "https://github.com/"
-
-      - name: Bump version and create tag
-        id: version
-        run: |
-          npm version ${{ inputs.bump }} -m "release: v%s"
-          echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
-          echo "tag=v$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
-
-      - name: Push version commit and tag
-        run: git push origin main --follow-tags
-
       - name: Create GitHub Release
         run: |
           gh release create "${{ steps.version.outputs.tag }}" \
@@ -76,10 +57,3 @@ jobs:
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Sync version bump back to develop
-        run: |
-          git checkout develop
-          git pull origin develop
-          git merge main --no-edit --strategy-option theirs
-          git push origin develop

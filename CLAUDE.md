@@ -90,10 +90,14 @@ The MCP server (`src/mcp/server.ts`) exposes: `query_context`, `add_context`, `g
 ### Creating a Release
 
 1. Merge `develop` → `main` via PR
-2. Go to **Actions** → **Release** → **Run workflow** on `main`
-3. Select bump type: `patch`, `minor`, or `major`
-4. The workflow will: validate code, bump `package.json`, create git tag, push, create GitHub Release, and sync version back to `develop`
-5. The tag push triggers the Docker build workflow automatically
+2. Checkout `main` locally and pull latest
+3. Run `./scripts/release.sh <patch|minor|major>`
+   - Validates branch, clean tree, and up-to-date with remote
+   - Runs `pnpm validate` (typecheck + lint + test)
+   - Runs `npm version` to bump `package.json`, commit (GPG-signed), and create tag
+   - Pushes the commit and tag to origin
+4. The tag push triggers both the Release workflow (GitHub Release + npm publish) and Docker build workflow
+5. Merge `main` back into `develop` to sync the version bump
 
 ### Deploying :dev to Staging
 
