@@ -48,6 +48,7 @@ export const contextAwareToolDefinition = {
   annotations: {
     title: 'Get Klever Context',
     readOnlyHint: true,
+    destructiveHint: false,
     idempotentHint: true,
     openWorldHint: false,
   },
