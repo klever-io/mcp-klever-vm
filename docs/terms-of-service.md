@@ -1,8 +1,8 @@
 # Terms of Service
 
 **Klever MCP Server**
-**Effective Date:** February 2025
-**Last Updated:** February 2025
+**Effective Date:** February 2026
+**Last Updated:** February 2026
 
 ## 1. Acceptance of Terms
 
