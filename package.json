@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "mcp-klever-vm": "bin/cli.mjs",
-    "mcp-server": "bin/cli.mjs"
+    "mcp-server": "bin/cli.mjs",
+    "mcp-klever-vm": "bin/cli.mjs"
   },
   "files": [
     "dist/",

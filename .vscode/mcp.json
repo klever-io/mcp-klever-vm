@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "klever-vm": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@klever/mcp-server"],
+      "env": {
+        "MODE": "mcp",
+        "STORAGE_TYPE": "memory"
+      }
+    }
+  }
+}
