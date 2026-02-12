@@ -123,6 +123,7 @@ export class KleverMCPServer {
         annotations: {
           title: 'Query Knowledge Base',
           readOnlyHint: true,
+          destructiveHint: false,
           idempotentHint: true,
           openWorldHint: false,
         },
@@ -145,6 +146,7 @@ export class KleverMCPServer {
         annotations: {
           title: 'Get Context by ID',
           readOnlyHint: true,
+          destructiveHint: false,
           idempotentHint: true,
           openWorldHint: false,
         },
@@ -174,6 +176,7 @@ export class KleverMCPServer {
         annotations: {
           title: 'Find Similar Contexts',
           readOnlyHint: true,
+          destructiveHint: false,
           idempotentHint: true,
           openWorldHint: false,
         },
@@ -189,6 +192,7 @@ export class KleverMCPServer {
         annotations: {
           title: 'Knowledge Base Stats',
           readOnlyHint: true,
+          destructiveHint: false,
           idempotentHint: true,
           openWorldHint: false,
         },
@@ -217,6 +221,7 @@ export class KleverMCPServer {
         annotations: {
           title: 'Enhance Query with Context',
           readOnlyHint: true,
+          destructiveHint: false,
           idempotentHint: true,
           openWorldHint: false,
         },
@@ -245,6 +250,7 @@ export class KleverMCPServer {
         annotations: {
           title: 'Search Documentation',
           readOnlyHint: true,
+          destructiveHint: false,
           idempotentHint: true,
           openWorldHint: false,
         },
@@ -272,6 +278,7 @@ export class KleverMCPServer {
         annotations: {
           title: 'Analyze Contract',
           readOnlyHint: true,
+          destructiveHint: false,
           idempotentHint: true,
           openWorldHint: false,
         },

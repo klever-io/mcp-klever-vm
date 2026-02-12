@@ -10,6 +10,7 @@ export const checkSdkStatusToolDefinition = {
   annotations: {
     title: 'Check SDK Status',
     readOnlyHint: true,
+    destructiveHint: false,
     idempotentHint: true,
     openWorldHint: false,
   },
