@@ -1,9 +1,26 @@
 {
-  "name": "mcp-klever-vm",
+  "name": "@klever/mcp-server",
   "version": "1.1.1",
   "description": "MCP server for Klever blockchain smart contract development",
   "main": "dist/index.js",
   "type": "module",
+  "bin": {
+    "mcp-klever-vm": "bin/cli.mjs",
+    "mcp-server": "bin/cli.mjs"
+  },
+  "files": [
+    "dist/",
+    "bin/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/klever-io/mcp-klever-vm.git"
+  },
+  "mcpName": "io.github.klever-io/mcp-klever-vm",
+  "homepage": "https://ai.klever.org",
+  "bugs": {
+    "url": "https://github.com/klever-io/mcp-klever-vm/issues"
+  },
   "scripts": {
     "build": "tsc && cp -r src/templates dist/",
     "dev": "tsx watch src/index.ts",
@@ -23,7 +40,8 @@
     "start:public": "MODE=public node dist/index.js",
     "dev:public": "MODE=public STORAGE_TYPE=memory tsx watch src/index.ts",
     "install-sdk": "./scripts/install-sdk.sh",
-    "validate:mcp": "./scripts/validate-mcp.sh"
+    "validate:mcp": "./scripts/validate-mcp.sh",
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "mcp",
@@ -32,7 +50,7 @@
     "smart-contracts",
     "kvm"
   ],
-  "author": "",
+  "author": "Klever <https://klever.org>",
   "license": "MIT",
   "packageManager": "pnpm@10.29.2",
   "engines": {
