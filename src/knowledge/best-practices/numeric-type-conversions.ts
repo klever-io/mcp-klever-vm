@@ -76,8 +76,8 @@ let int = BigInt::from(-5i64);
 let uint = BigUint::from(10u32);
 
 // ✅ All operators work (Add, Sub, Mul, Div, Rem)
-let result: BigInt = int + uint;   // BigInt(5)
-let result: BigInt = uint - int;   // BigInt(15)
+let result: BigInt = int.clone() + uint.clone();   // BigInt(5)
+let result: BigInt = uint - int;                   // BigInt(15)
 
 // ⚠️ Compound assignment does NOT support mixed types:
 // let mut x = BigInt::from(10i64);

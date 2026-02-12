@@ -50,18 +50,23 @@ require!(balance > 0u64, "Must be positive");
 For arithmetic, references matter — they avoid consuming (moving) values:
 
 \`\`\`rust
-// ✅ Reference arithmetic (efficient, a and b survive)
+// ✅ Reference arithmetic (efficient, values survive)
 let a = BigUint::from(100u32);
 let b = BigUint::from(50u32);
 let result = &a + &b;  // Doesn't consume a or b
 
-// ✅ Move semantics (consumes values)
-let result = a + b;    // a and b are consumed
+// ✅ Move semantics (consumes values — new variables needed)
+let x = BigUint::from(100u32);
+let y = BigUint::from(50u32);
+let result = x + y;    // x and y are consumed
 
 // ✅ Mixed: owned + reference
-let result = a + &b;   // a is consumed, b stays
+let x = BigUint::from(100u32);
+let y = BigUint::from(50u32);
+let result = x + &y;   // x is consumed, y stays
 
 // ✅ Primitive operands (auto-converts)
+let a = BigUint::from(100u32);
 let result = &a + 50u32;
 let result = &a * 2u64;
 \`\`\`

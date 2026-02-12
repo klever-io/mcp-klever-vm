@@ -131,8 +131,8 @@ let quot = &a / &b;    // 6.0
 let sum = a.clone() + b.clone();  // 1.75
 
 // Negation — two approaches:
-let neg = a.neg();      // .neg() takes &self (a survives)
-let neg = -a;           // Unary - takes self (a is moved)
+let neg_ref = a.neg();  // .neg() takes &self (a survives)
+let neg_own = -a;       // Unary - takes self (a is moved)
 // let neg = -&a;       // ❌ Won't compile — no Neg for &BigFloat
 \`\`\`
 
