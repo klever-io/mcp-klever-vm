@@ -27,17 +27,19 @@ The public hosted server at `mcp.klever.org` operates in **read-only mode**. We 
 
 When you run the Klever MCP Server locally or on your own infrastructure:
 
-- **No data is transmitted to Klever.** The server operates entirely within your environment.
+- **No telemetry is sent to Klever.** The core server does not automatically send usage analytics, logs, or any other data to Klever.
 - **You control all data.** Any context you add via the API is stored only in your chosen backend (in-memory or Redis).
-- **No telemetry or analytics.** The server does not phone home, collect usage metrics, or transmit any data externally.
+- **No automatic "phone home" behavior.** The server does not automatically contact Klever or any third-party service during normal operation.
+- **Optional tools may perform outbound downloads.** If you invoke helper commands (e.g., SDK installation tools), they may download resources from external hosts, which will receive standard network metadata (IP address, timestamps) as part of handling those requests.
 
 ### npm Package (npx @klever/mcp-server)
 
 When installed via npm and run locally in MCP stdio mode:
 
 - The server runs entirely on your machine.
-- No data is sent to Klever or any external service.
+- The core server does not send telemetry, analytics, or usage data to Klever or any external service.
 - All knowledge base queries are processed locally.
+- Optional tools you invoke (e.g., SDK installers) may contact external hosts to fetch resources.
 
 ## How We Use Information
 

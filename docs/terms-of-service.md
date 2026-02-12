@@ -34,7 +34,7 @@ You may not:
 - Use the Service to conduct denial-of-service attacks or otherwise disrupt the Service
 - Attempt to circumvent rate limits or security measures
 - Use the Service for any unlawful purpose
-- Redistribute the knowledge base content as a competing service
+- Use the public hosted server at `mcp.klever.org` to provide an automated competing service or API that replicates the Service's functionality for third parties (this restriction does not limit any rights granted under the open-source licenses described in Section 7.2)
 - Misrepresent the Service or your affiliation with Klever
 
 ## 4. Public Hosted Server
@@ -69,8 +69,9 @@ When self-hosting the Klever MCP Server:
 The `@klever/mcp-server` npm package is distributed under the MIT License. When running locally:
 
 - You are responsible for your own environment and data
-- The package operates entirely on your machine
-- No data is transmitted to Klever
+- The core server operates on your machine and does not send your prompts, code, or project data to Klever
+- Certain tools (e.g., `install_klever_sdk`) may make outbound network requests to download SDK binaries or metadata from external endpoints when you invoke them
+- Apart from such explicit download requests, the npm package does not transmit data to Klever
 
 ## 7. Intellectual Property
 
