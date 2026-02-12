@@ -39,6 +39,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -70,6 +71,11 @@ jobs:
             --target main
         env:
           GH_TOKEN: ${{ secrets.GIT_PASS }}
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Sync version bump back to develop
         run: |

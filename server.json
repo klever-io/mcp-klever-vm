@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.klever-io/mcp-klever-vm",
+  "description": "MCP server for Klever blockchain smart contract development.",
+  "repository": {
+    "url": "https://github.com/klever-io/mcp-klever-vm",
+    "source": "github"
+  },
+  "version": "1.1.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@klever/mcp-server",
+      "version": "1.1.1",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.klever.org/mcp"
+    }
+  ]
+}

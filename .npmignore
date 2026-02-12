@@ -1,0 +1,38 @@
+# Source (TypeScript)
+src/
+
+# Tests
+__tests__/
+*.test.ts
+*.spec.ts
+jest.config.cjs
+coverage/
+
+# Config
+.eslintrc*
+eslint.config.*
+.prettierrc*
+tsconfig.json
+.editorconfig
+
+# CI/CD
+.github/
+docker-compose*.yml
+Dockerfile
+
+# Documentation (not needed in package)
+docs/
+MCP_SETUP.md
+SETUP_MCP.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+
+# Development
+.claude/
+.vscode/
+scripts/
+*.log
+.env*
+.npmrc
+claude-mcp-config.json

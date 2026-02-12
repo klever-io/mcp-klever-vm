@@ -263,12 +263,24 @@ describe('KleverMCPServer (public mode)', () => {
       }
     });
 
-    it('all tools have annotations with readOnlyHint', async () => {
+    it('all tools have complete annotation sets', async () => {
       const { tools } = await client.listTools();
+      const requiredAnnotations = [
+        'title',
+        'readOnlyHint',
+        'destructiveHint',
+        'idempotentHint',
+        'openWorldHint',
+      ];
 
       for (const tool of tools) {
         expect(tool.annotations).toBeDefined();
-        expect(tool.annotations!.readOnlyHint).toBeDefined();
+        for (const annotation of requiredAnnotations) {
+          expect(tool.annotations).toHaveProperty(
+            annotation,
+            expect.anything(),
+          );
+        }
       }
     });
 

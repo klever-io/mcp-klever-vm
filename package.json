@@ -1,9 +1,26 @@
 {
-  "name": "mcp-klever-vm",
+  "name": "@klever/mcp-server",
   "version": "1.1.1",
   "description": "MCP server for Klever blockchain smart contract development",
   "main": "dist/index.js",
   "type": "module",
+  "bin": {
+    "mcp-server": "bin/cli.mjs",
+    "mcp-klever-vm": "bin/cli.mjs"
+  },
+  "files": [
+    "dist/",
+    "bin/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/klever-io/mcp-klever-vm.git"
+  },
+  "mcpName": "io.github.klever-io/mcp-klever-vm",
+  "homepage": "https://ai.klever.org",
+  "bugs": {
+    "url": "https://github.com/klever-io/mcp-klever-vm/issues"
+  },
   "scripts": {
     "build": "tsc && cp -r src/templates dist/",
     "dev": "tsx watch src/index.ts",
@@ -23,7 +40,8 @@
     "start:public": "MODE=public node dist/index.js",
     "dev:public": "MODE=public STORAGE_TYPE=memory tsx watch src/index.ts",
     "install-sdk": "./scripts/install-sdk.sh",
-    "validate:mcp": "./scripts/validate-mcp.sh"
+    "validate:mcp": "./scripts/validate-mcp.sh",
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "mcp",
@@ -32,32 +50,25 @@
     "smart-contracts",
     "kvm"
   ],
-  "author": "",
+  "author": "Klever <https://klever.org>",
   "license": "MIT",
   "packageManager": "pnpm@10.29.2",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.14.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
-    "@types/jest": "^29.5.14",
-    "@types/node": "^22.15.30",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.2.3",
     "eslint": "^9.28.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.3.0",
-    "jest": "^29.7.0",
+    "jest": "^30.2.0",
     "prettier": "^3.8.1",
     "ts-jest": "^29.4.6",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.55.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "qs": "^6.14.1",
-      "js-yaml@^3.0.0": "^3.14.2",
-      "brace-expansion@^1.0.0": "^1.1.12"
-    }
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
@@ -65,10 +76,10 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "cors": "^2.8.6",
-    "dotenv": "^16.5.0",
+    "dotenv": "^17.2.4",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "redis": "^5.10.0",
-    "zod": "^3.25.56"
+    "zod": "^4.3.6"
   }
 }

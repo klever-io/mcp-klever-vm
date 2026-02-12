@@ -10,7 +10,7 @@ import { autoIngestKnowledge } from './utils/auto-ingest.js';
 import { getVersionInfo } from './version.js';
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ quiet: true });
 
 /**
  * Main entry point for Klever MCP Server
