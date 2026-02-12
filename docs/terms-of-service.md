@@ -34,7 +34,6 @@ You may not:
 - Use the Service to conduct denial-of-service attacks or otherwise disrupt the Service
 - Attempt to circumvent rate limits or security measures
 - Use the Service for any unlawful purpose
-- Use the public hosted server at `mcp.klever.org` to provide an automated competing service or API that replicates the Service's functionality for third parties (this restriction does not limit any rights granted under the open-source licenses described in Section 7.2)
 - Misrepresent the Service or your affiliation with Klever
 
 ## 4. Public Hosted Server
