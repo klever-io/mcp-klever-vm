@@ -61,6 +61,10 @@ The MCP server (`src/mcp/server.ts`) exposes: `query_context`, `add_context`, `g
 2. Update relevance scoring in `ContextService.calculateRelevanceScore()`
 3. Update MCP tool input schemas in `src/mcp/server.ts` (the enum arrays in `query_context` and `add_context`)
 
+### SKILL.md
+
+LLM-optimized reference documentation lives in `docs/SKILL.md` with 9 sub-files in `docs/skills/` for progressive disclosure. Compiled from the knowledge base. Covers correctness rules, contract structure, storage, tokens, events, modules, deployment, API reference, security, and troubleshooting.
+
 ## Environment Variables
 
 - `MODE`: `http` (default) or `mcp`
