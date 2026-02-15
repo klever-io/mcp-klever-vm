@@ -14,6 +14,8 @@ import { ContextService } from '../context/service.js';
 import { QueryContextSchema, ContextPayloadSchema } from '../types/index.js';
 import { VERSION, GIT_SHA } from '../version.js';
 import { KNOWLEDGE_CATEGORIES } from './resources.js';
+import { KleverChainClient } from '../chain/index.js';
+import type { KleverNetwork, VMQueryRequest } from '../chain/types.js';
 
 export type ServerProfile = 'local' | 'public';
 
@@ -38,12 +40,15 @@ function toExecError(error: unknown): ExecError {
 export class KleverMCPServer {
   private server: Server;
   private profile: ServerProfile;
+  private chainClient: KleverChainClient;
 
   constructor(
     private contextService: ContextService,
-    profile: ServerProfile = 'local'
+    profile: ServerProfile = 'local',
+    chainClient?: KleverChainClient
   ) {
     this.profile = profile;
+    this.chainClient = chainClient || new KleverChainClient();
     this.server = new Server(
       {
         name: 'klever-vm-mcp',
@@ -286,6 +291,335 @@ export class KleverMCPServer {
     ];
   }
 
+  private getChainReadToolDefinitions() {
+    const networkDesc = `Network to query. Options: "mainnet", "testnet", "devnet", "local". Defaults to server default (${this.chainClient.getDefaultNetwork()}).`;
+    return [
+      {
+        name: 'get_balance',
+        description:
+          'Get the KLV or KDA token balance for a Klever blockchain address. Returns the balance in the smallest unit (for KLV: 1 KLV = 1,000,000 units with 6 decimal places). Optionally specify an asset ID to query a specific KDA token balance instead of KLV.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            address: {
+              type: 'string',
+              description: 'Klever address (klv1... bech32 format).',
+            },
+            assetId: {
+              type: 'string',
+              description:
+                'Optional KDA token ID (e.g. "USDT-A1B2", "LPKLVKFI-3I0N"). Omit for KLV balance.',
+            },
+            network: { type: 'string', description: networkDesc },
+          },
+          required: ['address'],
+        },
+        annotations: {
+          title: 'Get Balance',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'get_account',
+        description:
+          'Get full account details for a Klever blockchain address including nonce, balance, frozen balance, allowance, and permissions. Use this when you need comprehensive account state beyond just the balance.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            address: {
+              type: 'string',
+              description: 'Klever address (klv1... bech32 format).',
+            },
+            network: { type: 'string', description: networkDesc },
+          },
+          required: ['address'],
+        },
+        annotations: {
+          title: 'Get Account',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'get_asset_info',
+        description:
+          'Get complete properties and configuration for any asset on the Klever blockchain (KLV, KFI, KDA tokens, NFT collections). Returns supply info, permissions (CanMint, CanBurn, etc.), roles, precision, and metadata. Note: string fields like ID, Name, Ticker are base64-encoded in the raw response.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            assetId: {
+              type: 'string',
+              description:
+                'Asset identifier (e.g. "KLV", "KFI", "USDT-A1B2", "MYNFT-XY78").',
+            },
+            network: { type: 'string', description: networkDesc },
+          },
+          required: ['assetId'],
+        },
+        annotations: {
+          title: 'Get Asset Info',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'query_sc',
+        description:
+          'Execute a read-only query against a Klever smart contract (VM view call). Returns the contract function result as base64-encoded return data. Arguments must be base64-encoded. Use this to read contract state without modifying it.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            scAddress: {
+              type: 'string',
+              description: 'Smart contract address (klv1... bech32 format).',
+            },
+            funcName: {
+              type: 'string',
+              description:
+                'Function name to call (must be a #[view] function on the contract).',
+            },
+            args: {
+              type: 'array',
+              items: { type: 'string' },
+              description:
+                'Optional base64-encoded arguments. For addresses, encode the hex-decoded bech32 bytes. For numbers, use big-endian byte encoding.',
+            },
+            network: { type: 'string', description: networkDesc },
+          },
+          required: ['scAddress', 'funcName'],
+        },
+        annotations: {
+          title: 'Query Smart Contract',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'get_transaction',
+        description:
+          'Get transaction details by hash from the Klever blockchain. Returns sender, receiver, status, block info, contracts, and receipts. Uses the API proxy for indexed data.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            hash: {
+              type: 'string',
+              description: 'Transaction hash (hex string).',
+            },
+            network: { type: 'string', description: networkDesc },
+          },
+          required: ['hash'],
+        },
+        annotations: {
+          title: 'Get Transaction',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'get_block',
+        description:
+          'Get block information from the Klever blockchain by nonce (block number). If no nonce is provided, returns the latest block. Returns hash, timestamp, proposer, number of transactions, and other block metadata.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            nonce: {
+              type: 'integer',
+              minimum: 0,
+              description:
+                'Block number (nonce). Omit to get the latest block.',
+            },
+            network: { type: 'string', description: networkDesc },
+          },
+        },
+        annotations: {
+          title: 'Get Block',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'list_validators',
+        description:
+          'List active validators on the Klever blockchain network. Returns validator addresses, names, commission rates, delegation info, and staking amounts.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            network: { type: 'string', description: networkDesc },
+          },
+        },
+        annotations: {
+          title: 'List Validators',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+    ];
+  }
+
+  private getChainWriteToolDefinitions() {
+    const networkDesc = `Network to use. Options: "mainnet", "testnet", "devnet", "local". Defaults to server default (${this.chainClient.getDefaultNetwork()}).`;
+    return [
+      {
+        name: 'send_transfer',
+        description:
+          'Build an unsigned KLV or KDA token transfer transaction on the Klever blockchain. Returns the unsigned transaction data and hash for client-side signing. The MCP server NEVER handles private keys — signing must be done externally.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            sender: {
+              type: 'string',
+              description: 'Sender address (klv1... bech32 format).',
+            },
+            receiver: {
+              type: 'string',
+              description: 'Receiver address (klv1... bech32 format).',
+            },
+            amount: {
+              type: 'integer',
+              minimum: 1,
+              description:
+                'Amount in the smallest unit. For KLV: 1 KLV = 1,000,000 units (6 decimals). Example: to send 10 KLV, use 10000000.',
+            },
+            assetId: {
+              type: 'string',
+              description:
+                'Optional KDA token ID for non-KLV transfers (e.g. "USDT-A1B2"). Omit for KLV.',
+            },
+            network: { type: 'string', description: networkDesc },
+          },
+          required: ['sender', 'receiver', 'amount'],
+        },
+        annotations: {
+          title: 'Build Transfer Transaction',
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'deploy_sc',
+        description:
+          'Build an unsigned smart contract deployment transaction for the Klever blockchain. Provide the WASM bytecode as a hex string. Returns the unsigned transaction for client-side signing. The MCP server NEVER handles private keys.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            sender: {
+              type: 'string',
+              description: 'Deployer address (klv1... bech32 format).',
+            },
+            wasmHex: {
+              type: 'string',
+              description:
+                'Smart contract WASM bytecode as a hex-encoded string.',
+            },
+            initArgs: {
+              type: 'array',
+              items: { type: 'string' },
+              description:
+                'Optional base64-encoded init arguments for the contract constructor.',
+            },
+            network: { type: 'string', description: networkDesc },
+          },
+          required: ['sender', 'wasmHex'],
+        },
+        annotations: {
+          title: 'Build Deploy SC Transaction',
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'invoke_sc',
+        description:
+          'Build an unsigned smart contract invocation transaction on the Klever blockchain. Calls a state-changing endpoint on a deployed contract. Returns the unsigned transaction for client-side signing. For read-only calls, use query_sc instead.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            sender: {
+              type: 'string',
+              description: 'Caller address (klv1... bech32 format).',
+            },
+            scAddress: {
+              type: 'string',
+              description: 'Smart contract address (klv1... bech32 format).',
+            },
+            funcName: {
+              type: 'string',
+              description: 'Endpoint function name to invoke.',
+            },
+            args: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Optional base64-encoded arguments.',
+            },
+            value: {
+              type: 'integer',
+              minimum: 0,
+              description:
+                'Optional KLV amount to send with the call (smallest unit). Required for payable endpoints.',
+            },
+            network: { type: 'string', description: networkDesc },
+          },
+          required: ['sender', 'scAddress', 'funcName'],
+        },
+        annotations: {
+          title: 'Build Invoke SC Transaction',
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'freeze_klv',
+        description:
+          'Build an unsigned Freeze KLV transaction on the Klever blockchain. Freezing KLV provides energy/bandwidth for network operations and enables staking rewards. Returns the unsigned transaction for client-side signing.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            sender: {
+              type: 'string',
+              description: 'Address to freeze from (klv1... bech32 format).',
+            },
+            amount: {
+              type: 'integer',
+              minimum: 1,
+              description:
+                'Amount of KLV to freeze in the smallest unit (1 KLV = 1,000,000 units).',
+            },
+            network: { type: 'string', description: networkDesc },
+          },
+          required: ['sender', 'amount'],
+        },
+        annotations: {
+          title: 'Build Freeze KLV Transaction',
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+    ];
+  }
+
   private async getPublicModeToolDefinitions() {
     const { projectInitToolDefinition, addHelperScriptsToolDefinition } = await import(
       '../utils/project-init-script.js'
@@ -401,12 +735,16 @@ export class KleverMCPServer {
   private setupHandlers() {
     // List available tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      const tools: Array<Record<string, unknown>> = [...this.getReadOnlyToolDefinitions()];
+      const tools: Array<Record<string, unknown>> = [
+        ...this.getReadOnlyToolDefinitions(),
+        ...this.getChainReadToolDefinitions(),
+      ];
 
       if (this.profile === 'public') {
         const publicTools = await this.getPublicModeToolDefinitions();
         tools.push(...publicTools);
       } else {
+        tools.push(...this.getChainWriteToolDefinitions());
         const localTools = await this.getLocalOnlyToolDefinitions();
         tools.push(...localTools);
       }
@@ -422,10 +760,16 @@ export class KleverMCPServer {
       console.error(`[MCP] Tool called: ${name}`, JSON.stringify(args));
 
       // Block local-only tools in public profile
-      if (
-        this.profile === 'public' &&
-        ['add_context', 'check_sdk_status', 'install_klever_sdk'].includes(name)
-      ) {
+      const localOnlyTools = [
+        'add_context',
+        'check_sdk_status',
+        'install_klever_sdk',
+        'send_transfer',
+        'deploy_sc',
+        'invoke_sc',
+        'freeze_klv',
+      ];
+      if (this.profile === 'public' && localOnlyTools.includes(name)) {
         return {
           content: [
             {
@@ -433,9 +777,9 @@ export class KleverMCPServer {
               text: JSON.stringify(
                 {
                   success: false,
-                  error: `Tool "${name}" is not available in public mode. Public mode does not allow local-only or environment-modifying tools.`,
+                  error: `Tool "${name}" is not available in public mode. Public mode does not allow local-only, write, or environment-modifying tools.`,
                   suggestion:
-                    'Use query_context, search_documentation, or analyze_contract to explore the knowledge base. For project scaffolding in public mode, init_klever_project and add_helper_scripts return template files instead of modifying your local environment.',
+                    'Use query_context, search_documentation, or analyze_contract to explore the knowledge base. On-chain read tools (get_balance, get_account, get_asset_info, query_sc, get_transaction, get_block, list_validators) are available in public mode.',
                   availableTools: [
                     'query_context',
                     'get_context',
@@ -444,6 +788,13 @@ export class KleverMCPServer {
                     'enhance_with_context',
                     'search_documentation',
                     'analyze_contract',
+                    'get_balance',
+                    'get_account',
+                    'get_asset_info',
+                    'query_sc',
+                    'get_transaction',
+                    'get_block',
+                    'list_validators',
                     'init_klever_project',
                     'add_helper_scripts',
                   ],
@@ -1217,6 +1568,492 @@ export class KleverMCPServer {
                 ],
               };
             }
+          }
+
+          // ─── Chain Read Tools ─────────────────────────────
+
+          case 'get_balance': {
+            const { address, assetId, network } = args as {
+              address: string;
+              assetId?: string;
+              network?: string;
+            };
+            console.error(`[MCP] get_balance: ${address} asset=${assetId || 'KLV'} network=${network || 'default'}`);
+
+            const balance = await this.chainClient.getBalance(
+              address,
+              assetId,
+              network as KleverNetwork | undefined
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      address,
+                      assetId: assetId || 'KLV',
+                      balance,
+                      formatted: assetId
+                        ? `${balance} (raw units — check asset precision)`
+                        : `${(balance / 1_000_000).toFixed(6)} KLV`,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'get_account': {
+            const { address, network } = args as {
+              address: string;
+              network?: string;
+            };
+            console.error(`[MCP] get_account: ${address} network=${network || 'default'}`);
+
+            const account = await this.chainClient.getAccount(
+              address,
+              network as KleverNetwork | undefined
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      data: account,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'get_asset_info': {
+            const { assetId, network } = args as {
+              assetId: string;
+              network?: string;
+            };
+            console.error(`[MCP] get_asset_info: ${assetId} network=${network || 'default'}`);
+
+            const asset = await this.chainClient.getAssetInfo(
+              assetId,
+              network as KleverNetwork | undefined
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      data: asset,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'query_sc': {
+            const { scAddress, funcName, args: scArgs, network } = args as {
+              scAddress: string;
+              funcName: string;
+              args?: string[];
+              network?: string;
+            };
+            console.error(`[MCP] query_sc: ${scAddress}::${funcName} network=${network || 'default'}`);
+
+            const request: VMQueryRequest = {
+              scAddress,
+              funcName,
+              args: scArgs,
+            };
+
+            const result = await this.chainClient.querySmartContract(
+              request,
+              network as KleverNetwork | undefined
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      data: result,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                      hint: 'returnData values are base64-encoded. Decode them based on the expected return type.',
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'get_transaction': {
+            const { hash, network } = args as {
+              hash: string;
+              network?: string;
+            };
+            console.error(`[MCP] get_transaction: ${hash} network=${network || 'default'}`);
+
+            const tx = await this.chainClient.getTransaction(
+              hash,
+              network as KleverNetwork | undefined
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      data: tx,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'get_block': {
+            const { nonce, network } = args as {
+              nonce?: number;
+              network?: string;
+            };
+            console.error(`[MCP] get_block: nonce=${nonce ?? 'latest'} network=${network || 'default'}`);
+
+            const block = await this.chainClient.getBlock(
+              nonce,
+              network as KleverNetwork | undefined
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      data: block,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'list_validators': {
+            const { network } = args as { network?: string };
+            console.error(`[MCP] list_validators: network=${network || 'default'}`);
+
+            const validators = await this.chainClient.listValidators(
+              network as KleverNetwork | undefined
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      total: validators.length,
+                      data: validators,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          // ─── Chain Write Tools (local only) ────────────────
+
+          case 'send_transfer': {
+            const { sender, receiver, amount, assetId, network } = args as {
+              sender: string;
+              receiver: string;
+              amount: number;
+              assetId?: string;
+              network?: string;
+            };
+            console.error(`[MCP] send_transfer: ${sender} -> ${receiver} amount=${amount} asset=${assetId || 'KLV'}`);
+
+            const nonce = await this.chainClient.getNonce(
+              sender,
+              network as KleverNetwork | undefined
+            );
+
+            const contract: Array<{ type: number; parameter: Record<string, unknown> }> = [
+              {
+                type: 0, // Transfer
+                parameter: {
+                  amount,
+                  toAddress: receiver,
+                  ...(assetId ? { assetId } : {}),
+                },
+              },
+            ];
+
+            const txResult = await this.chainClient.buildTransaction(
+              { type: 0, sender, nonce, contract },
+              network as KleverNetwork | undefined
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      message:
+                        'Unsigned transaction built successfully. Sign this transaction externally and broadcast it.',
+                      txHash: txResult.result.txHash,
+                      unsignedTx: txResult.result.tx,
+                      details: {
+                        sender,
+                        receiver,
+                        amount,
+                        assetId: assetId || 'KLV',
+                        nonce,
+                      },
+                      network: network || this.chainClient.getDefaultNetwork(),
+                      nextSteps: [
+                        '1. Sign the transaction hash with the sender private key',
+                        '2. Broadcast the signed transaction to the network',
+                        'WARNING: The MCP server does NOT handle private keys.',
+                      ],
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'deploy_sc': {
+            const { sender, wasmHex, initArgs, network } = args as {
+              sender: string;
+              wasmHex: string;
+              initArgs?: string[];
+              network?: string;
+            };
+            console.error(`[MCP] deploy_sc: sender=${sender} wasmSize=${wasmHex.length / 2} bytes`);
+
+            const nonce = await this.chainClient.getNonce(
+              sender,
+              network as KleverNetwork | undefined
+            );
+
+            const data = [wasmHex, ...(initArgs || [])];
+
+            const contract: Array<{ type: number; parameter: Record<string, unknown> }> = [
+              {
+                type: 9, // SmartContract (Deploy)
+                parameter: {
+                  type: 0, // Deploy
+                },
+              },
+            ];
+
+            const txResult = await this.chainClient.buildTransaction(
+              { type: 9, sender, nonce, contract, data },
+              network as KleverNetwork | undefined
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      message:
+                        'Unsigned deploy transaction built. Sign externally and broadcast.',
+                      txHash: txResult.result.txHash,
+                      unsignedTx: txResult.result.tx,
+                      details: {
+                        sender,
+                        wasmSize: `${wasmHex.length / 2} bytes`,
+                        nonce,
+                      },
+                      network: network || this.chainClient.getDefaultNetwork(),
+                      nextSteps: [
+                        '1. Sign the transaction hash with the deployer private key',
+                        '2. Broadcast the signed transaction',
+                        '3. The contract address will be derived from the sender address + nonce',
+                      ],
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'invoke_sc': {
+            const {
+              sender,
+              scAddress,
+              funcName,
+              args: scArgs,
+              value,
+              network,
+            } = args as {
+              sender: string;
+              scAddress: string;
+              funcName: string;
+              args?: string[];
+              value?: number;
+              network?: string;
+            };
+            console.error(`[MCP] invoke_sc: ${sender} -> ${scAddress}::${funcName}`);
+
+            const nonce = await this.chainClient.getNonce(
+              sender,
+              network as KleverNetwork | undefined
+            );
+
+            const data = [funcName, ...(scArgs || [])];
+
+            const contract: Array<{ type: number; parameter: Record<string, unknown> }> = [
+              {
+                type: 9, // SmartContract (Invoke)
+                parameter: {
+                  type: 1, // Invoke
+                  callValue: value ? { amount: value } : undefined,
+                  address: scAddress,
+                },
+              },
+            ];
+
+            const txResult = await this.chainClient.buildTransaction(
+              { type: 9, sender, nonce, contract, data },
+              network as KleverNetwork | undefined
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      message:
+                        'Unsigned SC invoke transaction built. Sign externally and broadcast.',
+                      txHash: txResult.result.txHash,
+                      unsignedTx: txResult.result.tx,
+                      details: {
+                        sender,
+                        scAddress,
+                        funcName,
+                        argsCount: scArgs?.length || 0,
+                        value: value || 0,
+                        nonce,
+                      },
+                      network: network || this.chainClient.getDefaultNetwork(),
+                      nextSteps: [
+                        '1. Sign the transaction hash with the caller private key',
+                        '2. Broadcast the signed transaction',
+                        '3. Check the transaction receipt for execution results',
+                      ],
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'freeze_klv': {
+            const { sender, amount, network } = args as {
+              sender: string;
+              amount: number;
+              network?: string;
+            };
+            console.error(`[MCP] freeze_klv: ${sender} amount=${amount}`);
+
+            const nonce = await this.chainClient.getNonce(
+              sender,
+              network as KleverNetwork | undefined
+            );
+
+            const contract: Array<{ type: number; parameter: Record<string, unknown> }> = [
+              {
+                type: 2, // Freeze
+                parameter: {
+                  amount,
+                },
+              },
+            ];
+
+            const txResult = await this.chainClient.buildTransaction(
+              { type: 2, sender, nonce, contract },
+              network as KleverNetwork | undefined
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      message:
+                        'Unsigned freeze transaction built. Sign externally and broadcast.',
+                      txHash: txResult.result.txHash,
+                      unsignedTx: txResult.result.tx,
+                      details: {
+                        sender,
+                        amount,
+                        formattedAmount: `${(amount / 1_000_000).toFixed(6)} KLV`,
+                        nonce,
+                      },
+                      network: network || this.chainClient.getDefaultNetwork(),
+                      nextSteps: [
+                        '1. Sign the transaction hash with the sender private key',
+                        '2. Broadcast the signed transaction',
+                        '3. Frozen KLV provides energy/bandwidth and enables staking rewards',
+                      ],
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
           }
 
           default:

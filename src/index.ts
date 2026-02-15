@@ -8,6 +8,8 @@ import { createRoutes } from './api/routes.js';
 import { KleverMCPServer } from './mcp/server.js';
 import { autoIngestKnowledge } from './utils/auto-ingest.js';
 import { getVersionInfo } from './version.js';
+import { KleverChainClient } from './chain/index.js';
+import type { KleverNetwork } from './chain/types.js';
 
 // Load environment variables
 dotenv.config({ quiet: true });
@@ -34,6 +36,16 @@ function createStorageAndService() {
   const storage = StorageFactory.create(storageType, storageOptions);
   const contextService = new ContextService(storage);
   return { storageType, contextService };
+}
+
+function createChainClient(): KleverChainClient {
+  const network = (process.env.KLEVER_NETWORK as KleverNetwork) || 'mainnet';
+  return new KleverChainClient({
+    network,
+    nodeUrl: process.env.KLEVER_NODE_URL,
+    apiUrl: process.env.KLEVER_API_URL,
+    timeout: parseInt(process.env.KLEVER_TIMEOUT || '15000'),
+  });
 }
 
 async function startHTTPServer() {
@@ -88,7 +100,8 @@ async function startMCPServer() {
   }
 
   // Create and start MCP server
-  const mcpServer = new KleverMCPServer(contextService);
+  const chainClient = createChainClient();
+  const mcpServer = new KleverMCPServer(contextService, 'local', chainClient);
   await mcpServer.start();
 }
 
@@ -222,7 +235,8 @@ async function startPublicServer() {
             });
 
             // Create a public-profile MCP server and connect the transport
-            const mcpServer = new KleverMCPServer(contextService, 'public');
+            const chainClient = createChainClient();
+            const mcpServer = new KleverMCPServer(contextService, 'public', chainClient);
             await mcpServer.connectTransport(transport);
 
             // Handle the request
