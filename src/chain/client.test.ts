@@ -1,9 +1,14 @@
 import { jest } from '@jest/globals';
 import { KleverChainClient, NETWORK_CONFIGS } from './client.js';
 
-// Mock global fetch
+// Mock global fetch (save original and restore in afterAll)
+const originalFetch = global.fetch;
 const mockFetch = jest.fn<typeof fetch>();
 global.fetch = mockFetch;
+
+afterAll(() => {
+  global.fetch = originalFetch;
+});
 
 function jsonResponse(data: unknown, status = 200): Response {
   return {
@@ -184,6 +189,47 @@ describe('KleverChainClient', () => {
         'https://node.testnet.klever.org/asset/LPKLVKFI-3I0N',
         expect.anything()
       );
+    });
+  });
+
+  describe('getKDAInfo', () => {
+    it('fetches KDA token info for an address', async () => {
+      const kdaData = {
+        balance: 500000,
+        frozenBalance: 0,
+        lastClaim: { timestamp: 0, epoch: 0 },
+      };
+
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: kdaData, error: '', code: 'successful' })
+      );
+
+      const result = await client.getKDAInfo('klv1test', 'USDT-A1B2');
+      expect(result.balance).toBe(500000);
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://node.testnet.klever.org/address/klv1test/kda?asset=USDT-A1B2',
+        expect.anything()
+      );
+    });
+
+    it('URL-encodes the asset ID', async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { balance: 100 }, error: '', code: 'successful' })
+      );
+
+      await client.getKDAInfo('klv1test', 'LPKLVKFI-3I0N');
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://node.testnet.klever.org/address/klv1test/kda?asset=LPKLVKFI-3I0N',
+        expect.anything()
+      );
+    });
+
+    it('throws on API error', async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: null, error: 'asset not found', code: 'internal_issue' })
+      );
+
+      await expect(client.getKDAInfo('klv1test', 'FAKE-TOKEN')).rejects.toThrow('asset not found');
     });
   });
 

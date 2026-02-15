@@ -322,7 +322,7 @@ export class KleverMCPServer {
               description:
                 'Optional KDA token ID (e.g. "USDT-A1B2", "LPKLVKFI-3I0N"). Omit for KLV balance.',
             },
-            network: { type: 'string', description: networkDesc },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
           required: ['address'],
         },
@@ -345,7 +345,7 @@ export class KleverMCPServer {
               type: 'string',
               description: 'Klever address (klv1... bech32 format).',
             },
-            network: { type: 'string', description: networkDesc },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
           required: ['address'],
         },
@@ -369,7 +369,7 @@ export class KleverMCPServer {
               description:
                 'Asset identifier (e.g. "KLV", "KFI", "USDT-A1B2", "MYNFT-XY78").',
             },
-            network: { type: 'string', description: networkDesc },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
           required: ['assetId'],
         },
@@ -403,7 +403,7 @@ export class KleverMCPServer {
               description:
                 'Optional base64-encoded arguments. For addresses, encode the hex-decoded bech32 bytes. For numbers, use big-endian byte encoding.',
             },
-            network: { type: 'string', description: networkDesc },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
           required: ['scAddress', 'funcName'],
         },
@@ -426,7 +426,7 @@ export class KleverMCPServer {
               type: 'string',
               description: 'Transaction hash (hex string).',
             },
-            network: { type: 'string', description: networkDesc },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
           required: ['hash'],
         },
@@ -451,7 +451,7 @@ export class KleverMCPServer {
               description:
                 'Block number (nonce). Omit to get the latest block.',
             },
-            network: { type: 'string', description: networkDesc },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
         },
         annotations: {
@@ -469,7 +469,7 @@ export class KleverMCPServer {
         inputSchema: {
           type: 'object' as const,
           properties: {
-            network: { type: 'string', description: networkDesc },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
         },
         annotations: {
@@ -512,7 +512,7 @@ export class KleverMCPServer {
               description:
                 'Optional KDA token ID for non-KLV transfers (e.g. "USDT-A1B2"). Omit for KLV.',
             },
-            network: { type: 'string', description: networkDesc },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
           required: ['sender', 'receiver', 'amount'],
         },
@@ -546,7 +546,7 @@ export class KleverMCPServer {
               description:
                 'Optional base64-encoded init arguments for the contract constructor.',
             },
-            network: { type: 'string', description: networkDesc },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
           required: ['sender', 'wasmHex'],
         },
@@ -588,7 +588,7 @@ export class KleverMCPServer {
               description:
                 'Optional KLV amount to send with the call (smallest unit). Required for payable endpoints.',
             },
-            network: { type: 'string', description: networkDesc },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
           required: ['sender', 'scAddress', 'funcName'],
         },
@@ -617,7 +617,7 @@ export class KleverMCPServer {
               description:
                 'Amount of KLV to freeze in the smallest unit (1 KLV = 1,000,000 units).',
             },
-            network: { type: 'string', description: networkDesc },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
           required: ['sender', 'amount'],
         },
@@ -768,8 +768,13 @@ export class KleverMCPServer {
     this.server.setRequestHandler(CallToolRequestSchema, async request => {
       const { name, arguments: args } = request.params;
 
-      // Debug logging to stderr
-      console.error(`[MCP] Tool called: ${name}`, JSON.stringify(args));
+      // Debug logging to stderr (truncate large fields like wasmHex)
+      const safeArgs = args ? Object.fromEntries(
+        Object.entries(args).map(([k, v]) =>
+          typeof v === 'string' && v.length > 200 ? [k, `${v.slice(0, 100)}...(${v.length} chars)`] : [k, v]
+        )
+      ) : args;
+      console.error(`[MCP] Tool called: ${name}`, JSON.stringify(safeArgs));
 
       // Block local-only tools in public profile
       const localOnlyTools = [

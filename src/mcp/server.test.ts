@@ -6,9 +6,14 @@ import { InMemoryStorage } from '../storage/memory.js';
 import { KleverMCPServer } from './server.js';
 import { KleverChainClient } from '../chain/index.js';
 
-// Mock global fetch for chain tools
+// Mock global fetch for chain tools (save original and restore in afterAll)
+const originalFetch = global.fetch;
 const mockFetch = jest.fn<typeof fetch>();
 global.fetch = mockFetch;
+
+afterAll(() => {
+  global.fetch = originalFetch;
+});
 
 function jsonResponse(data: unknown, status = 200): Response {
   return {
@@ -643,6 +648,73 @@ describe('KleverMCPServer (local mode)', () => {
     expect(parsed.details.amount).toBe(5000000);
     expect(parsed.nextSteps).toBeDefined();
     expect(parsed.message).toContain('Unsigned');
+  });
+
+  it('deploy_sc builds unsigned deploy transaction', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ data: { nonce: 3 }, error: '', code: 'successful' })
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        data: { result: { txHash: 'deployhash', tx: 'deploy_proto' } },
+        error: '',
+        code: 'successful',
+      })
+    );
+
+    const result = await client.callTool({
+      name: 'deploy_sc',
+      arguments: { sender: 'klv1deployer', wasmHex: 'deadbeefcafe' },
+    });
+
+    const content = result.content as Array<{ type: string; text: string }>;
+    const parsed = JSON.parse(content[0].text);
+    expect(parsed.success).toBe(true);
+    expect(parsed.txHash).toBe('deployhash');
+    expect(parsed.unsignedTx).toBe('deploy_proto');
+    expect(parsed.details.sender).toBe('klv1deployer');
+    expect(parsed.details.wasmSize).toBe('6 bytes');
+    expect(parsed.details.nonce).toBe(3);
+    expect(parsed.nextSteps).toBeDefined();
+    expect(parsed.message).toContain('deploy');
+  });
+
+  it('invoke_sc builds unsigned invoke transaction', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ data: { nonce: 7 }, error: '', code: 'successful' })
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        data: { result: { txHash: 'invokehash', tx: 'invoke_proto' } },
+        error: '',
+        code: 'successful',
+      })
+    );
+
+    const result = await client.callTool({
+      name: 'invoke_sc',
+      arguments: {
+        sender: 'klv1caller',
+        scAddress: 'klv1contract',
+        funcName: 'doSomething',
+        args: ['AQID'],
+        value: 1000000,
+      },
+    });
+
+    const content = result.content as Array<{ type: string; text: string }>;
+    const parsed = JSON.parse(content[0].text);
+    expect(parsed.success).toBe(true);
+    expect(parsed.txHash).toBe('invokehash');
+    expect(parsed.unsignedTx).toBe('invoke_proto');
+    expect(parsed.details.sender).toBe('klv1caller');
+    expect(parsed.details.scAddress).toBe('klv1contract');
+    expect(parsed.details.funcName).toBe('doSomething');
+    expect(parsed.details.argsCount).toBe(1);
+    expect(parsed.details.value).toBe(1000000);
+    expect(parsed.details.nonce).toBe(7);
+    expect(parsed.nextSteps).toBeDefined();
+    expect(parsed.message).toContain('invoke');
   });
 
   it('freeze_klv builds unsigned transaction', async () => {

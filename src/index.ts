@@ -38,8 +38,17 @@ function createStorageAndService() {
   return { storageType, contextService };
 }
 
+const VALID_NETWORKS = new Set(['mainnet', 'testnet', 'devnet', 'local']);
+
 function createChainClient(): KleverChainClient {
-  const network = (process.env.KLEVER_NETWORK as KleverNetwork) || 'mainnet';
+  const envNetwork = process.env.KLEVER_NETWORK;
+  if (envNetwork && !VALID_NETWORKS.has(envNetwork)) {
+    console.error(
+      `[WARN] Invalid KLEVER_NETWORK="${envNetwork}". Valid: mainnet, testnet, devnet, local. Defaulting to mainnet.`
+    );
+  }
+  const network: KleverNetwork =
+    envNetwork && VALID_NETWORKS.has(envNetwork) ? (envNetwork as KleverNetwork) : 'mainnet';
   return new KleverChainClient({
     network,
     nodeUrl: process.env.KLEVER_NODE_URL,
