@@ -19,6 +19,18 @@ import type { KleverNetwork, VMQueryRequest } from '../chain/types.js';
 
 export type ServerProfile = 'local' | 'public';
 
+const VALID_NETWORKS = new Set<string>(['mainnet', 'testnet', 'devnet', 'local']);
+
+function validateNetwork(network: string | undefined): KleverNetwork | undefined {
+  if (network === undefined) return undefined;
+  if (!VALID_NETWORKS.has(network)) {
+    throw new Error(
+      `Invalid network "${network}". Valid options: mainnet, testnet, devnet, local.`
+    );
+  }
+  return network as KleverNetwork;
+}
+
 interface ExecError {
   message: string;
   stderr: string;
@@ -1583,7 +1595,7 @@ export class KleverMCPServer {
             const balance = await this.chainClient.getBalance(
               address,
               assetId,
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             return {
@@ -1618,7 +1630,7 @@ export class KleverMCPServer {
 
             const account = await this.chainClient.getAccount(
               address,
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             return {
@@ -1648,7 +1660,7 @@ export class KleverMCPServer {
 
             const asset = await this.chainClient.getAssetInfo(
               assetId,
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             return {
@@ -1686,7 +1698,7 @@ export class KleverMCPServer {
 
             const result = await this.chainClient.querySmartContract(
               request,
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             return {
@@ -1717,7 +1729,7 @@ export class KleverMCPServer {
 
             const tx = await this.chainClient.getTransaction(
               hash,
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             return {
@@ -1747,7 +1759,7 @@ export class KleverMCPServer {
 
             const block = await this.chainClient.getBlock(
               nonce,
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             return {
@@ -1773,7 +1785,7 @@ export class KleverMCPServer {
             console.error(`[MCP] list_validators: network=${network || 'default'}`);
 
             const validators = await this.chainClient.listValidators(
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             return {
@@ -1809,7 +1821,7 @@ export class KleverMCPServer {
 
             const nonce = await this.chainClient.getNonce(
               sender,
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             const contract: Array<{ type: number; parameter: Record<string, unknown> }> = [
@@ -1825,7 +1837,7 @@ export class KleverMCPServer {
 
             const txResult = await this.chainClient.buildTransaction(
               { type: 0, sender, nonce, contract },
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             return {
@@ -1872,7 +1884,7 @@ export class KleverMCPServer {
 
             const nonce = await this.chainClient.getNonce(
               sender,
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             const data = [wasmHex, ...(initArgs || [])];
@@ -1888,7 +1900,7 @@ export class KleverMCPServer {
 
             const txResult = await this.chainClient.buildTransaction(
               { type: 9, sender, nonce, contract, data },
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             return {
@@ -1942,7 +1954,7 @@ export class KleverMCPServer {
 
             const nonce = await this.chainClient.getNonce(
               sender,
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             const data = [funcName, ...(scArgs || [])];
@@ -1960,7 +1972,7 @@ export class KleverMCPServer {
 
             const txResult = await this.chainClient.buildTransaction(
               { type: 9, sender, nonce, contract, data },
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             return {
@@ -2007,7 +2019,7 @@ export class KleverMCPServer {
 
             const nonce = await this.chainClient.getNonce(
               sender,
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             const contract: Array<{ type: number; parameter: Record<string, unknown> }> = [
@@ -2021,7 +2033,7 @@ export class KleverMCPServer {
 
             const txResult = await this.chainClient.buildTransaction(
               { type: 2, sender, nonce, contract },
-              network as KleverNetwork | undefined
+              validateNetwork(network)
             );
 
             return {

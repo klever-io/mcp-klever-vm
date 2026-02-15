@@ -450,6 +450,18 @@ pub trait MyContract {
       }
     });
 
+    it('rejects invalid network parameter', async () => {
+      const result = await client.callTool({
+        name: 'get_balance',
+        arguments: { address: 'klv1test', network: 'staging' },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      expect(content[0].text).toContain('Invalid network');
+      expect(content[0].text).toContain('staging');
+      expect(content[0].text).toContain('mainnet, testnet, devnet, local');
+    });
+
     it('get_balance returns formatted result', async () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({ data: { balance: 5000000 }, error: '', code: 'successful' })
