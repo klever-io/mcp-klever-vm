@@ -26,6 +26,9 @@ pub trait MyContract: only_admin::OnlyAdminModule {
         self.add_admin(caller);
     }
 
+    #[upgrade]
+    fn upgrade(&self) {}
+
     #[only_admin]
     #[endpoint]
     fn admin_only_action(&self) {
@@ -43,10 +46,18 @@ pub trait MyContract: only_admin::OnlyAdminModule {
 ## Pause Module (Built-in)
 
 ```rust
+#![no_std]
+use klever_sc::imports::*;
 use klever_sc_modules::pause;
 
 #[klever_sc::contract]
 pub trait MyContract: pause::PauseModule {
+    #[init]
+    fn init(&self) {}
+
+    #[upgrade]
+    fn upgrade(&self) {}
+
     #[endpoint]
     fn do_something(&self) {
         self.require_not_paused();
@@ -59,14 +70,26 @@ pub trait MyContract: pause::PauseModule {
         // Don't check pause status for safety-critical operations
         let caller = self.blockchain().get_caller();
         let balance = self.balance(&caller).get();
+        require!(balance > 0, "Nothing to withdraw");
+
+        // Update state BEFORE external call (checks-effects-interactions)
+        self.balance(&caller).clear();
         self.send().direct_klv(&caller, &balance);
     }
+
+    #[storage_mapper("balance")]
+    fn balance(&self, addr: &ManagedAddress) -> SingleValueMapper<BigUint>;
 }
 ```
 
 ## Combining Modules
 
 ```rust
+#![no_std]
+use klever_sc::imports::*;
+use klever_sc_modules::only_admin;
+use klever_sc_modules::pause;
+
 #[klever_sc::contract]
 pub trait MyContract:
     only_admin::OnlyAdminModule
@@ -77,6 +100,9 @@ pub trait MyContract:
         let caller = self.blockchain().get_caller();
         self.add_admin(caller);
     }
+
+    #[upgrade]
+    fn upgrade(&self) {}
 
     #[only_admin]
     #[endpoint]

@@ -71,4 +71,7 @@ fn get_all_users(&self) -> MultiValueEncoded<ManagedAddress> {
     }
     result
 }
+
+#[storage_mapper("users")]
+fn users(&self) -> SetMapper<ManagedAddress>;
 ```

@@ -290,8 +290,8 @@ docker run -p 3000:3000 kleverapp/mcp-klever-vm:latest
 # URL: https://mcp.klever.org/mcp
 ```
 
-**Knowledge tools**: `search_documentation`, `query_context`, `analyze_contract`, `enhance_with_context`
-
-**On-chain tools**: `get_balance`, `get_account`, `get_asset_info`, `query_sc`, `get_transaction`, `get_block`, `list_validators`
+**Knowledge tools**: `search_documentation`, `query_context`, `get_context`, `find_similar`, `get_knowledge_stats`, `enhance_with_context`, `analyze_contract`
 
 **Project tools**: `init_klever_project`, `add_helper_scripts`
+
+**Other tools**: `add_context`

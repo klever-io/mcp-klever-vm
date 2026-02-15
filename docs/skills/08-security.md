@@ -39,6 +39,7 @@ Always allow withdrawals even when paused:
 fn emergency_withdraw(&self) {
     let caller = self.blockchain().get_caller();
     let balance = self.balance(&caller).get();
+    require!(balance > 0, "Nothing to withdraw");
     self.balance(&caller).clear();
     self.send().direct_klv(&caller, &balance);
 }
