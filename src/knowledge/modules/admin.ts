@@ -34,7 +34,7 @@ pub trait AdminModule {
 \`\`\`rust
 // In Cargo.toml:
 [dependencies.klever-sc-modules]
-version = "0.44.0"
+version = "0.45.0"  # check crates.io/crates/klever-sc for latest
 
 // In your contract file:
 use klever_sc_modules::only_admin;
@@ -83,7 +83,7 @@ src/
 // Step 1: Add dependency to Cargo.toml
 /*
 [dependencies.klever-sc-modules]
-version = "0.44.0"
+version = "0.45.0"  # check crates.io/crates/klever-sc for latest
 */
 
 // Step 2: Import the admin module
@@ -153,7 +153,7 @@ The OnlyAdminModule is a built-in Klever SDK module that provides multi-admin ac
 ### 1. Add Dependency to Cargo.toml
 \`\`\`toml
 [dependencies.klever-sc-modules]
-version = "0.44.0"
+version = "0.45.0"  # check crates.io/crates/klever-sc for latest
 \`\`\`
 
 ### 2. Import the Module
@@ -300,7 +300,7 @@ Klever VM SDK provides a pre-built admin module in the \`klever-sc-modules\` cra
 ### 1. Add Dependency to Cargo.toml
 \`\`\`toml
 [dependencies.klever-sc-modules]
-version = "0.44.0"
+version = "0.45.0"  # check crates.io/crates/klever-sc for latest
 \`\`\`
 
 ### 2. Import the Module
