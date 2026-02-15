@@ -195,9 +195,13 @@ describe('KleverChainClient', () => {
   describe('getKDAInfo', () => {
     it('fetches KDA token info for an address', async () => {
       const kdaData = {
-        balance: 500000,
-        frozenBalance: 0,
-        lastClaim: { timestamp: 0, epoch: 0 },
+        address: 'klv1test',
+        asset: 'USDT-A1B2',
+        userKDA: {
+          balance: 500000,
+          frozenBalance: 0,
+          LastClaim: { timestamp: 0, epoch: 0 },
+        },
       };
 
       mockFetch.mockResolvedValueOnce(
@@ -205,7 +209,9 @@ describe('KleverChainClient', () => {
       );
 
       const result = await client.getKDAInfo('klv1test', 'USDT-A1B2');
-      expect(result.balance).toBe(500000);
+      expect(result.address).toBe('klv1test');
+      expect(result.asset).toBe('USDT-A1B2');
+      expect(result.userKDA.balance).toBe(500000);
       expect(mockFetch).toHaveBeenCalledWith(
         'https://node.testnet.klever.org/address/klv1test/kda?asset=USDT-A1B2',
         expect.anything()
