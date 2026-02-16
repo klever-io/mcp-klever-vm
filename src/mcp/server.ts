@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -18,6 +19,13 @@ import { KleverChainClient } from '../chain/index.js';
 import type { KleverNetwork, VMQueryRequest } from '../chain/types.js';
 
 export type ServerProfile = 'local' | 'public';
+
+/**
+ * In MCP mode, stdout is reserved for the JSON-RPC protocol (stdio transport).
+ * Any non-protocol output on stdout breaks the MCP client. All logging must go
+ * to stderr via console.error. This alias improves readability for info-level logs.
+ */
+const log = (...args: unknown[]) => console.error(...args);
 
 const VALID_NETWORKS = new Set<string>(['mainnet', 'testnet', 'devnet', 'local']);
 
@@ -403,6 +411,11 @@ export class KleverMCPServer {
               description:
                 'Optional base64-encoded arguments. For addresses, encode the hex-decoded bech32 bytes. For numbers, use big-endian byte encoding.',
             },
+            caller: {
+              type: 'string',
+              description:
+                'Optional caller address (klv1... bech32 format). Some view functions use the caller to look up address-keyed storage mappers.',
+            },
             network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
           required: ['scAddress', 'funcName'],
@@ -527,7 +540,7 @@ export class KleverMCPServer {
       {
         name: 'deploy_sc',
         description:
-          'Build an unsigned smart contract deployment transaction for the Klever blockchain. Provide the WASM bytecode as a hex string. Returns the unsigned transaction for client-side signing. The MCP server NEVER handles private keys.',
+          'Build an unsigned smart contract deployment transaction for the Klever blockchain. Provide either wasmPath (preferred — reads the file server-side) or wasmHex. Returns the unsigned transaction for client-side signing. The MCP server NEVER handles private keys.',
         inputSchema: {
           type: 'object' as const,
           properties: {
@@ -535,10 +548,15 @@ export class KleverMCPServer {
               type: 'string',
               description: 'Deployer address (klv1... bech32 format).',
             },
+            wasmPath: {
+              type: 'string',
+              description:
+                'Absolute path to the compiled WASM file (preferred over wasmHex to avoid loading large binaries into AI context).',
+            },
             wasmHex: {
               type: 'string',
               description:
-                'Smart contract WASM bytecode as a hex-encoded string.',
+                'Smart contract WASM bytecode as a hex-encoded string. Use wasmPath instead for large contracts.',
             },
             initArgs: {
               type: 'array',
@@ -548,7 +566,7 @@ export class KleverMCPServer {
             },
             network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
-          required: ['sender', 'wasmHex'],
+          required: ['sender'],
         },
         annotations: {
           title: 'Build Deploy SC Transaction',
@@ -582,11 +600,11 @@ export class KleverMCPServer {
               items: { type: 'string' },
               description: 'Optional base64-encoded arguments.',
             },
-            value: {
-              type: 'integer',
-              minimum: 0,
+            callValue: {
+              type: 'object',
+              additionalProperties: { type: 'integer' },
               description:
-                'Optional KLV amount to send with the call (smallest unit). Required for payable endpoints.',
+                'Optional token amounts to send with the call, as a map of token ID to amount (e.g. {"KLV": 1000000}). Required for payable endpoints.',
             },
             network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
           },
@@ -774,7 +792,7 @@ export class KleverMCPServer {
           typeof v === 'string' && v.length > 200 ? [k, `${v.slice(0, 100)}...(${v.length} chars)`] : [k, v]
         )
       ) : args;
-      console.error(`[MCP] Tool called: ${name}`, JSON.stringify(safeArgs));
+      log(`[MCP] Tool called: ${name}`, JSON.stringify(safeArgs));
 
       // Block local-only tools in public profile
       const localOnlyTools = [
@@ -828,7 +846,7 @@ export class KleverMCPServer {
         switch (name) {
           case 'query_context': {
             const params = QueryContextSchema.parse(args);
-            console.error(`[MCP] Query params:`, JSON.stringify(params));
+            log(`[MCP] Query params:`, JSON.stringify(params));
             const result = await this.contextService.query(params);
             console.error(
               `[MCP] Query returned ${result.results.length} out of ${result.total} total results`
@@ -986,7 +1004,7 @@ export class KleverMCPServer {
               }
             }
 
-            console.error(`[MCP] Knowledge stats: ${stats.total} total contexts`);
+            log(`[MCP] Knowledge stats: ${stats.total} total contexts`);
 
             return {
               content: [
@@ -1008,11 +1026,11 @@ export class KleverMCPServer {
           case 'enhance_with_context': {
             const { query, autoInclude = true } = args as { query: string; autoInclude?: boolean };
 
-            console.error(`[MCP] Enhancing query with context: "${query}"`);
+            log(`[MCP] Enhancing query with context: "${query}"`);
 
             // Extract keywords for better matching
             const keywords = this.extractKeywords(query);
-            console.error(`[MCP] Extracted keywords: ${keywords.join(', ')}`);
+            log(`[MCP] Extracted keywords: ${keywords.join(', ')}`);
 
             // Query for relevant contexts
             const searchQuery = keywords.join(' ');
@@ -1022,7 +1040,7 @@ export class KleverMCPServer {
               offset: 0,
             });
 
-            console.error(`[MCP] Found ${result.results.length} relevant contexts`);
+            log(`[MCP] Found ${result.results.length} relevant contexts`);
 
             // Format the enhanced response
             let enhancedResponse = `Query: "${query}"\n\n`;
@@ -1069,7 +1087,7 @@ export class KleverMCPServer {
 
           case 'search_documentation': {
             const { query, category } = args as { query: string; category?: string };
-            console.error(`[MCP] Documentation search: "${query}" (category: ${category || 'all'})`);
+            log(`[MCP] Documentation search: "${query}" (category: ${category || 'all'})`);
 
             const { CATEGORY_TAG_MAP } = await import('./resources.js');
 
@@ -1121,7 +1139,7 @@ export class KleverMCPServer {
               contractName?: string;
             };
             const label = contractName || 'contract';
-            console.error(`[MCP] Analyzing contract: ${label} (${sourceCode.length} chars)`);
+            log(`[MCP] Analyzing contract: ${label} (${sourceCode.length} chars)`);
 
             const findings = await this.analyzeContractSource(sourceCode);
 
@@ -1204,17 +1222,17 @@ export class KleverMCPServer {
               cmdArgs.push('--no-move');
             }
 
-            console.error(`[MCP] Running: ${scriptPath} ${cmdArgs.join(' ')}`);
+            log(`[MCP] Running: ${scriptPath} ${cmdArgs.join(' ')}`);
 
             try {
-              console.error(`[MCP] Current working directory: ${process.cwd()}`);
+              log(`[MCP] Current working directory: ${process.cwd()}`);
 
               // Check if script exists
               try {
                 await access(scriptPath);
-                console.error(`[MCP] Script path exists: true`);
+                log(`[MCP] Script path exists: true`);
               } catch {
-                console.error(`[MCP] Script path exists: false`);
+                log(`[MCP] Script path exists: false`);
               }
 
               // Execute the script using execFile to safely handle paths with spaces
@@ -1223,10 +1241,10 @@ export class KleverMCPServer {
                 env: { ...process.env },
               });
 
-              console.error(`[MCP] Script stdout length: ${stdout.length}`);
-              console.error(`[MCP] Script output: ${stdout}`);
+              log(`[MCP] Script stdout length: ${stdout.length}`);
+              log(`[MCP] Script output: ${stdout}`);
               if (stderr) {
-                console.error(`[MCP] Script stderr: ${stderr}`);
+                log(`[MCP] Script stderr: ${stderr}`);
               }
 
               // Clean up temp script
@@ -1237,7 +1255,7 @@ export class KleverMCPServer {
                 '-c',
                 'ls -la scripts/ 2>/dev/null || echo "No scripts directory"',
               ]);
-              console.error(`[MCP] Scripts directory check: ${checkResult.stdout}`);
+              log(`[MCP] Scripts directory check: ${checkResult.stdout}`);
 
               return {
                 content: [
@@ -1279,8 +1297,8 @@ export class KleverMCPServer {
               // Clean up temp script on error
               await unlink(scriptPath).catch(() => {});
 
-              console.error(`[MCP] Project init error: ${err.message}`);
-              console.error(`[MCP] Error details:`, err);
+              log(`[MCP] Project init error: ${err.message}`);
+              log(`[MCP] Error details:`, err);
 
               return {
                 content: [
@@ -1338,7 +1356,7 @@ export class KleverMCPServer {
             const { createHelperScriptsScript } = await import('../utils/project-init-script.js');
             const execFileHelper = promisifyUtil(execFileCb);
 
-            console.error(`[MCP] Adding helper scripts to existing project`);
+            log(`[MCP] Adding helper scripts to existing project`);
 
             // Create the helper scripts generation script
             const helperScriptContent = createHelperScriptsScript();
@@ -1348,10 +1366,10 @@ export class KleverMCPServer {
             await wf(helperScriptPath, helperScriptContent, 'utf8');
             await ch(helperScriptPath, '755');
 
-            console.error(`[MCP] Running: ${helperScriptPath}`);
+            log(`[MCP] Running: ${helperScriptPath}`);
 
             try {
-              console.error(`[MCP] Current working directory: ${process.cwd()}`);
+              log(`[MCP] Current working directory: ${process.cwd()}`);
 
               // Execute the script using execFile to safely handle paths with spaces
               const { stdout, stderr } = await execFileHelper('/bin/bash', [helperScriptPath], {
@@ -1359,9 +1377,9 @@ export class KleverMCPServer {
                 env: { ...process.env },
               });
 
-              console.error(`[MCP] Script stdout: ${stdout}`);
+              log(`[MCP] Script stdout: ${stdout}`);
               if (stderr) {
-                console.error(`[MCP] Script stderr: ${stderr}`);
+                log(`[MCP] Script stderr: ${stderr}`);
               }
 
               // Clean up temp script
@@ -1372,7 +1390,7 @@ export class KleverMCPServer {
                 '-c',
                 'ls -la scripts/ 2>/dev/null || echo "No scripts directory"',
               ]);
-              console.error(`[MCP] Scripts directory check: ${checkResult.stdout}`);
+              log(`[MCP] Scripts directory check: ${checkResult.stdout}`);
 
               return {
                 content: [
@@ -1411,8 +1429,8 @@ export class KleverMCPServer {
               // Clean up temp script on error
               await ul(helperScriptPath).catch(() => {});
 
-              console.error(`[MCP] Add helper scripts error: ${err.message}`);
-              console.error(`[MCP] Error details:`, err);
+              log(`[MCP] Add helper scripts error: ${err.message}`);
+              log(`[MCP] Error details:`, err);
 
               return {
                 content: [
@@ -1446,7 +1464,7 @@ export class KleverMCPServer {
             const { createCheckSdkScript } = await import('../utils/sdk-install-script.js');
             const execFileSdkAsync = promisifySdk(execFileSdk);
 
-            console.error(`[MCP] Checking SDK status`);
+            log(`[MCP] Checking SDK status`);
 
             const scriptContent = createCheckSdkScript();
             const scriptPath = joinSdk(tdSdk(), `check-sdk-${Date.now()}.sh`);
@@ -1460,13 +1478,13 @@ export class KleverMCPServer {
               });
 
               if (stderr) {
-                console.error(`[MCP] Check SDK stderr: ${stderr}`);
+                log(`[MCP] Check SDK stderr: ${stderr}`);
               }
 
               await ulSdk(scriptPath);
 
               const status = JSON.parse(stdout.trim());
-              console.error(`[MCP] SDK status: ksc=${status.ksc?.installed}, koperator=${status.koperator?.installed}`);
+              log(`[MCP] SDK status: ksc=${status.ksc?.installed}, koperator=${status.koperator?.installed}`);
 
               return {
                 content: [
@@ -1487,7 +1505,7 @@ export class KleverMCPServer {
               const err = toExecError(error);
               await ulSdk(scriptPath).catch(() => {});
 
-              console.error(`[MCP] Check SDK error: ${err.message}`);
+              log(`[MCP] Check SDK error: ${err.message}`);
 
               return {
                 content: [
@@ -1521,7 +1539,7 @@ export class KleverMCPServer {
             const { tool: toolArg = 'all' } = args as { tool?: string };
             const toolChoice = ['ksc', 'koperator', 'all'].includes(toolArg) ? toolArg : 'all';
 
-            console.error(`[MCP] Installing SDK: ${toolChoice}`);
+            log(`[MCP] Installing SDK: ${toolChoice}`);
 
             const scriptContent = createInstallSdkScript(toolChoice);
             const scriptPath = joinInst(tdInst(), `install-sdk-${Date.now()}.sh`);
@@ -1536,13 +1554,13 @@ export class KleverMCPServer {
               });
 
               if (stderr) {
-                console.error(`[MCP] Install SDK stderr: ${stderr}`);
+                log(`[MCP] Install SDK stderr: ${stderr}`);
               }
 
               await ulInst(scriptPath);
 
               const result = JSON.parse(stdout.trim());
-              console.error(`[MCP] Install SDK result: ${JSON.stringify(result)}`);
+              log(`[MCP] Install SDK result: ${JSON.stringify(result)}`);
 
               return {
                 content: [
@@ -1563,7 +1581,7 @@ export class KleverMCPServer {
               const err = toExecError(error);
               await ulInst(scriptPath).catch(() => {});
 
-              console.error(`[MCP] Install SDK error: ${err.message}`);
+              log(`[MCP] Install SDK error: ${err.message}`);
 
               return {
                 content: [
@@ -1595,7 +1613,7 @@ export class KleverMCPServer {
               assetId?: string;
               network?: string;
             };
-            console.error(`[MCP] get_balance: ${address} asset=${assetId || 'KLV'} network=${network || 'default'}`);
+            log(`[MCP] get_balance: ${address} asset=${assetId || 'KLV'} network=${network || 'default'}`);
 
             const balance = await this.chainClient.getBalance(
               address,
@@ -1631,7 +1649,7 @@ export class KleverMCPServer {
               address: string;
               network?: string;
             };
-            console.error(`[MCP] get_account: ${address} network=${network || 'default'}`);
+            log(`[MCP] get_account: ${address} network=${network || 'default'}`);
 
             const account = await this.chainClient.getAccount(
               address,
@@ -1661,7 +1679,7 @@ export class KleverMCPServer {
               assetId: string;
               network?: string;
             };
-            console.error(`[MCP] get_asset_info: ${assetId} network=${network || 'default'}`);
+            log(`[MCP] get_asset_info: ${assetId} network=${network || 'default'}`);
 
             const asset = await this.chainClient.getAssetInfo(
               assetId,
@@ -1687,18 +1705,20 @@ export class KleverMCPServer {
           }
 
           case 'query_sc': {
-            const { scAddress, funcName, args: scArgs, network } = args as {
+            const { scAddress, funcName, args: scArgs, caller, network } = args as {
               scAddress: string;
               funcName: string;
               args?: string[];
+              caller?: string;
               network?: string;
             };
-            console.error(`[MCP] query_sc: ${scAddress}::${funcName} network=${network || 'default'}`);
+            log(`[MCP] query_sc: ${scAddress}::${funcName} network=${network || 'default'}`);
 
             const request: VMQueryRequest = {
               scAddress,
               funcName,
               args: scArgs,
+              ...(caller ? { caller } : {}),
             };
 
             const result = await this.chainClient.querySmartContract(
@@ -1730,7 +1750,7 @@ export class KleverMCPServer {
               hash: string;
               network?: string;
             };
-            console.error(`[MCP] get_transaction: ${hash} network=${network || 'default'}`);
+            log(`[MCP] get_transaction: ${hash} network=${network || 'default'}`);
 
             const tx = await this.chainClient.getTransaction(
               hash,
@@ -1760,7 +1780,7 @@ export class KleverMCPServer {
               nonce?: number;
               network?: string;
             };
-            console.error(`[MCP] get_block: nonce=${nonce ?? 'latest'} network=${network || 'default'}`);
+            log(`[MCP] get_block: nonce=${nonce ?? 'latest'} network=${network || 'default'}`);
 
             const block = await this.chainClient.getBlock(
               nonce,
@@ -1787,7 +1807,7 @@ export class KleverMCPServer {
 
           case 'list_validators': {
             const { network } = args as { network?: string };
-            console.error(`[MCP] list_validators: network=${network || 'default'}`);
+            log(`[MCP] list_validators: network=${network || 'default'}`);
 
             const validators = await this.chainClient.listValidators(
               validateNetwork(network)
@@ -1822,26 +1842,10 @@ export class KleverMCPServer {
               assetId?: string;
               network?: string;
             };
-            console.error(`[MCP] send_transfer: ${sender} -> ${receiver} amount=${amount} asset=${assetId || 'KLV'}`);
+            log(`[MCP] send_transfer: ${sender} -> ${receiver} amount=${amount} asset=${assetId || 'KLV'}`);
 
-            const nonce = await this.chainClient.getNonce(
-              sender,
-              validateNetwork(network)
-            );
-
-            const contract: Array<{ type: number; parameter: Record<string, unknown> }> = [
-              {
-                type: 0, // Transfer
-                parameter: {
-                  amount,
-                  toAddress: receiver,
-                  ...(assetId ? { assetId } : {}),
-                },
-              },
-            ];
-
-            const txResult = await this.chainClient.buildTransaction(
-              { type: 0, sender, nonce, contract },
+            const txResult = await this.chainClient.buildTransfer(
+              { sender, receiver, amount, assetId },
               validateNetwork(network)
             );
 
@@ -1861,7 +1865,6 @@ export class KleverMCPServer {
                         receiver,
                         amount,
                         assetId: assetId || 'KLV',
-                        nonce,
                       },
                       network: network || this.chainClient.getDefaultNetwork(),
                       nextSteps: [
@@ -1879,32 +1882,44 @@ export class KleverMCPServer {
           }
 
           case 'deploy_sc': {
-            const { sender, wasmHex, initArgs, network } = args as {
+            const { sender, wasmPath, wasmHex, initArgs, network } = args as {
               sender: string;
-              wasmHex: string;
+              wasmPath?: string;
+              wasmHex?: string;
               initArgs?: string[];
               network?: string;
             };
-            console.error(`[MCP] deploy_sc: sender=${sender} wasmSize=${wasmHex.length / 2} bytes`);
 
-            const nonce = await this.chainClient.getNonce(
-              sender,
-              validateNetwork(network)
-            );
+            let resolvedWasmHex: string;
+            if (wasmPath) {
+              const wasmBuffer = await readFile(wasmPath);
+              resolvedWasmHex = wasmBuffer.toString('hex');
+            } else if (wasmHex) {
+              resolvedWasmHex = wasmHex;
+            } else {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify(
+                      {
+                        success: false,
+                        error: 'Either wasmPath or wasmHex must be provided.',
+                        suggestion:
+                          'Use wasmPath to specify the path to the compiled .wasm file (preferred), or wasmHex to provide the hex-encoded bytecode directly.',
+                      },
+                      null,
+                      2
+                    ),
+                  },
+                ],
+              };
+            }
 
-            const data = [wasmHex, ...(initArgs || [])];
+            log(`[MCP] deploy_sc: sender=${sender} wasmSize=${resolvedWasmHex.length / 2} bytes`);
 
-            const contract: Array<{ type: number; parameter: Record<string, unknown> }> = [
-              {
-                type: 9, // SmartContract (Deploy)
-                parameter: {
-                  type: 0, // Deploy
-                },
-              },
-            ];
-
-            const txResult = await this.chainClient.buildTransaction(
-              { type: 9, sender, nonce, contract, data },
+            const txResult = await this.chainClient.buildDeploy(
+              { sender, wasmHex: resolvedWasmHex, initArgs },
               validateNetwork(network)
             );
 
@@ -1921,8 +1936,8 @@ export class KleverMCPServer {
                       unsignedTx: txResult.result.tx,
                       details: {
                         sender,
-                        wasmSize: `${wasmHex.length / 2} bytes`,
-                        nonce,
+                        wasmSize: `${resolvedWasmHex.length / 2} bytes`,
+                        ...(wasmPath ? { wasmPath } : {}),
                       },
                       network: network || this.chainClient.getDefaultNetwork(),
                       nextSteps: [
@@ -1945,38 +1960,20 @@ export class KleverMCPServer {
               scAddress,
               funcName,
               args: scArgs,
-              value,
+              callValue,
               network,
             } = args as {
               sender: string;
               scAddress: string;
               funcName: string;
               args?: string[];
-              value?: number;
+              callValue?: Record<string, number>;
               network?: string;
             };
-            console.error(`[MCP] invoke_sc: ${sender} -> ${scAddress}::${funcName}`);
+            log(`[MCP] invoke_sc: ${sender} -> ${scAddress}::${funcName}`);
 
-            const nonce = await this.chainClient.getNonce(
-              sender,
-              validateNetwork(network)
-            );
-
-            const data = [funcName, ...(scArgs || [])];
-
-            const contract: Array<{ type: number; parameter: Record<string, unknown> }> = [
-              {
-                type: 9, // SmartContract (Invoke)
-                parameter: {
-                  type: 1, // Invoke
-                  callValue: value ? { amount: value } : undefined,
-                  address: scAddress,
-                },
-              },
-            ];
-
-            const txResult = await this.chainClient.buildTransaction(
-              { type: 9, sender, nonce, contract, data },
+            const txResult = await this.chainClient.buildInvoke(
+              { sender, scAddress, funcName, args: scArgs, callValue },
               validateNetwork(network)
             );
 
@@ -1996,8 +1993,7 @@ export class KleverMCPServer {
                         scAddress,
                         funcName,
                         argsCount: scArgs?.length || 0,
-                        value: value || 0,
-                        nonce,
+                        callValue: callValue || {},
                       },
                       network: network || this.chainClient.getDefaultNetwork(),
                       nextSteps: [
@@ -2020,24 +2016,10 @@ export class KleverMCPServer {
               amount: number;
               network?: string;
             };
-            console.error(`[MCP] freeze_klv: ${sender} amount=${amount}`);
+            log(`[MCP] freeze_klv: ${sender} amount=${amount}`);
 
-            const nonce = await this.chainClient.getNonce(
-              sender,
-              validateNetwork(network)
-            );
-
-            const contract: Array<{ type: number; parameter: Record<string, unknown> }> = [
-              {
-                type: 2, // Freeze
-                parameter: {
-                  amount,
-                },
-              },
-            ];
-
-            const txResult = await this.chainClient.buildTransaction(
-              { type: 2, sender, nonce, contract },
+            const txResult = await this.chainClient.buildFreeze(
+              { sender, amount },
               validateNetwork(network)
             );
 
@@ -2056,7 +2038,6 @@ export class KleverMCPServer {
                         sender,
                         amount,
                         formattedAmount: `${(amount / 1_000_000).toFixed(6)} KLV`,
-                        nonce,
                       },
                       network: network || this.chainClient.getDefaultNetwork(),
                       nextSteps: [
@@ -2147,7 +2128,7 @@ export class KleverMCPServer {
 
   async connectTransport(transport: Transport) {
     await this.server.connect(transport);
-    console.error(`[MCP] Klever MCP Server connected (profile: ${this.profile})`);
+    log(`[MCP] Klever MCP Server connected (profile: ${this.profile})`);
   }
 
   async start() {

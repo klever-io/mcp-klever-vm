@@ -5,6 +5,10 @@
  * Uses native fetch (Node 18+) — no external HTTP dependencies.
  */
 
+import {
+  ContractType,
+  SCType,
+} from './types.js';
 import type {
   KleverNetwork,
   NetworkConfig,
@@ -21,6 +25,10 @@ import type {
   NodeStatusData,
   TransactionBuildRequest,
   TransactionBuildData,
+  TransferParams,
+  DeployParams,
+  InvokeParams,
+  FreezeParams,
 } from './types.js';
 
 /** Network URL mapping */
@@ -86,22 +94,19 @@ export class KleverChainClient {
 
   // ─── Core HTTP Methods ───────────────────────────────────
 
-  private async fetchJson<T>(url: string): Promise<T> {
+  private async fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: { Accept: 'application/json' },
-      });
+      const response = await fetch(url, { ...init, signal: controller.signal });
 
       if (!response.ok) {
         const text = await response.text().catch(() => '');
         throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
       }
 
-      return (await response.json()) as T;
+      return response;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error(`Request timed out after ${this.timeout}ms: ${url}`);
@@ -112,35 +117,23 @@ export class KleverChainClient {
     }
   }
 
+  private async fetchJson<T>(url: string): Promise<T> {
+    const response = await this.fetchWithTimeout(url, {
+      headers: { Accept: 'application/json' },
+    });
+    return (await response.json()) as T;
+  }
+
   private async postJson<T>(url: string, body: unknown): Promise<T> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) {
-        const text = await response.text().catch(() => '');
-        throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
-      }
-
-      return (await response.json()) as T;
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timed out after ${this.timeout}ms: ${url}`);
-      }
-      throw error;
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    const response = await this.fetchWithTimeout(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    return (await response.json()) as T;
   }
 
   /** Unwrap a Klever API response, throwing on error */
@@ -233,6 +226,88 @@ export class KleverChainClient {
       request
     );
     return this.unwrap(response, `querySmartContract(${request.scAddress}::${request.funcName})`);
+  }
+
+  // ─── Transaction Builder Methods ────────────────────────
+
+  /** Build an unsigned transfer (KLV or KDA) transaction */
+  async buildTransfer(
+    params: TransferParams,
+    network?: KleverNetwork
+  ): Promise<TransactionBuildData> {
+    const nonce = await this.getNonce(params.sender, network);
+
+    const contracts: Array<Record<string, unknown>> = [
+      {
+        amount: params.amount,
+        toAddress: params.receiver,
+        ...(params.assetId ? { assetId: params.assetId } : {}),
+      },
+    ];
+
+    return this.buildTransaction(
+      { type: ContractType.Transfer, sender: params.sender, nonce, contracts },
+      network
+    );
+  }
+
+  /** Build an unsigned smart contract deploy transaction */
+  async buildDeploy(
+    params: DeployParams,
+    network?: KleverNetwork
+  ): Promise<TransactionBuildData> {
+    const nonce = await this.getNonce(params.sender, network);
+
+    const data = [params.wasmHex, ...(params.initArgs || [])];
+
+    const contracts: Array<Record<string, unknown>> = [
+      { scType: SCType.SCDeploy },
+    ];
+
+    return this.buildTransaction(
+      { type: ContractType.SmartContract, sender: params.sender, nonce, contracts, data },
+      network
+    );
+  }
+
+  /** Build an unsigned smart contract invoke transaction */
+  async buildInvoke(
+    params: InvokeParams,
+    network?: KleverNetwork
+  ): Promise<TransactionBuildData> {
+    const nonce = await this.getNonce(params.sender, network);
+
+    const data = [params.funcName, ...(params.args || [])];
+
+    const contracts: Array<Record<string, unknown>> = [
+      {
+        scType: SCType.SCInvoke,
+        address: params.scAddress,
+        ...(params.callValue ? { callValue: params.callValue } : {}),
+      },
+    ];
+
+    return this.buildTransaction(
+      { type: ContractType.SmartContract, sender: params.sender, nonce, contracts, data },
+      network
+    );
+  }
+
+  /** Build an unsigned freeze KLV transaction */
+  async buildFreeze(
+    params: FreezeParams,
+    network?: KleverNetwork
+  ): Promise<TransactionBuildData> {
+    const nonce = await this.getNonce(params.sender, network);
+
+    const contracts: Array<Record<string, unknown>> = [
+      { amount: params.amount },
+    ];
+
+    return this.buildTransaction(
+      { type: ContractType.Freeze, sender: params.sender, nonce, contracts },
+      network
+    );
   }
 
   // ─── Transaction Operations ──────────────────────────────

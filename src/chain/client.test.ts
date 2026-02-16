@@ -407,11 +407,159 @@ describe('KleverChainClient', () => {
         type: 0,
         sender: 'klv1sender',
         nonce: 5,
-        contract: [{ type: 0, parameter: { amount: 1000000, toAddress: 'klv1receiver' } }],
+        contracts: [{ amount: 1000000, toAddress: 'klv1receiver' }],
       });
 
       expect(result.result.txHash).toBe('hash123');
       expect(result.result.tx).toBe('proto_encoded_tx');
+    });
+  });
+
+  describe('querySmartContract with caller', () => {
+    it('passes caller field in VM query', async () => {
+      const vmResult = {
+        returnData: ['AQID'],
+        returnCode: 'ok',
+        returnMessage: '',
+      };
+
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: vmResult, error: '', code: 'successful' })
+      );
+
+      await client.querySmartContract({
+        scAddress: 'klv1contract',
+        funcName: 'getBalance',
+        caller: 'klv1caller',
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://node.testnet.klever.org/vm/query',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            scAddress: 'klv1contract',
+            funcName: 'getBalance',
+            caller: 'klv1caller',
+          }),
+        })
+      );
+    });
+  });
+
+  describe('buildTransfer', () => {
+    it('fetches nonce and builds a transfer transaction', async () => {
+      // Mock getNonce
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { nonce: 10 }, error: '', code: 'successful' })
+      );
+      // Mock buildTransaction
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          data: { result: { txHash: 'hash1', tx: 'proto1' } },
+          error: '',
+          code: 'successful',
+        })
+      );
+
+      const result = await client.buildTransfer({
+        sender: 'klv1sender',
+        receiver: 'klv1receiver',
+        amount: 5000000,
+      });
+
+      expect(result.result.txHash).toBe('hash1');
+      // Verify the buildTransaction POST body
+      const postCall = mockFetch.mock.calls[1];
+      const body = JSON.parse(postCall[1]?.body as string);
+      expect(body.type).toBe(0);
+      expect(body.contracts[0].amount).toBe(5000000);
+      expect(body.contracts[0].toAddress).toBe('klv1receiver');
+    });
+  });
+
+  describe('buildDeploy', () => {
+    it('builds a deploy transaction with correct type 63 and scType 1', async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { nonce: 3 }, error: '', code: 'successful' })
+      );
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          data: { result: { txHash: 'deploy1', tx: 'deploy_proto' } },
+          error: '',
+          code: 'successful',
+        })
+      );
+
+      const result = await client.buildDeploy({
+        sender: 'klv1deployer',
+        wasmHex: 'deadbeef',
+      });
+
+      expect(result.result.txHash).toBe('deploy1');
+      const postCall = mockFetch.mock.calls[1];
+      const body = JSON.parse(postCall[1]?.body as string);
+      expect(body.type).toBe(63);
+      expect(body.contracts[0].scType).toBe(1);
+      expect(body.data).toEqual(['deadbeef']);
+    });
+  });
+
+  describe('buildInvoke', () => {
+    it('builds an invoke transaction with correct type 63, scType 0, and callValue map', async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { nonce: 7 }, error: '', code: 'successful' })
+      );
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          data: { result: { txHash: 'invoke1', tx: 'invoke_proto' } },
+          error: '',
+          code: 'successful',
+        })
+      );
+
+      const result = await client.buildInvoke({
+        sender: 'klv1caller',
+        scAddress: 'klv1contract',
+        funcName: 'doSomething',
+        args: ['AQID'],
+        callValue: { KLV: 1000000 },
+      });
+
+      expect(result.result.txHash).toBe('invoke1');
+      const postCall = mockFetch.mock.calls[1];
+      const body = JSON.parse(postCall[1]?.body as string);
+      expect(body.type).toBe(63);
+      expect(body.contracts[0].scType).toBe(0);
+      expect(body.contracts[0].address).toBe('klv1contract');
+      expect(body.contracts[0].callValue).toEqual({ KLV: 1000000 });
+      expect(body.data).toEqual(['doSomething', 'AQID']);
+    });
+  });
+
+  describe('buildFreeze', () => {
+    it('builds a freeze transaction with correct type 4', async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { nonce: 5 }, error: '', code: 'successful' })
+      );
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          data: { result: { txHash: 'freeze1', tx: 'freeze_proto' } },
+          error: '',
+          code: 'successful',
+        })
+      );
+
+      const result = await client.buildFreeze({
+        sender: 'klv1sender',
+        amount: 10000000,
+      });
+
+      expect(result.result.txHash).toBe('freeze1');
+      const postCall = mockFetch.mock.calls[1];
+      const body = JSON.parse(postCall[1]?.body as string);
+      expect(body.type).toBe(4);
+      expect(body.contracts[0].amount).toBe(10000000);
     });
   });
 

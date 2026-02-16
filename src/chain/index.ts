@@ -1,5 +1,9 @@
 export { KleverChainClient, NETWORK_CONFIGS } from './client.js';
 export type { ChainClientOptions } from './client.js';
+export {
+  ContractType,
+  SCType,
+} from './types.js';
 export type {
   KleverNetwork,
   NetworkConfig,
@@ -16,4 +20,8 @@ export type {
   NodeStatusData,
   TransactionBuildRequest,
   TransactionBuildData,
+  TransferParams,
+  DeployParams,
+  InvokeParams,
+  FreezeParams,
 } from './types.js';

@@ -108,6 +108,7 @@ export interface VMQueryRequest {
   scAddress: string;
   funcName: string;
   args?: string[];
+  caller?: string;
 }
 
 /** VM query response from POST /vm/query */
@@ -176,20 +177,66 @@ export interface NodeStatusData {
   [key: string]: unknown;
 }
 
+/**
+ * Klever contract type numbers (from transaction.proto).
+ *
+ * TransferContractType  = 0
+ * FreezeContractType    = 4
+ * SmartContractType     = 63
+ */
+export const ContractType = {
+  Transfer: 0,
+  Freeze: 4,
+  SmartContract: 63,
+} as const;
+
+/** SmartContract sub-types (from contracts.proto SCType enum) */
+export const SCType = {
+  SCInvoke: 0,
+  SCDeploy: 1,
+} as const;
+
 /** Transaction build request for POST /transaction/send */
 export interface TransactionBuildRequest {
   type: number;
   sender: string;
   nonce: number;
-  contract: Array<{
-    type: number;
-    parameter: Record<string, unknown>;
-  }>;
+  contracts: Array<Record<string, unknown>>;
   data?: string[];
   kdaFee?: {
     kda: string;
     amount: number;
   };
+}
+
+/** Parameters for building a transfer transaction */
+export interface TransferParams {
+  sender: string;
+  receiver: string;
+  amount: number;
+  assetId?: string;
+}
+
+/** Parameters for building a deploy SC transaction */
+export interface DeployParams {
+  sender: string;
+  wasmHex: string;
+  initArgs?: string[];
+}
+
+/** Parameters for building an invoke SC transaction */
+export interface InvokeParams {
+  sender: string;
+  scAddress: string;
+  funcName: string;
+  args?: string[];
+  callValue?: Record<string, number>;
+}
+
+/** Parameters for building a freeze KLV transaction */
+export interface FreezeParams {
+  sender: string;
+  amount: number;
 }
 
 /** Transaction build response from POST /transaction/send */

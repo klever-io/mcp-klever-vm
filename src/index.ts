@@ -43,6 +43,7 @@ const VALID_NETWORKS = new Set(['mainnet', 'testnet', 'devnet', 'local']);
 function createChainClient(): KleverChainClient {
   const envNetwork = process.env.KLEVER_NETWORK;
   if (envNetwork && !VALID_NETWORKS.has(envNetwork)) {
+    // In MCP mode stdout is reserved for the JSON-RPC protocol; stderr is the only safe log channel.
     console.error(
       `[WARN] Invalid KLEVER_NETWORK="${envNetwork}". Valid: mainnet, testnet, devnet, local. Defaulting to mainnet.`
     );

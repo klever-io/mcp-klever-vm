@@ -674,9 +674,20 @@ describe('KleverMCPServer (local mode)', () => {
     expect(parsed.unsignedTx).toBe('deploy_proto');
     expect(parsed.details.sender).toBe('klv1deployer');
     expect(parsed.details.wasmSize).toBe('6 bytes');
-    expect(parsed.details.nonce).toBe(3);
     expect(parsed.nextSteps).toBeDefined();
     expect(parsed.message).toContain('deploy');
+  });
+
+  it('deploy_sc requires wasmPath or wasmHex', async () => {
+    const result = await client.callTool({
+      name: 'deploy_sc',
+      arguments: { sender: 'klv1deployer' },
+    });
+
+    const content = result.content as Array<{ type: string; text: string }>;
+    const parsed = JSON.parse(content[0].text);
+    expect(parsed.success).toBe(false);
+    expect(parsed.error).toContain('wasmPath or wasmHex');
   });
 
   it('invoke_sc builds unsigned invoke transaction', async () => {
@@ -698,7 +709,7 @@ describe('KleverMCPServer (local mode)', () => {
         scAddress: 'klv1contract',
         funcName: 'doSomething',
         args: ['AQID'],
-        value: 1000000,
+        callValue: { KLV: 1000000 },
       },
     });
 
@@ -711,8 +722,7 @@ describe('KleverMCPServer (local mode)', () => {
     expect(parsed.details.scAddress).toBe('klv1contract');
     expect(parsed.details.funcName).toBe('doSomething');
     expect(parsed.details.argsCount).toBe(1);
-    expect(parsed.details.value).toBe(1000000);
-    expect(parsed.details.nonce).toBe(7);
+    expect(parsed.details.callValue).toEqual({ KLV: 1000000 });
     expect(parsed.nextSteps).toBeDefined();
     expect(parsed.message).toContain('invoke');
   });
