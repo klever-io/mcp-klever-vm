@@ -312,7 +312,7 @@ export class KleverChainClient {
 
   // ─── Transaction Operations ──────────────────────────────
 
-  /** Get transaction details by hash (from node) */
+  /** Get transaction details by hash (uses API proxy for indexed data) */
   async getTransaction(
     hash: string,
     network?: KleverNetwork

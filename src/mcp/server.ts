@@ -1,4 +1,5 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
+import { extname } from 'node:path';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -1890,8 +1891,48 @@ export class KleverMCPServer {
               network?: string;
             };
 
+            const MAX_WASM_SIZE = 10 * 1024 * 1024; // 10 MB
+
             let resolvedWasmHex: string;
             if (wasmPath) {
+              if (extname(wasmPath).toLowerCase() !== '.wasm') {
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: JSON.stringify(
+                        {
+                          success: false,
+                          error: 'wasmPath must point to a .wasm file.',
+                          suggestion: 'Provide the path to a compiled WebAssembly binary (e.g. output/contract.wasm).',
+                        },
+                        null,
+                        2
+                      ),
+                    },
+                  ],
+                };
+              }
+
+              const fileInfo = await stat(wasmPath);
+              if (fileInfo.size > MAX_WASM_SIZE) {
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: JSON.stringify(
+                        {
+                          success: false,
+                          error: `WASM file too large: ${(fileInfo.size / 1024 / 1024).toFixed(1)} MB (max ${MAX_WASM_SIZE / 1024 / 1024} MB).`,
+                        },
+                        null,
+                        2
+                      ),
+                    },
+                  ],
+                };
+              }
+
               const wasmBuffer = await readFile(wasmPath);
               resolvedWasmHex = wasmBuffer.toString('hex');
             } else if (wasmHex) {
