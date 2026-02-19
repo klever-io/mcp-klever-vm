@@ -61,6 +61,14 @@ The MCP server (`src/mcp/server.ts`) exposes: `query_context`, `add_context`, `g
 2. Update relevance scoring in `ContextService.calculateRelevanceScore()`
 3. Update MCP tool input schemas in `src/mcp/server.ts` (the enum arrays in `query_context` and `add_context`)
 
+### Chain Client
+
+`src/chain/` provides a zero-dependency HTTP client for querying the Klever blockchain (uses native `fetch`). `KleverChainClient` supports mainnet/testnet/devnet/local with per-call network override. The MCP server creates a chain client at startup (configured via env vars) and passes it to `KleverMCPServer`. On-chain tools (get_balance, get_account, get_asset_info, query_sc, get_transaction, get_block, list_validators) are available in all profiles. Write tools (send_transfer, deploy_sc, invoke_sc, freeze_klv) are local-only.
+
+### SKILL.md
+
+LLM-optimized reference documentation lives in `docs/SKILL.md` with 9 sub-files in `docs/skills/` for progressive disclosure. Compiled from the knowledge base. Covers correctness rules, contract structure, storage, tokens, events, modules, deployment, API reference, security, and troubleshooting.
+
 ## Environment Variables
 
 - `MODE`: `http` (default) or `mcp`
@@ -69,6 +77,10 @@ The MCP server (`src/mcp/server.ts`) exposes: `query_context`, `add_context`, `g
 - `REDIS_URL`: Redis connection string (only for redis storage)
 - `MEMORY_MAX_SIZE`: Max contexts in memory storage (default: 10000)
 - `NODE_ENV`: `development` or `production` (affects error detail in responses)
+- `KLEVER_NETWORK`: Default chain network: `mainnet` (default), `testnet`, `devnet`, `local`
+- `KLEVER_NODE_URL`: Custom node URL (overrides network-based URL)
+- `KLEVER_API_URL`: Custom API proxy URL (overrides network-based URL)
+- `KLEVER_TIMEOUT`: Chain client request timeout in ms (default: 15000)
 
 ## Branching & Release Process
 

@@ -40,6 +40,7 @@
     "start:public": "MODE=public node dist/index.js",
     "dev:public": "MODE=public STORAGE_TYPE=memory tsx watch src/index.ts",
     "install-sdk": "./scripts/install-sdk.sh",
+    "version": "node -e \"const fs=require('fs');const s=JSON.parse(fs.readFileSync('server.json','utf8'));s.version=process.env.npm_package_version;if(s.packages)s.packages.forEach(p=>p.version=process.env.npm_package_version);fs.writeFileSync('server.json',JSON.stringify(s,null,2)+'\\n')\" && git add server.json",
     "validate:mcp": "./scripts/validate-mcp.sh",
     "prepublishOnly": "pnpm run build"
   },

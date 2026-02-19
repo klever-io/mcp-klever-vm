@@ -13,7 +13,7 @@ export const pauseModuleKnowledge: KnowledgeEntry[] = [
 // Step 1: Add dependency to Cargo.toml
 /*
 [dependencies.klever-sc-modules]
-version = "0.44.0"
+version = "0.45.0"  # check crates.io/crates/klever-sc for latest
 */
 
 // Step 2: Import the pause module
@@ -88,7 +88,7 @@ The PauseModule is a built-in Klever SDK module that provides contract pausabili
 ### 1. Add Dependency to Cargo.toml
 \`\`\`toml
 [dependencies.klever-sc-modules]
-version = "0.44.0"
+version = "0.45.0"  # check crates.io/crates/klever-sc for latest
 \`\`\`
 
 ### 2. Import the Module

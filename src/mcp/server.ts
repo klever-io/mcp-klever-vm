@@ -1,3 +1,5 @@
+import { readFile, stat } from 'node:fs/promises';
+import { extname } from 'node:path';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -14,8 +16,29 @@ import { ContextService } from '../context/service.js';
 import { QueryContextSchema, ContextPayloadSchema } from '../types/index.js';
 import { VERSION, GIT_SHA } from '../version.js';
 import { KNOWLEDGE_CATEGORIES } from './resources.js';
+import { KleverChainClient } from '../chain/index.js';
+import type { KleverNetwork, VMQueryRequest } from '../chain/types.js';
 
 export type ServerProfile = 'local' | 'public';
+
+/**
+ * In MCP mode, stdout is reserved for the JSON-RPC protocol (stdio transport).
+ * Any non-protocol output on stdout breaks the MCP client. All logging must go
+ * to stderr via console.error. This alias improves readability for info-level logs.
+ */
+const log = (...args: unknown[]) => console.error(...args);
+
+const VALID_NETWORKS = new Set<string>(['mainnet', 'testnet', 'devnet', 'local']);
+
+function validateNetwork(network: string | undefined): KleverNetwork | undefined {
+  if (network === undefined) return undefined;
+  if (!VALID_NETWORKS.has(network)) {
+    throw new Error(
+      `Invalid network "${network}". Valid options: mainnet, testnet, devnet, local.`
+    );
+  }
+  return network as KleverNetwork;
+}
 
 interface ExecError {
   message: string;
@@ -38,12 +61,15 @@ function toExecError(error: unknown): ExecError {
 export class KleverMCPServer {
   private server: Server;
   private profile: ServerProfile;
+  private chainClient: KleverChainClient;
 
   constructor(
     private contextService: ContextService,
-    profile: ServerProfile = 'local'
+    profile: ServerProfile = 'local',
+    chainClient?: KleverChainClient
   ) {
     this.profile = profile;
+    this.chainClient = chainClient || new KleverChainClient();
     this.server = new Server(
       {
         name: 'klever-vm-mcp',
@@ -286,6 +312,345 @@ export class KleverMCPServer {
     ];
   }
 
+  private getChainReadToolDefinitions() {
+    const networkDesc = `Network to query. Options: "mainnet", "testnet", "devnet", "local". Defaults to server default (${this.chainClient.getDefaultNetwork()}).`;
+    return [
+      {
+        name: 'get_balance',
+        description:
+          'Get the KLV or KDA token balance for a Klever blockchain address. Returns the balance in the smallest unit (for KLV: 1 KLV = 1,000,000 units with 6 decimal places). Optionally specify an asset ID to query a specific KDA token balance instead of KLV.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            address: {
+              type: 'string',
+              description: 'Klever address (klv1... bech32 format).',
+            },
+            assetId: {
+              type: 'string',
+              description:
+                'Optional KDA token ID (e.g. "USDT-A1B2", "LPKLVKFI-3I0N"). Omit for KLV balance.',
+            },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
+          },
+          required: ['address'],
+        },
+        annotations: {
+          title: 'Get Balance',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'get_account',
+        description:
+          'Get full account details for a Klever blockchain address including nonce, balance, frozen balance, allowance, and permissions. Use this when you need comprehensive account state beyond just the balance.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            address: {
+              type: 'string',
+              description: 'Klever address (klv1... bech32 format).',
+            },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
+          },
+          required: ['address'],
+        },
+        annotations: {
+          title: 'Get Account',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'get_asset_info',
+        description:
+          'Get complete properties and configuration for any asset on the Klever blockchain (KLV, KFI, KDA tokens, NFT collections). Returns supply info, permissions (CanMint, CanBurn, etc.), roles, precision, and metadata. Note: string fields like ID, Name, Ticker are base64-encoded in the raw response.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            assetId: {
+              type: 'string',
+              description:
+                'Asset identifier (e.g. "KLV", "KFI", "USDT-A1B2", "MYNFT-XY78").',
+            },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
+          },
+          required: ['assetId'],
+        },
+        annotations: {
+          title: 'Get Asset Info',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'query_sc',
+        description:
+          'Execute a read-only query against a Klever smart contract (VM view call). Returns the contract function result as base64-encoded return data. Arguments must be base64-encoded. Use this to read contract state without modifying it.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            scAddress: {
+              type: 'string',
+              description: 'Smart contract address (klv1... bech32 format).',
+            },
+            funcName: {
+              type: 'string',
+              description:
+                'Function name to call (must be a #[view] function on the contract).',
+            },
+            args: {
+              type: 'array',
+              items: { type: 'string' },
+              description:
+                'Optional base64-encoded arguments. For addresses, encode the hex-decoded bech32 bytes. For numbers, use big-endian byte encoding.',
+            },
+            caller: {
+              type: 'string',
+              description:
+                'Optional caller address (klv1... bech32 format). Some view functions use the caller to look up address-keyed storage mappers.',
+            },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
+          },
+          required: ['scAddress', 'funcName'],
+        },
+        annotations: {
+          title: 'Query Smart Contract',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'get_transaction',
+        description:
+          'Get transaction details by hash from the Klever blockchain. Returns sender, receiver, status, block info, contracts, and receipts. Uses the API proxy for indexed data.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            hash: {
+              type: 'string',
+              description: 'Transaction hash (hex string).',
+            },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
+          },
+          required: ['hash'],
+        },
+        annotations: {
+          title: 'Get Transaction',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'get_block',
+        description:
+          'Get block information from the Klever blockchain by nonce (block number). If no nonce is provided, returns the latest block. Returns hash, timestamp, proposer, number of transactions, and other block metadata.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            nonce: {
+              type: 'integer',
+              minimum: 0,
+              description:
+                'Block number (nonce). Omit to get the latest block.',
+            },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
+          },
+        },
+        annotations: {
+          title: 'Get Block',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'list_validators',
+        description:
+          'List active validators on the Klever blockchain network. Returns validator addresses, names, commission rates, delegation info, and staking amounts.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
+          },
+        },
+        annotations: {
+          title: 'List Validators',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+    ];
+  }
+
+  private getChainWriteToolDefinitions() {
+    const networkDesc = `Network to use. Options: "mainnet", "testnet", "devnet", "local". Defaults to server default (${this.chainClient.getDefaultNetwork()}).`;
+    return [
+      {
+        name: 'send_transfer',
+        description:
+          'Build an unsigned KLV or KDA token transfer transaction on the Klever blockchain. Returns the unsigned transaction data and hash for client-side signing. The MCP server NEVER handles private keys — signing must be done externally.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            sender: {
+              type: 'string',
+              description: 'Sender address (klv1... bech32 format).',
+            },
+            receiver: {
+              type: 'string',
+              description: 'Receiver address (klv1... bech32 format).',
+            },
+            amount: {
+              type: 'integer',
+              minimum: 1,
+              description:
+                'Amount in the smallest unit. For KLV: 1 KLV = 1,000,000 units (6 decimals). Example: to send 10 KLV, use 10000000.',
+            },
+            assetId: {
+              type: 'string',
+              description:
+                'Optional KDA token ID for non-KLV transfers (e.g. "USDT-A1B2"). Omit for KLV.',
+            },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
+          },
+          required: ['sender', 'receiver', 'amount'],
+        },
+        annotations: {
+          title: 'Build Transfer Transaction',
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'deploy_sc',
+        description:
+          'Build an unsigned smart contract deployment transaction for the Klever blockchain. Provide either wasmPath (preferred — reads the file server-side) or wasmHex. Returns the unsigned transaction for client-side signing. The MCP server NEVER handles private keys.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            sender: {
+              type: 'string',
+              description: 'Deployer address (klv1... bech32 format).',
+            },
+            wasmPath: {
+              type: 'string',
+              description:
+                'Absolute path to the compiled WASM file (preferred over wasmHex to avoid loading large binaries into AI context).',
+            },
+            wasmHex: {
+              type: 'string',
+              description:
+                'Smart contract WASM bytecode as a hex-encoded string. Use wasmPath instead for large contracts.',
+            },
+            initArgs: {
+              type: 'array',
+              items: { type: 'string' },
+              description:
+                'Optional base64-encoded init arguments for the contract constructor.',
+            },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
+          },
+          required: ['sender'],
+        },
+        annotations: {
+          title: 'Build Deploy SC Transaction',
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'invoke_sc',
+        description:
+          'Build an unsigned smart contract invocation transaction on the Klever blockchain. Calls a state-changing endpoint on a deployed contract. Returns the unsigned transaction for client-side signing. For read-only calls, use query_sc instead.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            sender: {
+              type: 'string',
+              description: 'Caller address (klv1... bech32 format).',
+            },
+            scAddress: {
+              type: 'string',
+              description: 'Smart contract address (klv1... bech32 format).',
+            },
+            funcName: {
+              type: 'string',
+              description: 'Endpoint function name to invoke.',
+            },
+            args: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Optional base64-encoded arguments.',
+            },
+            callValue: {
+              type: 'object',
+              additionalProperties: { type: 'integer' },
+              description:
+                'Optional token amounts to send with the call, as a map of token ID to amount (e.g. {"KLV": 1000000}). Required for payable endpoints.',
+            },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
+          },
+          required: ['sender', 'scAddress', 'funcName'],
+        },
+        annotations: {
+          title: 'Build Invoke SC Transaction',
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'freeze_klv',
+        description:
+          'Build an unsigned Freeze KLV transaction on the Klever blockchain. Freezing KLV provides energy/bandwidth for network operations and enables staking rewards. Returns the unsigned transaction for client-side signing.',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            sender: {
+              type: 'string',
+              description: 'Address to freeze from (klv1... bech32 format).',
+            },
+            amount: {
+              type: 'integer',
+              minimum: 1,
+              description:
+                'Amount of KLV to freeze in the smallest unit (1 KLV = 1,000,000 units).',
+            },
+            network: { type: 'string', enum: ['mainnet', 'testnet', 'devnet', 'local'], description: networkDesc },
+          },
+          required: ['sender', 'amount'],
+        },
+        annotations: {
+          title: 'Build Freeze KLV Transaction',
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
+      },
+    ];
+  }
+
   private async getPublicModeToolDefinitions() {
     const { projectInitToolDefinition, addHelperScriptsToolDefinition } = await import(
       '../utils/project-init-script.js'
@@ -401,12 +766,16 @@ export class KleverMCPServer {
   private setupHandlers() {
     // List available tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      const tools: Array<Record<string, unknown>> = [...this.getReadOnlyToolDefinitions()];
+      const tools: Array<Record<string, unknown>> = [
+        ...this.getReadOnlyToolDefinitions(),
+        ...this.getChainReadToolDefinitions(),
+      ];
 
       if (this.profile === 'public') {
         const publicTools = await this.getPublicModeToolDefinitions();
         tools.push(...publicTools);
       } else {
+        tools.push(...this.getChainWriteToolDefinitions());
         const localTools = await this.getLocalOnlyToolDefinitions();
         tools.push(...localTools);
       }
@@ -418,14 +787,25 @@ export class KleverMCPServer {
     this.server.setRequestHandler(CallToolRequestSchema, async request => {
       const { name, arguments: args } = request.params;
 
-      // Debug logging to stderr
-      console.error(`[MCP] Tool called: ${name}`, JSON.stringify(args));
+      // Debug logging to stderr (truncate large fields like wasmHex)
+      const safeArgs = args ? Object.fromEntries(
+        Object.entries(args).map(([k, v]) =>
+          typeof v === 'string' && v.length > 200 ? [k, `${v.slice(0, 100)}...(${v.length} chars)`] : [k, v]
+        )
+      ) : args;
+      log(`[MCP] Tool called: ${name}`, JSON.stringify(safeArgs));
 
       // Block local-only tools in public profile
-      if (
-        this.profile === 'public' &&
-        ['add_context', 'check_sdk_status', 'install_klever_sdk'].includes(name)
-      ) {
+      const localOnlyTools = [
+        'add_context',
+        'check_sdk_status',
+        'install_klever_sdk',
+        'send_transfer',
+        'deploy_sc',
+        'invoke_sc',
+        'freeze_klv',
+      ];
+      if (this.profile === 'public' && localOnlyTools.includes(name)) {
         return {
           content: [
             {
@@ -433,9 +813,9 @@ export class KleverMCPServer {
               text: JSON.stringify(
                 {
                   success: false,
-                  error: `Tool "${name}" is not available in public mode. Public mode does not allow local-only or environment-modifying tools.`,
+                  error: `Tool "${name}" is not available in public mode. Public mode does not allow local-only, write, or environment-modifying tools.`,
                   suggestion:
-                    'Use query_context, search_documentation, or analyze_contract to explore the knowledge base. For project scaffolding in public mode, init_klever_project and add_helper_scripts return template files instead of modifying your local environment.',
+                    'Use query_context, search_documentation, or analyze_contract to explore the knowledge base. On-chain read tools (get_balance, get_account, get_asset_info, query_sc, get_transaction, get_block, list_validators) are available in public mode.',
                   availableTools: [
                     'query_context',
                     'get_context',
@@ -444,6 +824,13 @@ export class KleverMCPServer {
                     'enhance_with_context',
                     'search_documentation',
                     'analyze_contract',
+                    'get_balance',
+                    'get_account',
+                    'get_asset_info',
+                    'query_sc',
+                    'get_transaction',
+                    'get_block',
+                    'list_validators',
                     'init_klever_project',
                     'add_helper_scripts',
                   ],
@@ -460,7 +847,7 @@ export class KleverMCPServer {
         switch (name) {
           case 'query_context': {
             const params = QueryContextSchema.parse(args);
-            console.error(`[MCP] Query params:`, JSON.stringify(params));
+            log(`[MCP] Query params:`, JSON.stringify(params));
             const result = await this.contextService.query(params);
             console.error(
               `[MCP] Query returned ${result.results.length} out of ${result.total} total results`
@@ -618,7 +1005,7 @@ export class KleverMCPServer {
               }
             }
 
-            console.error(`[MCP] Knowledge stats: ${stats.total} total contexts`);
+            log(`[MCP] Knowledge stats: ${stats.total} total contexts`);
 
             return {
               content: [
@@ -640,11 +1027,11 @@ export class KleverMCPServer {
           case 'enhance_with_context': {
             const { query, autoInclude = true } = args as { query: string; autoInclude?: boolean };
 
-            console.error(`[MCP] Enhancing query with context: "${query}"`);
+            log(`[MCP] Enhancing query with context: "${query}"`);
 
             // Extract keywords for better matching
             const keywords = this.extractKeywords(query);
-            console.error(`[MCP] Extracted keywords: ${keywords.join(', ')}`);
+            log(`[MCP] Extracted keywords: ${keywords.join(', ')}`);
 
             // Query for relevant contexts
             const searchQuery = keywords.join(' ');
@@ -654,7 +1041,7 @@ export class KleverMCPServer {
               offset: 0,
             });
 
-            console.error(`[MCP] Found ${result.results.length} relevant contexts`);
+            log(`[MCP] Found ${result.results.length} relevant contexts`);
 
             // Format the enhanced response
             let enhancedResponse = `Query: "${query}"\n\n`;
@@ -701,7 +1088,7 @@ export class KleverMCPServer {
 
           case 'search_documentation': {
             const { query, category } = args as { query: string; category?: string };
-            console.error(`[MCP] Documentation search: "${query}" (category: ${category || 'all'})`);
+            log(`[MCP] Documentation search: "${query}" (category: ${category || 'all'})`);
 
             const { CATEGORY_TAG_MAP } = await import('./resources.js');
 
@@ -753,7 +1140,7 @@ export class KleverMCPServer {
               contractName?: string;
             };
             const label = contractName || 'contract';
-            console.error(`[MCP] Analyzing contract: ${label} (${sourceCode.length} chars)`);
+            log(`[MCP] Analyzing contract: ${label} (${sourceCode.length} chars)`);
 
             const findings = await this.analyzeContractSource(sourceCode);
 
@@ -836,17 +1223,17 @@ export class KleverMCPServer {
               cmdArgs.push('--no-move');
             }
 
-            console.error(`[MCP] Running: ${scriptPath} ${cmdArgs.join(' ')}`);
+            log(`[MCP] Running: ${scriptPath} ${cmdArgs.join(' ')}`);
 
             try {
-              console.error(`[MCP] Current working directory: ${process.cwd()}`);
+              log(`[MCP] Current working directory: ${process.cwd()}`);
 
               // Check if script exists
               try {
                 await access(scriptPath);
-                console.error(`[MCP] Script path exists: true`);
+                log(`[MCP] Script path exists: true`);
               } catch {
-                console.error(`[MCP] Script path exists: false`);
+                log(`[MCP] Script path exists: false`);
               }
 
               // Execute the script using execFile to safely handle paths with spaces
@@ -855,10 +1242,10 @@ export class KleverMCPServer {
                 env: { ...process.env },
               });
 
-              console.error(`[MCP] Script stdout length: ${stdout.length}`);
-              console.error(`[MCP] Script output: ${stdout}`);
+              log(`[MCP] Script stdout length: ${stdout.length}`);
+              log(`[MCP] Script output: ${stdout}`);
               if (stderr) {
-                console.error(`[MCP] Script stderr: ${stderr}`);
+                log(`[MCP] Script stderr: ${stderr}`);
               }
 
               // Clean up temp script
@@ -869,7 +1256,7 @@ export class KleverMCPServer {
                 '-c',
                 'ls -la scripts/ 2>/dev/null || echo "No scripts directory"',
               ]);
-              console.error(`[MCP] Scripts directory check: ${checkResult.stdout}`);
+              log(`[MCP] Scripts directory check: ${checkResult.stdout}`);
 
               return {
                 content: [
@@ -911,8 +1298,8 @@ export class KleverMCPServer {
               // Clean up temp script on error
               await unlink(scriptPath).catch(() => {});
 
-              console.error(`[MCP] Project init error: ${err.message}`);
-              console.error(`[MCP] Error details:`, err);
+              log(`[MCP] Project init error: ${err.message}`);
+              log(`[MCP] Error details:`, err);
 
               return {
                 content: [
@@ -970,7 +1357,7 @@ export class KleverMCPServer {
             const { createHelperScriptsScript } = await import('../utils/project-init-script.js');
             const execFileHelper = promisifyUtil(execFileCb);
 
-            console.error(`[MCP] Adding helper scripts to existing project`);
+            log(`[MCP] Adding helper scripts to existing project`);
 
             // Create the helper scripts generation script
             const helperScriptContent = createHelperScriptsScript();
@@ -980,10 +1367,10 @@ export class KleverMCPServer {
             await wf(helperScriptPath, helperScriptContent, 'utf8');
             await ch(helperScriptPath, '755');
 
-            console.error(`[MCP] Running: ${helperScriptPath}`);
+            log(`[MCP] Running: ${helperScriptPath}`);
 
             try {
-              console.error(`[MCP] Current working directory: ${process.cwd()}`);
+              log(`[MCP] Current working directory: ${process.cwd()}`);
 
               // Execute the script using execFile to safely handle paths with spaces
               const { stdout, stderr } = await execFileHelper('/bin/bash', [helperScriptPath], {
@@ -991,9 +1378,9 @@ export class KleverMCPServer {
                 env: { ...process.env },
               });
 
-              console.error(`[MCP] Script stdout: ${stdout}`);
+              log(`[MCP] Script stdout: ${stdout}`);
               if (stderr) {
-                console.error(`[MCP] Script stderr: ${stderr}`);
+                log(`[MCP] Script stderr: ${stderr}`);
               }
 
               // Clean up temp script
@@ -1004,7 +1391,7 @@ export class KleverMCPServer {
                 '-c',
                 'ls -la scripts/ 2>/dev/null || echo "No scripts directory"',
               ]);
-              console.error(`[MCP] Scripts directory check: ${checkResult.stdout}`);
+              log(`[MCP] Scripts directory check: ${checkResult.stdout}`);
 
               return {
                 content: [
@@ -1043,8 +1430,8 @@ export class KleverMCPServer {
               // Clean up temp script on error
               await ul(helperScriptPath).catch(() => {});
 
-              console.error(`[MCP] Add helper scripts error: ${err.message}`);
-              console.error(`[MCP] Error details:`, err);
+              log(`[MCP] Add helper scripts error: ${err.message}`);
+              log(`[MCP] Error details:`, err);
 
               return {
                 content: [
@@ -1078,7 +1465,7 @@ export class KleverMCPServer {
             const { createCheckSdkScript } = await import('../utils/sdk-install-script.js');
             const execFileSdkAsync = promisifySdk(execFileSdk);
 
-            console.error(`[MCP] Checking SDK status`);
+            log(`[MCP] Checking SDK status`);
 
             const scriptContent = createCheckSdkScript();
             const scriptPath = joinSdk(tdSdk(), `check-sdk-${Date.now()}.sh`);
@@ -1092,13 +1479,13 @@ export class KleverMCPServer {
               });
 
               if (stderr) {
-                console.error(`[MCP] Check SDK stderr: ${stderr}`);
+                log(`[MCP] Check SDK stderr: ${stderr}`);
               }
 
               await ulSdk(scriptPath);
 
               const status = JSON.parse(stdout.trim());
-              console.error(`[MCP] SDK status: ksc=${status.ksc?.installed}, koperator=${status.koperator?.installed}`);
+              log(`[MCP] SDK status: ksc=${status.ksc?.installed}, koperator=${status.koperator?.installed}`);
 
               return {
                 content: [
@@ -1119,7 +1506,7 @@ export class KleverMCPServer {
               const err = toExecError(error);
               await ulSdk(scriptPath).catch(() => {});
 
-              console.error(`[MCP] Check SDK error: ${err.message}`);
+              log(`[MCP] Check SDK error: ${err.message}`);
 
               return {
                 content: [
@@ -1153,7 +1540,7 @@ export class KleverMCPServer {
             const { tool: toolArg = 'all' } = args as { tool?: string };
             const toolChoice = ['ksc', 'koperator', 'all'].includes(toolArg) ? toolArg : 'all';
 
-            console.error(`[MCP] Installing SDK: ${toolChoice}`);
+            log(`[MCP] Installing SDK: ${toolChoice}`);
 
             const scriptContent = createInstallSdkScript(toolChoice);
             const scriptPath = joinInst(tdInst(), `install-sdk-${Date.now()}.sh`);
@@ -1168,13 +1555,13 @@ export class KleverMCPServer {
               });
 
               if (stderr) {
-                console.error(`[MCP] Install SDK stderr: ${stderr}`);
+                log(`[MCP] Install SDK stderr: ${stderr}`);
               }
 
               await ulInst(scriptPath);
 
               const result = JSON.parse(stdout.trim());
-              console.error(`[MCP] Install SDK result: ${JSON.stringify(result)}`);
+              log(`[MCP] Install SDK result: ${JSON.stringify(result)}`);
 
               return {
                 content: [
@@ -1195,7 +1582,7 @@ export class KleverMCPServer {
               const err = toExecError(error);
               await ulInst(scriptPath).catch(() => {});
 
-              console.error(`[MCP] Install SDK error: ${err.message}`);
+              log(`[MCP] Install SDK error: ${err.message}`);
 
               return {
                 content: [
@@ -1217,6 +1604,495 @@ export class KleverMCPServer {
                 ],
               };
             }
+          }
+
+          // ─── Chain Read Tools ─────────────────────────────
+
+          case 'get_balance': {
+            const { address, assetId, network } = args as {
+              address: string;
+              assetId?: string;
+              network?: string;
+            };
+            log(`[MCP] get_balance: ${address} asset=${assetId || 'KLV'} network=${network || 'default'}`);
+
+            const balance = await this.chainClient.getBalance(
+              address,
+              assetId,
+              validateNetwork(network)
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      address,
+                      assetId: assetId || 'KLV',
+                      balance,
+                      formatted: assetId
+                        ? `${balance} (raw units — check asset precision)`
+                        : `${(balance / 1_000_000).toFixed(6)} KLV`,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'get_account': {
+            const { address, network } = args as {
+              address: string;
+              network?: string;
+            };
+            log(`[MCP] get_account: ${address} network=${network || 'default'}`);
+
+            const account = await this.chainClient.getAccount(
+              address,
+              validateNetwork(network)
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      data: account,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'get_asset_info': {
+            const { assetId, network } = args as {
+              assetId: string;
+              network?: string;
+            };
+            log(`[MCP] get_asset_info: ${assetId} network=${network || 'default'}`);
+
+            const asset = await this.chainClient.getAssetInfo(
+              assetId,
+              validateNetwork(network)
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      data: asset,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'query_sc': {
+            const { scAddress, funcName, args: scArgs, caller, network } = args as {
+              scAddress: string;
+              funcName: string;
+              args?: string[];
+              caller?: string;
+              network?: string;
+            };
+            log(`[MCP] query_sc: ${scAddress}::${funcName} network=${network || 'default'}`);
+
+            const request: VMQueryRequest = {
+              scAddress,
+              funcName,
+              args: scArgs,
+              ...(caller ? { caller } : {}),
+            };
+
+            const result = await this.chainClient.querySmartContract(
+              request,
+              validateNetwork(network)
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      data: result,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                      hint: 'returnData values are base64-encoded. Decode them based on the expected return type.',
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'get_transaction': {
+            const { hash, network } = args as {
+              hash: string;
+              network?: string;
+            };
+            log(`[MCP] get_transaction: ${hash} network=${network || 'default'}`);
+
+            const tx = await this.chainClient.getTransaction(
+              hash,
+              validateNetwork(network)
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      data: tx,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'get_block': {
+            const { nonce, network } = args as {
+              nonce?: number;
+              network?: string;
+            };
+            log(`[MCP] get_block: nonce=${nonce ?? 'latest'} network=${network || 'default'}`);
+
+            const block = await this.chainClient.getBlock(
+              nonce,
+              validateNetwork(network)
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      data: block,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'list_validators': {
+            const { network } = args as { network?: string };
+            log(`[MCP] list_validators: network=${network || 'default'}`);
+
+            const validators = await this.chainClient.listValidators(
+              validateNetwork(network)
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      total: validators.length,
+                      data: validators,
+                      network: network || this.chainClient.getDefaultNetwork(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          // ─── Chain Write Tools (local only) ────────────────
+
+          case 'send_transfer': {
+            const { sender, receiver, amount, assetId, network } = args as {
+              sender: string;
+              receiver: string;
+              amount: number;
+              assetId?: string;
+              network?: string;
+            };
+            log(`[MCP] send_transfer: ${sender} -> ${receiver} amount=${amount} asset=${assetId || 'KLV'}`);
+
+            const txResult = await this.chainClient.buildTransfer(
+              { sender, receiver, amount, assetId },
+              validateNetwork(network)
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      message:
+                        'Unsigned transaction built successfully. Sign this transaction externally and broadcast it.',
+                      txHash: txResult.result.txHash,
+                      unsignedTx: txResult.result.tx,
+                      details: {
+                        sender,
+                        receiver,
+                        amount,
+                        assetId: assetId || 'KLV',
+                      },
+                      network: network || this.chainClient.getDefaultNetwork(),
+                      nextSteps: [
+                        '1. Sign the transaction hash with the sender private key',
+                        '2. Broadcast the signed transaction to the network',
+                        'WARNING: The MCP server does NOT handle private keys.',
+                      ],
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'deploy_sc': {
+            const { sender, wasmPath, wasmHex, initArgs, network } = args as {
+              sender: string;
+              wasmPath?: string;
+              wasmHex?: string;
+              initArgs?: string[];
+              network?: string;
+            };
+
+            const MAX_WASM_SIZE = 10 * 1024 * 1024; // 10 MB
+
+            let resolvedWasmHex: string;
+            if (wasmPath) {
+              if (extname(wasmPath).toLowerCase() !== '.wasm') {
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: JSON.stringify(
+                        {
+                          success: false,
+                          error: 'wasmPath must point to a .wasm file.',
+                          suggestion: 'Provide the path to a compiled WebAssembly binary (e.g. output/contract.wasm).',
+                        },
+                        null,
+                        2
+                      ),
+                    },
+                  ],
+                };
+              }
+
+              const fileInfo = await stat(wasmPath);
+              if (fileInfo.size > MAX_WASM_SIZE) {
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: JSON.stringify(
+                        {
+                          success: false,
+                          error: `WASM file too large: ${(fileInfo.size / 1024 / 1024).toFixed(1)} MB (max ${MAX_WASM_SIZE / 1024 / 1024} MB).`,
+                        },
+                        null,
+                        2
+                      ),
+                    },
+                  ],
+                };
+              }
+
+              const wasmBuffer = await readFile(wasmPath);
+              resolvedWasmHex = wasmBuffer.toString('hex');
+            } else if (wasmHex) {
+              resolvedWasmHex = wasmHex;
+            } else {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify(
+                      {
+                        success: false,
+                        error: 'Either wasmPath or wasmHex must be provided.',
+                        suggestion:
+                          'Use wasmPath to specify the path to the compiled .wasm file (preferred), or wasmHex to provide the hex-encoded bytecode directly.',
+                      },
+                      null,
+                      2
+                    ),
+                  },
+                ],
+              };
+            }
+
+            log(`[MCP] deploy_sc: sender=${sender} wasmSize=${resolvedWasmHex.length / 2} bytes`);
+
+            const txResult = await this.chainClient.buildDeploy(
+              { sender, wasmHex: resolvedWasmHex, initArgs },
+              validateNetwork(network)
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      message:
+                        'Unsigned deploy transaction built. Sign externally and broadcast.',
+                      txHash: txResult.result.txHash,
+                      unsignedTx: txResult.result.tx,
+                      details: {
+                        sender,
+                        wasmSize: `${resolvedWasmHex.length / 2} bytes`,
+                        ...(wasmPath ? { wasmPath } : {}),
+                      },
+                      network: network || this.chainClient.getDefaultNetwork(),
+                      nextSteps: [
+                        '1. Sign the transaction hash with the deployer private key',
+                        '2. Broadcast the signed transaction',
+                        '3. The contract address will be derived from the sender address + nonce',
+                      ],
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'invoke_sc': {
+            const {
+              sender,
+              scAddress,
+              funcName,
+              args: scArgs,
+              callValue,
+              network,
+            } = args as {
+              sender: string;
+              scAddress: string;
+              funcName: string;
+              args?: string[];
+              callValue?: Record<string, number>;
+              network?: string;
+            };
+            log(`[MCP] invoke_sc: ${sender} -> ${scAddress}::${funcName}`);
+
+            const txResult = await this.chainClient.buildInvoke(
+              { sender, scAddress, funcName, args: scArgs, callValue },
+              validateNetwork(network)
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      message:
+                        'Unsigned SC invoke transaction built. Sign externally and broadcast.',
+                      txHash: txResult.result.txHash,
+                      unsignedTx: txResult.result.tx,
+                      details: {
+                        sender,
+                        scAddress,
+                        funcName,
+                        argsCount: scArgs?.length || 0,
+                        callValue: callValue || {},
+                      },
+                      network: network || this.chainClient.getDefaultNetwork(),
+                      nextSteps: [
+                        '1. Sign the transaction hash with the caller private key',
+                        '2. Broadcast the signed transaction',
+                        '3. Check the transaction receipt for execution results',
+                      ],
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+          }
+
+          case 'freeze_klv': {
+            const { sender, amount, network } = args as {
+              sender: string;
+              amount: number;
+              network?: string;
+            };
+            log(`[MCP] freeze_klv: ${sender} amount=${amount}`);
+
+            const txResult = await this.chainClient.buildFreeze(
+              { sender, amount },
+              validateNetwork(network)
+            );
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      message:
+                        'Unsigned freeze transaction built. Sign externally and broadcast.',
+                      txHash: txResult.result.txHash,
+                      unsignedTx: txResult.result.tx,
+                      details: {
+                        sender,
+                        amount,
+                        formattedAmount: `${(amount / 1_000_000).toFixed(6)} KLV`,
+                      },
+                      network: network || this.chainClient.getDefaultNetwork(),
+                      nextSteps: [
+                        '1. Sign the transaction hash with the sender private key',
+                        '2. Broadcast the signed transaction',
+                        '3. Frozen KLV provides energy/bandwidth and enables staking rewards',
+                      ],
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
           }
 
           default:
@@ -1293,7 +2169,7 @@ export class KleverMCPServer {
 
   async connectTransport(transport: Transport) {
     await this.server.connect(transport);
-    console.error(`[MCP] Klever MCP Server connected (profile: ${this.profile})`);
+    log(`[MCP] Klever MCP Server connected (profile: ${this.profile})`);
   }
 
   async start() {
