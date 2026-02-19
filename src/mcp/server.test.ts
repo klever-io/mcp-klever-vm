@@ -4,6 +4,37 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { ContextService } from '../context/service.js';
 import { InMemoryStorage } from '../storage/memory.js';
 import { KleverMCPServer } from './server.js';
+import { KleverChainClient } from '../chain/index.js';
+
+// Mock global fetch for chain tools (save original and restore in afterAll)
+const originalFetch = global.fetch;
+const mockFetch = jest.fn<typeof fetch>();
+global.fetch = mockFetch;
+
+afterAll(() => {
+  global.fetch = originalFetch;
+});
+
+function jsonResponse(data: unknown, status = 200): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: status === 200 ? 'OK' : 'Error',
+    json: () => Promise.resolve(data),
+    text: () => Promise.resolve(JSON.stringify(data)),
+    headers: new Headers(),
+    redirected: false,
+    type: 'basic' as ResponseType,
+    url: '',
+    clone: () => jsonResponse(data, status),
+    body: null,
+    bodyUsed: false,
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    blob: () => Promise.resolve(new Blob()),
+    formData: () => Promise.resolve(new FormData()),
+    bytes: () => Promise.resolve(new Uint8Array()),
+  };
+}
 
 describe('KleverMCPServer (public mode)', () => {
   let client: Client;
@@ -386,5 +417,336 @@ pub trait MyContract {
         true
       );
     });
+  });
+
+  describe('chain read tools (public mode)', () => {
+    it('lists chain read tools in public mode', async () => {
+      const { tools } = await client.listTools();
+      const names = tools.map(t => t.name);
+
+      expect(names).toContain('get_balance');
+      expect(names).toContain('get_account');
+      expect(names).toContain('get_asset_info');
+      expect(names).toContain('query_sc');
+      expect(names).toContain('get_transaction');
+      expect(names).toContain('get_block');
+      expect(names).toContain('list_validators');
+    });
+
+    it('does not list chain write tools in public mode', async () => {
+      const { tools } = await client.listTools();
+      const names = tools.map(t => t.name);
+
+      expect(names).not.toContain('send_transfer');
+      expect(names).not.toContain('deploy_sc');
+      expect(names).not.toContain('invoke_sc');
+      expect(names).not.toContain('freeze_klv');
+    });
+
+    it('chain read tools are marked readOnlyHint: true', async () => {
+      const { tools } = await client.listTools();
+      const chainReadTools = ['get_balance', 'get_account', 'get_asset_info', 'query_sc', 'get_transaction', 'get_block', 'list_validators'];
+
+      for (const name of chainReadTools) {
+        const tool = tools.find(t => t.name === name);
+        expect(tool).toBeDefined();
+        expect(tool!.annotations!.readOnlyHint).toBe(true);
+        expect(tool!.annotations!.openWorldHint).toBe(true);
+      }
+    });
+
+    it('rejects invalid network parameter', async () => {
+      const result = await client.callTool({
+        name: 'get_balance',
+        arguments: { address: 'klv1test', network: 'staging' },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      expect(content[0].text).toContain('Invalid network');
+      expect(content[0].text).toContain('staging');
+      expect(content[0].text).toContain('mainnet, testnet, devnet, local');
+    });
+
+    it('get_balance returns formatted result', async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { balance: 5000000 }, error: '', code: 'successful' })
+      );
+
+      const result = await client.callTool({
+        name: 'get_balance',
+        arguments: { address: 'klv1test' },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      const parsed = JSON.parse(content[0].text);
+      expect(parsed.success).toBe(true);
+      expect(parsed.balance).toBe(5000000);
+      expect(parsed.assetId).toBe('KLV');
+      expect(parsed.formatted).toContain('KLV');
+    });
+
+    it('get_account returns account data', async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          data: { account: { address: 'klv1test', nonce: 5, balance: 1000000 } },
+          error: '',
+          code: 'successful',
+        })
+      );
+
+      const result = await client.callTool({
+        name: 'get_account',
+        arguments: { address: 'klv1test' },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      const parsed = JSON.parse(content[0].text);
+      expect(parsed.success).toBe(true);
+      expect(parsed.data.address).toBe('klv1test');
+    });
+
+    it('list_validators returns array', async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          data: { validators: [{ ownerAddress: 'klv1val1', name: 'Val 1' }] },
+          error: '',
+        })
+      );
+
+      const result = await client.callTool({
+        name: 'list_validators',
+        arguments: {},
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      const parsed = JSON.parse(content[0].text);
+      expect(parsed.success).toBe(true);
+      expect(parsed.total).toBe(1);
+    });
+  });
+
+  describe('chain write tools blocked in public mode', () => {
+    it('blocks send_transfer', async () => {
+      const result = await client.callTool({
+        name: 'send_transfer',
+        arguments: { sender: 'klv1a', receiver: 'klv1b', amount: 1000000 },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      const parsed = JSON.parse(content[0].text);
+      expect(parsed.success).toBe(false);
+      expect(parsed.error).toContain('not available in public mode');
+    });
+
+    it('blocks deploy_sc', async () => {
+      const result = await client.callTool({
+        name: 'deploy_sc',
+        arguments: { sender: 'klv1a', wasmHex: 'deadbeef' },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      const parsed = JSON.parse(content[0].text);
+      expect(parsed.success).toBe(false);
+      expect(parsed.error).toContain('not available in public mode');
+    });
+
+    it('blocks invoke_sc', async () => {
+      const result = await client.callTool({
+        name: 'invoke_sc',
+        arguments: { sender: 'klv1a', scAddress: 'klv1sc', funcName: 'test' },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      const parsed = JSON.parse(content[0].text);
+      expect(parsed.success).toBe(false);
+    });
+
+    it('blocks freeze_klv', async () => {
+      const result = await client.callTool({
+        name: 'freeze_klv',
+        arguments: { sender: 'klv1a', amount: 1000000 },
+      });
+
+      const content = result.content as Array<{ type: string; text: string }>;
+      const parsed = JSON.parse(content[0].text);
+      expect(parsed.success).toBe(false);
+    });
+  });
+});
+
+describe('KleverMCPServer (local mode)', () => {
+  let client: Client;
+  let consoleErrorSpy: ReturnType<typeof jest.spyOn>;
+
+  beforeAll(async () => {
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((() => {}) as () => void);
+
+    const storage = new InMemoryStorage();
+    const contextService = new ContextService(storage);
+    const chainClient = new KleverChainClient({ network: 'testnet' });
+    const server = new KleverMCPServer(contextService, 'local', chainClient);
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connectTransport(serverTransport);
+
+    client = new Client({ name: 'test-client-local', version: '1.0.0' });
+    await client.connect(clientTransport);
+  });
+
+  afterAll(async () => {
+    await client.close();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('lists chain write tools in local mode', async () => {
+    const { tools } = await client.listTools();
+    const names = tools.map(t => t.name);
+
+    expect(names).toContain('send_transfer');
+    expect(names).toContain('deploy_sc');
+    expect(names).toContain('invoke_sc');
+    expect(names).toContain('freeze_klv');
+  });
+
+  it('lists chain read tools in local mode', async () => {
+    const { tools } = await client.listTools();
+    const names = tools.map(t => t.name);
+
+    expect(names).toContain('get_balance');
+    expect(names).toContain('get_account');
+    expect(names).toContain('get_asset_info');
+    expect(names).toContain('query_sc');
+    expect(names).toContain('get_transaction');
+    expect(names).toContain('get_block');
+    expect(names).toContain('list_validators');
+  });
+
+  it('send_transfer builds unsigned transaction', async () => {
+    // Mock getNonce
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ data: { nonce: 10 }, error: '', code: 'successful' })
+    );
+    // Mock buildTransaction
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        data: { result: { txHash: 'hash123', tx: 'proto_tx' } },
+        error: '',
+        code: 'successful',
+      })
+    );
+
+    const result = await client.callTool({
+      name: 'send_transfer',
+      arguments: { sender: 'klv1sender', receiver: 'klv1receiver', amount: 5000000 },
+    });
+
+    const content = result.content as Array<{ type: string; text: string }>;
+    const parsed = JSON.parse(content[0].text);
+    expect(parsed.success).toBe(true);
+    expect(parsed.txHash).toBe('hash123');
+    expect(parsed.unsignedTx).toBe('proto_tx');
+    expect(parsed.details.amount).toBe(5000000);
+    expect(parsed.nextSteps).toBeDefined();
+    expect(parsed.message).toContain('Unsigned');
+  });
+
+  it('deploy_sc builds unsigned deploy transaction', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ data: { nonce: 3 }, error: '', code: 'successful' })
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        data: { result: { txHash: 'deployhash', tx: 'deploy_proto' } },
+        error: '',
+        code: 'successful',
+      })
+    );
+
+    const result = await client.callTool({
+      name: 'deploy_sc',
+      arguments: { sender: 'klv1deployer', wasmHex: 'deadbeefcafe' },
+    });
+
+    const content = result.content as Array<{ type: string; text: string }>;
+    const parsed = JSON.parse(content[0].text);
+    expect(parsed.success).toBe(true);
+    expect(parsed.txHash).toBe('deployhash');
+    expect(parsed.unsignedTx).toBe('deploy_proto');
+    expect(parsed.details.sender).toBe('klv1deployer');
+    expect(parsed.details.wasmSize).toBe('6 bytes');
+    expect(parsed.nextSteps).toBeDefined();
+    expect(parsed.message).toContain('deploy');
+  });
+
+  it('deploy_sc requires wasmPath or wasmHex', async () => {
+    const result = await client.callTool({
+      name: 'deploy_sc',
+      arguments: { sender: 'klv1deployer' },
+    });
+
+    const content = result.content as Array<{ type: string; text: string }>;
+    const parsed = JSON.parse(content[0].text);
+    expect(parsed.success).toBe(false);
+    expect(parsed.error).toContain('wasmPath or wasmHex');
+  });
+
+  it('invoke_sc builds unsigned invoke transaction', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ data: { nonce: 7 }, error: '', code: 'successful' })
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        data: { result: { txHash: 'invokehash', tx: 'invoke_proto' } },
+        error: '',
+        code: 'successful',
+      })
+    );
+
+    const result = await client.callTool({
+      name: 'invoke_sc',
+      arguments: {
+        sender: 'klv1caller',
+        scAddress: 'klv1contract',
+        funcName: 'doSomething',
+        args: ['AQID'],
+        callValue: { KLV: 1000000 },
+      },
+    });
+
+    const content = result.content as Array<{ type: string; text: string }>;
+    const parsed = JSON.parse(content[0].text);
+    expect(parsed.success).toBe(true);
+    expect(parsed.txHash).toBe('invokehash');
+    expect(parsed.unsignedTx).toBe('invoke_proto');
+    expect(parsed.details.sender).toBe('klv1caller');
+    expect(parsed.details.scAddress).toBe('klv1contract');
+    expect(parsed.details.funcName).toBe('doSomething');
+    expect(parsed.details.argsCount).toBe(1);
+    expect(parsed.details.callValue).toEqual({ KLV: 1000000 });
+    expect(parsed.nextSteps).toBeDefined();
+    expect(parsed.message).toContain('invoke');
+  });
+
+  it('freeze_klv builds unsigned transaction', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ data: { nonce: 5 }, error: '', code: 'successful' })
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        data: { result: { txHash: 'freezehash', tx: 'freeze_proto' } },
+        error: '',
+        code: 'successful',
+      })
+    );
+
+    const result = await client.callTool({
+      name: 'freeze_klv',
+      arguments: { sender: 'klv1sender', amount: 10000000 },
+    });
+
+    const content = result.content as Array<{ type: string; text: string }>;
+    const parsed = JSON.parse(content[0].text);
+    expect(parsed.success).toBe(true);
+    expect(parsed.details.formattedAmount).toBe('10.000000 KLV');
   });
 });
