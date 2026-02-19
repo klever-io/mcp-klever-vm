@@ -65,6 +65,10 @@ The MCP server (`src/mcp/server.ts`) exposes: `query_context`, `add_context`, `g
 
 `src/chain/` provides a zero-dependency HTTP client for querying the Klever blockchain (uses native `fetch`). `KleverChainClient` supports mainnet/testnet/devnet/local with per-call network override. The MCP server creates a chain client at startup (configured via env vars) and passes it to `KleverMCPServer`. On-chain tools (get_balance, get_account, get_asset_info, query_sc, get_transaction, get_block, list_validators) are available in all profiles. Write tools (send_transfer, deploy_sc, invoke_sc, freeze_klv) are local-only.
 
+### SKILL.md
+
+LLM-optimized reference documentation lives in `docs/SKILL.md` with 9 sub-files in `docs/skills/` for progressive disclosure. Compiled from the knowledge base. Covers correctness rules, contract structure, storage, tokens, events, modules, deployment, API reference, security, and troubleshooting.
+
 ## Environment Variables
 
 - `MODE`: `http` (default) or `mcp`
