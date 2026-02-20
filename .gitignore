@@ -38,3 +38,7 @@ tmp/
 temp/
 
 # pnpm (lock file is tracked for reproducible Docker builds)
+
+
+# mcp-publisher login info
+.mcpregistry*
