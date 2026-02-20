@@ -208,15 +208,15 @@ async function startPublicServer() {
         sessionIdGenerator: undefined,
       });
 
+      res.on('close', () => {
+        transport.close().catch(() => {});
+      });
+
       const chainClient = createChainClient();
       const mcpServer = new KleverMCPServer(contextService, 'public', chainClient);
       await mcpServer.connectTransport(transport);
 
       await transport.handleRequest(req, res, req.body);
-
-      res.on('close', () => {
-        transport.close().catch(() => {});
-      });
     } catch (error) {
       console.error('[Public] MCP endpoint error:', error);
       if (!res.headersSent) {
@@ -230,7 +230,7 @@ async function startPublicServer() {
   });
 
   // GET and DELETE are not applicable in stateless mode
-  app.get('/mcp', (_req, res) => {
+  app.get('/mcp', mcpLimiter, (_req, res) => {
     res.status(405).json({
       jsonrpc: '2.0',
       error: { code: -32000, message: 'Method not allowed. Use POST for stateless requests.' },
@@ -238,7 +238,7 @@ async function startPublicServer() {
     });
   });
 
-  app.delete('/mcp', (_req, res) => {
+  app.delete('/mcp', mcpLimiter, (_req, res) => {
     res.status(405).json({
       jsonrpc: '2.0',
       error: { code: -32000, message: 'Method not allowed. No sessions to terminate in stateless mode.' },
@@ -296,8 +296,9 @@ async function startPublicServer() {
   // Graceful shutdown
   const shutdown = () => {
     console.error('\n[Public] Shutting down gracefully...');
-    server.close();
-    process.exit(0);
+    server.close(() => {
+      process.exit(0);
+    });
   };
 
   process.on('SIGINT', shutdown);
