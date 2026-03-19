@@ -182,10 +182,10 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies.klever-sc]
-version = "0.45.0"  # use latest from crates.io
+version = "0.45.1"  # use latest from crates.io
 
 [dev-dependencies.klever-sc-scenario]
-version = "0.45.0"  # use latest from crates.io
+version = "0.45.1"  # use latest from crates.io
 ```
 
 ### Minimal Contract
@@ -220,6 +220,9 @@ pub trait MyContract {
 ### Build & Deploy
 
 ```bash
+# Update dependencies (after bumping versions in Cargo.toml)
+~/klever-sdk/ksc all update
+
 # Build
 ~/klever-sdk/ksc all build
 

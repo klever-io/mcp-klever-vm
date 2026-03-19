@@ -46,6 +46,16 @@ If Klever VSCode extension is installed, ksc is located at:
 ~/klever-sdk/ksc all build --output-path ./my-output
 \`\`\`
 
+## Update Dependencies
+\`\`\`bash
+# Update Cargo.lock files in all wasm crates to latest dependency versions
+~/klever-sdk/ksc all update
+
+# Update in a specific directory
+~/klever-sdk/ksc all update --path ./my-contracts
+\`\`\`
+This is the easiest way to update your contract dependencies (e.g., klever-sc) to the latest version after bumping versions in Cargo.toml.
+
 ## Other Useful Commands
 \`\`\`bash
 # Generate contract ABI
@@ -60,7 +70,7 @@ If Klever VSCode extension is installed, ksc is located at:
     {
       title: 'Klever Smart Contract CLI (ksc) Commands Reference',
       description: 'Complete reference for all ksc commands used in Klever smart contract development',
-      tags: ['ksc', 'commands', 'reference', 'cli', 'build', 'templates'],
+      tags: ['ksc', 'commands', 'reference', 'cli', 'build', 'templates', 'update'],
       language: 'bash',
       relevanceScore: 0.95,
       contractType: 'any',
@@ -166,10 +176,10 @@ publish = false
 path = "src/lib.rs"
 
 [dependencies]
-klever-sc = "0.45.0"  # check crates.io/crates/klever-sc for latest
+klever-sc = "0.45.1"  # check crates.io/crates/klever-sc for latest
 
 [dev-dependencies]
-klever-sc-scenario = "0.45.0"  # check crates.io/crates/klever-sc for latest
+klever-sc-scenario = "0.45.1"  # check crates.io/crates/klever-sc for latest
 
 [profile.release]
 codegen-units = 1
@@ -347,6 +357,13 @@ This command will display all available templates that can be used with ksc new:
 ~/klever-sdk/ksc all build
 \`\`\`
 
+## Update Dependencies
+\`\`\`bash
+# Update Cargo.lock in all wasm crates to latest versions
+~/klever-sdk/ksc all update
+\`\`\`
+After bumping dependency versions in Cargo.toml, run this to update the lock files.
+
 ## Generate ABI
 \`\`\`bash
 ~/klever-sdk/ksc all abi
@@ -359,7 +376,7 @@ This command will display all available templates that can be used with ksc new:
     {
       title: 'Common KSC Commands',
       description: 'Most frequently used ksc commands for Klever smart contract development',
-      tags: ['ksc', 'commands', 'templates', 'build', 'create'],
+      tags: ['ksc', 'commands', 'templates', 'build', 'create', 'update'],
       language: 'bash',
       relevanceScore: 0.95,
       contractType: 'any',
