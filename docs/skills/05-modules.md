@@ -8,7 +8,7 @@ Do NOT create a custom admin module. Use the SDK's built-in module:
 
 ```toml
 [dependencies.klever-sc-modules]
-version = "0.45.0"  # use latest from crates.io
+version = "0.45.1"  # use latest from crates.io
 ```
 
 ### Usage

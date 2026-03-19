@@ -87,7 +87,7 @@ export class RedisStorage implements StorageBackend {
   async query(params: QueryContext): Promise<ContextPayload[]> {
     await this.connect();
 
-    let contextIds: string[] = [];
+    let contextIds: string[];
 
     // OPTIMIZATION: Use indexes instead of KEYS command
     if (params.types && params.types.length > 0) {

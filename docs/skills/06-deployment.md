@@ -7,6 +7,13 @@
 | **ksc** | Smart contract compiler (Rust -> WASM) | `~/klever-sdk/ksc` |
 | **koperator** | CLI for blockchain operations | `~/klever-sdk/koperator` |
 
+## Update Dependencies
+
+```bash
+# Update Cargo.lock in all wasm crates to latest versions
+~/klever-sdk/ksc all update
+```
+
 ## Build
 
 ```bash

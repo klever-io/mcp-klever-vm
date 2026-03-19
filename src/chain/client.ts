@@ -109,7 +109,7 @@ export class KleverChainClient {
       return response;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timed out after ${this.timeout}ms: ${url}`);
+        throw new Error(`Request timed out after ${this.timeout}ms: ${url}`, { cause: error });
       }
       throw error;
     } finally {
