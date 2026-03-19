@@ -11,7 +11,7 @@
 set -e  # Exit on any error
 
 # Configuration
-DEFAULT_KSC_VERSION="0.45.0"
+DEFAULT_KSC_VERSION="0.45.1"
 DEFAULT_KOPERATOR_VERSION="1.7.11"
 LATEST_VERSIONS_URL="https://storage.googleapis.com/kleverchain-public/versions.json"
 BASE_STORAGE_URL="https://storage.googleapis.com/kleverchain-public"

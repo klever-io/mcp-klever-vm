@@ -166,10 +166,10 @@ publish = false
 path = "src/lib.rs"
 
 [dependencies]
-klever-sc = "0.45.0"  # check crates.io/crates/klever-sc for latest
+klever-sc = "0.45.1"  # check crates.io/crates/klever-sc for latest
 
 [dev-dependencies]
-klever-sc-scenario = "0.45.0"  # check crates.io/crates/klever-sc for latest
+klever-sc-scenario = "0.45.1"  # check crates.io/crates/klever-sc for latest
 
 [profile.release]
 codegen-units = 1
