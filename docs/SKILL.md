@@ -220,6 +220,9 @@ pub trait MyContract {
 ### Build & Deploy
 
 ```bash
+# Update dependencies (after bumping versions in Cargo.toml)
+~/klever-sdk/ksc all update
+
 # Build
 ~/klever-sdk/ksc all build
 
