@@ -377,7 +377,7 @@ export const projectInitToolDefinition = {
 export const addHelperScriptsToolDefinition = {
   name: 'add_helper_scripts',
   description:
-    'Add build, deploy, upgrade, query, test, and interact automation scripts to an existing Klever smart contract project. Creates a scripts/ directory with bash scripts and updates .gitignore. Run this from the project root directory (where Cargo.toml is located).',
+    'Add build, deploy, upgrade, query, test, and interact automation scripts to an existing Klever smart contract project. Creates a scripts/ directory with bash scripts and updates .gitignore. Run this from the project root directory (where Cargo.toml is located). This tool generates scaffold files — for koperator CLI syntax reference (correct flags like --args, --values for payments), use search_documentation instead.',
   inputSchema: {
     type: 'object',
     properties: {

@@ -133,7 +133,8 @@ export class RedisStorage implements StorageBackend {
 
     if (params.query) {
       const queryTokens = params.query.toLowerCase().split(/\s+/).filter(Boolean);
-      results = results.filter(ctx => {
+      const threshold = Math.max(1, Math.ceil(queryTokens.length * 0.4));
+      const scored = results.map(ctx => {
         const searchable = [
           ctx.content,
           ctx.metadata.title,
@@ -143,12 +144,19 @@ export class RedisStorage implements StorageBackend {
           .join(' ')
           .toLowerCase();
 
-        return queryTokens.every(token => searchable.includes(token));
+        const matchCount = queryTokens.filter(token => searchable.includes(token)).length;
+        return { ctx, matchRatio: matchCount / queryTokens.length };
       });
+      results = scored
+        .filter(s => s.matchRatio >= threshold / queryTokens.length)
+        .sort((a, b) => b.matchRatio - a.matchRatio)
+        .map(s => s.ctx);
     }
 
-    // Sort by relevance score
-    results.sort((a, b) => (b.metadata.relevanceScore || 0) - (a.metadata.relevanceScore || 0));
+    // Sort by relevance score — secondary to query match ratio
+    if (!params.query) {
+      results.sort((a, b) => (b.metadata.relevanceScore || 0) - (a.metadata.relevanceScore || 0));
+    }
 
     // Apply pagination
     const start = params.offset || 0;
