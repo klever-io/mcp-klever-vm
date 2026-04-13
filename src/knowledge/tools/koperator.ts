@@ -50,6 +50,7 @@ Note: \`--upgradeable\` **defaults to true**. Omit it only when you want an immu
 - \`--token-transfers\` ❌ WRONG — use \`--values\`
 - \`Option:String:hello\` ❌ WRONG — use \`optionstring:hello\` (no colon between option and type)
 - \`List:u32:1,u32:2\` ❌ WRONG — no single-arg list syntax; pass each element as separate \`--args\`
+- \`--args "hex:0x1a2b3c"\` ❌ WRONG — hex type must NOT have 0x prefix, use \`hex:1a2b3c\`
 
 ## Correct Examples:
 
@@ -262,6 +263,8 @@ export KLEVER_NODE="https://node.testnet.klever.org"
     `# Koperator Argument Types — Complete Reference
 
 Every \`--args\` value follows the pattern \`<type>:<value>\` where type is case-insensitive.
+The type prefix is **mandatory** — there is no auto-detection without it (except \`number:\` which auto-selects integer width).
+Numeric values must NOT include underscores or thousand separators (e.g. use \`1000000\`, not \`1_000_000\`).
 
 ## Supported Types & Aliases
 
@@ -350,11 +353,22 @@ There is **NO single-arg syntax** for List, Tuple, or Variadic. Pass each elemen
 
 ## Token Payments (--values, NOT --args)
 
+⚠️ **--values amounts are in RAW smallest units** (not display amounts).
+Each token has its own precision (0–8 decimal places). You MUST multiply by 10^decimals.
+KLV has 6 decimals → 1 KLV = 1000000 raw. KFI has 6 decimals → 1 KFI = 1000000 raw.
+A custom KDA token with 8 decimals → 1 token = 100000000 raw.
+A custom KDA token with 0 decimals → 1 token = 1 raw.
+This is different from \`koperator account send\` which accepts display amounts directly.
+
+**Formula**: raw_amount = display_amount × 10^token_precision
+
 Payments use \`--values\` with \`=\` syntax:
 \`\`\`bash
---values "KLV=1000000"                     # Single token (1 KLV, 6 decimals)
+--values "KLV=1000000"                     # 1 KLV (precision 6 → 1×10^6)
+--values "KLV=10000000"                    # 10 KLV
 --values "KLV=1000000,KFI=500000"          # Multiple tokens
---values "NFT-XY01/01=1"                   # NFT with nonce
+--values "MYTKN-a1b2=100000000"            # 1 MYTKN (if precision=8 → 1×10^8)
+--values "NFT-XY01/01=1"                   # NFT (precision 0, nonce 01)
 --values "SFT-AB12/05=100"                 # SFT with nonce
 \`\`\`
 
@@ -1437,6 +1451,7 @@ mxpy contract build
 --args "Option:String:hello"    # Wrong Option syntax
 --args "List:u32:1,u32:2"       # No single-arg List syntax
 --args "tuple:u64:123,String:x" # No single-arg tuple syntax
+--args "hex:0xdeadbeef"         # 0x prefix causes "invalid item to encode" error
 \`\`\`
 
 ### ✅ Correct Argument Syntax
@@ -1445,6 +1460,24 @@ mxpy contract build
 --args "optionstring:hello"     # option prefix (no colon separator)
 --args "u32:1" --args "u32:2"   # List: separate --args per element
 --args "u64:123" --args "string:x" # Tuple: separate --args per element
+--args "hex:deadbeef"           # hex: NO 0x prefix, raw hex digits only
+\`\`\`
+
+### ❌ Wrong Payment Amount
+\`\`\`bash
+# WRONG - display amounts don't work in --values
+--values "KLV=10"              # This sends 0.00001 KLV, not 10 KLV!
+--klv=500000000                # --klv flag does not exist
+\`\`\`
+
+### ✅ Correct Payment Amount
+\`\`\`bash
+# CORRECT - --values uses raw smallest units: amount × 10^precision
+# Token precision ranges from 0 to 8 decimals (check each token's precision!)
+--values "KLV=10000000"        # 10 KLV (precision=6, 10 × 10^6)
+--values "KLV=500000000"       # 500 KLV (precision=6, 500 × 10^6)
+--values "MYTKN-a1b2=100000000" # 1 MYTKN (precision=8, 1 × 10^8)
+--values "NFT-XY01/01=1"       # 1 NFT (precision=0, nonce 01)
 \`\`\`
 
 ### ❌ Wrong Query Method
