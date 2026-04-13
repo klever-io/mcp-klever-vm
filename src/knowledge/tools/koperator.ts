@@ -2,76 +2,114 @@ import { createKnowledgeEntry, KnowledgeEntry } from '../types.js';
 
 /**
  * Koperator tool documentation and usage patterns
+ *
+ * Source of truth: operator-sc-invoke-create.md (extracted from koperator source code)
  */
 
 export const koperatorKnowledge: KnowledgeEntry[] = [
-  // CRITICAL: Correct Koperator Syntax
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 1 — CRITICAL: Correct Koperator Syntax
+  // ──────────────────────────────────────────────────────────────────────────
   createKnowledgeEntry(
     'deployment_tool',
     `# ⚠️ CRITICAL: Correct Koperator Command Syntax ⚠️
 
-## ALWAYS Use This Format for sc invoke:
+## sc invoke — ALWAYS Use This Format:
 
 \`\`\`bash
-# CORRECT FORMAT:
 ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke CONTRACT_ADDRESS FUNCTION_NAME \\
     --args "type:value" \\
     --values "KLV=amount" \\
-    --await --sign --result-only
+    --sign --await --result-only
 \`\`\`
 
+CONTRACT_ADDRESS (positional arg 0, required) and FUNCTION_NAME (positional arg 1) are NOT flags.
+If FUNCTION_NAME is omitted you must provide \`--message\` with raw data instead.
+\`--args\` and \`--message\` are **mutually exclusive** — never pass both.
+
+## sc create — Deploy Format:
+
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc create \\
+    --wasm="output/contract.wasm" \\
+    --args "type:value" \\
+    --upgradeable --readable --payable --payableBySC \\
+    --sign --await --result-only
+\`\`\`
+
+Note: \`--upgradeable\` **defaults to true**. Omit it only when you want an immutable contract.
+
 ## ❌ NEVER USE These Wrong Patterns:
-- \`--contract="address"\` ❌ WRONG - use positional argument
-- \`--function="name"\` ❌ WRONG - use positional argument
-- \`--value="amount"\` ❌ WRONG - use --values "KLV=amount"
-- \`--kdaFee="KLV"\` ❌ WRONG - does not exist
-- \`--token-transfers\` ❌ WRONG - use --values
+- \`--contract="address"\` ❌ WRONG — use positional argument
+- \`--function="name"\` ❌ WRONG — use positional argument
+- \`--value="amount"\` ❌ WRONG — use \`--values "KLV=amount"\` (plural)
+- \`--token-transfers\` ❌ WRONG — use \`--values\`
+- \`Option:String:hello\` ❌ WRONG — use \`optionstring:hello\` (no colon between option and type)
+- \`List:u32:1,u32:2\` ❌ WRONG — no single-arg list syntax; pass each element as separate \`--args\`
 
 ## Correct Examples:
 
 ### Simple Function Call
 \`\`\`bash
 ~/klever-sdk/koperator sc invoke klv1abc... myFunction \\
-    --await --sign --result-only
+    --sign --await --result-only
 \`\`\`
 
 ### With Arguments
 \`\`\`bash
 ~/klever-sdk/koperator sc invoke klv1abc... transfer \\
-    --args "Address:klv1xyz..." \\
+    --args "address:klv1xyz..." \\
     --args "bi:1000000" \\
-    --await --sign --result-only
+    --sign --await --result-only
 \`\`\`
 
 ### With Payment
 \`\`\`bash
 ~/klever-sdk/koperator sc invoke klv1abc... stake \\
     --values "KLV=10000000" \\
-    --await --sign --result-only
+    --sign --await --result-only
 \`\`\`
 
-## Key Parameters Explained:
-- Positional Args: CONTRACT_ADDRESS and FUNCTION_NAME come first (no flags)
-- \`--args\`: Each argument needs its own --args flag with type prefix
-- \`--values\`: For sending tokens (KLV, KFI, or KDA tokens)
-- \`--await\`: Wait for transaction confirmation
-- \`--sign\`: Sign the transaction
-- \`--result-only\`: Show only the transaction result (clean JSON output without logs)
+### With Optional Argument
+\`\`\`bash
+~/klever-sdk/koperator sc invoke klv1abc... setConfig \\
+    --args "optionu64:100" \\
+    --args "optionstring:newName" \\
+    --sign --await --result-only
+\`\`\`
+
+### Deploy with Init Arguments
+\`\`\`bash
+~/klever-sdk/koperator sc create \\
+    --wasm="output/contract.wasm" \\
+    --args "BigUint:1000000" \\
+    --args "address:klv1owner..." \\
+    --payable --payableBySC --readable \\
+    --sign --await --result-only
+\`\`\`
 
 ## 🚨 CRITICAL for Unattended Scripts:
-When using koperator in automated/unattended scripts, you MUST use these three flags together:
-- \`--sign\`: Signs and broadcasts the transaction without user interaction
-- \`--await\`: Waits for the transaction to be included in a block
-- \`--result-only\`: Returns only clean JSON result without extra output
+You MUST use these three flags together:
+- \`--sign\` (-s): Signs and broadcasts without user interaction
+- \`--await\`: Waits for the TX to be posted on-chain
+- \`--result-only\`: Returns only clean JSON result (requires --await)
 
-Without these flags, scripts will hang waiting for user input or produce unparseable output!`,
+Without these flags, scripts will hang waiting for user input or produce unparseable output!
+
+## Other Important Global Flags:
+- \`--create-only\` (-c): Build the TX JSON without broadcasting (offline signing)
+- \`--nonce-check\`: Nonce strategy — \`current\` (default), \`first-pending\`, or \`pending\`
+- \`--kdaFee\`: Pay fees with a specific KDA token
+- \`--verbose\`: Enable trace-level logging for debugging`,
     {
       title: 'CRITICAL: Correct Koperator Syntax - READ THIS FIRST',
       description:
-        'The ONLY correct way to use koperator sc invoke - NEVER use --contract, --function, --value. Always include --result-only for clean output',
-      tags: ['koperator', 'critical', 'syntax', 'sc-invoke', 'commands'],
+        'The ONLY correct way to use koperator sc invoke and sc create. Covers positional args, option syntax, --message vs --args, and automation flags.',
+      tags: ['koperator', 'critical', 'syntax', 'sc-invoke', 'sc-create', 'commands', 'smart-contract'],
       language: 'bash',
       relevanceScore: 1.0,
       contractType: 'any',
@@ -79,81 +117,136 @@ Without these flags, scripts will hang waiting for user input or produce unparse
     }
   ),
 
-  // Koperator Tool Overview
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 2 — Koperator Tool Overview (command hierarchy + all flags)
+  // ──────────────────────────────────────────────────────────────────────────
   createKnowledgeEntry(
     'documentation',
     `# Koperator - Klever Operator Tool
 
 ## Overview
-Koperator is the command-line tool for interacting with Klever blockchain and smart contracts.
+Koperator is the command-line tool for interacting with the Klever blockchain and smart contracts.
 
 ## Location
-If Klever VSCode extension is installed, koperator is located at:
-\`~/klever-sdk/koperator\`
+\`~/klever-sdk/koperator\` (installed by the Klever VSCode extension or manually)
 
-## Basic Usage
-\`\`\`bash
-# Check available options
-~/klever-sdk/koperator --help
+## Command Hierarchy
 
-# Smart contract operations
-~/klever-sdk/koperator sc --help
+\`\`\`
+operator
+  └── sc                          # smart contract actions
+        ├── create  (alias: csc)  # deploy a new smart contract
+        ├── invoke  (alias: isc)  # call a function on a deployed contract
+        ├── upgrade (alias: usc)  # upgrade an existing contract
+        ├── delete  (alias: dsc)  # delete a contract
+        ├── run-scenarios (alias: rs)
+        └── parse-output  (alias: scpo)
 \`\`\`
 
-## Node Configuration Options
+## sc create — Deploy a New Contract
 
-### Option 1: Environment Variable
 \`\`\`bash
-export KLEVER_NODE="http://localhost:8080"  # Local node (default port 8080)
-# export KLEVER_NODE="https://node.testnet.klever.org"  # Testnet
+~/klever-sdk/koperator sc create [optional-extra-hex] \\
+    --wasm <path-to-wasm> \\
+    [--vmType <hex>] \\
+    [--args <type:value> ...] \\
+    [--values 'KLV=amount,...'] \\
+    [--payable] [--upgradeable] [--payableBySC] [--readable] \\
+    [global flags]
 \`\`\`
 
-### Option 2: --node Parameter
+Create-specific flags:
+- \`--wasm\` (string, required): Path to the .wasm binary file
+- \`--vmType\` (string, default \`0500\`): VM type hex (KleverVM WASM)
+
+Data assembly: \`<hex-wasm>@<vmType>@<metadata-hex>[extra-hex][encoded-args]\`
+TX type: SmartContract_SCDeploy (receiver = zero address)
+
+## sc invoke — Call a Contract Endpoint
+
 \`\`\`bash
-# Use --node parameter directly in the command
-~/klever-sdk/koperator --node="http://localhost:8080" ...
+~/klever-sdk/koperator sc invoke <contract-address> [function-name] \\
+    [--args <type:value> ...] \\
+    [--values 'KLV=amount,...'] \\
+    [--message "raw-data"] \\
+    [global flags]
 \`\`\`
 
-## Smart Contract Operations
+Positional args: CONTRACT_ADDRESS (required), FUNCTION_NAME (optional if --message used)
+Data assembly: \`<functionName>@<encoded-arg-1>@<encoded-arg-2>@...\`
+TX type: SmartContract_SCInvoke
 
-### Contract Deployment (sc create)
+## Shared Flags (sc sub-commands)
+
+| Flag | Type | Default | Applies to | Description |
+|------|------|---------|------------|-------------|
+| \`--args\` | string[] | [] | create, invoke, upgrade | Typed arguments (\`type:value\`). Repeat per arg. Mutually exclusive with \`--message\`. |
+| \`--values\` | string→int64 | nil | create, invoke, upgrade | Token transfers: \`'KLV=1000000,KDA-ab12=500'\`. **Does NOT work for delete.** |
+| \`--payable\` | bool | false | **create, upgrade only** | Sets contract's payable metadata flag. **Ignored by invoke and delete.** |
+| \`--upgradeable\` | bool | **true** | **create, upgrade only** | Sets contract's upgradeable metadata flag. **Defaults to true. Ignored by invoke and delete.** |
+| \`--payableBySC\` | bool | false | **create, upgrade only** | Sets contract's payableBySC metadata flag. **Ignored by invoke and delete.** |
+| \`--readable\` | bool | false | **create, upgrade only** | Sets contract's readable metadata flag. **Ignored by invoke and delete.** |
+
+## Global Flags (all operator commands)
+
+| Flag | Short | Type | Default | Description |
+|------|-------|------|---------|-------------|
+| \`--key-file\` | \`-k\` | string | \`./walletKey.pem\` | Wallet PEM file path |
+| \`--node\` | \`-n\` | string | \`http://localhost:8080\` | Node API endpoint |
+| \`--nonce\` | — | uint64 | 0 (auto-fetch) | Explicit TX nonce. 0 = auto-fetch from chain. |
+| \`--nonce-check\` | — | string | \`current\` | Nonce strategy: \`current\`, \`first-pending\`, \`pending\` |
+| \`--message\` | — | string[] | nil | Raw data bytes. Mutually exclusive with \`--args\`. |
+| \`--permID\` | — | int32 | 0 | Permission ID for multi-sig accounts |
+| \`--fromAddress\` | — | string | "" | Override sender address |
+| \`--password\` | \`-p\` | string | "" | PEM file password (omit value to be prompted) |
+| \`--password-file\` | — | string | "" | Path to password file |
+| \`--multi-files\` | \`-m\` | string[] | [] | Additional PEM files for multi-signing |
+| \`--create-only\` | \`-c\` | bool | false | Build TX JSON without broadcasting |
+| \`--sign\` | \`-s\` | bool | false | Auto-sign without interactive confirmation |
+| \`--kdaFee\` | — | string | "" | Pay fees with a specific KDA token |
+| \`--await\` | — | bool | false | Wait for TX to be posted on-chain |
+| \`--result-only\` | — | bool | false | Print only the TX result (requires \`--await\`) |
+| \`--verbose\` | — | bool | false | Enable trace-level logging |
+
+## Nonce Strategies (\`--nonce-check\`)
+
+| Strategy | Behavior | Use When |
+|----------|----------|----------|
+| \`current\` (default) | Uses the last confirmed nonce | Normal single-TX operations |
+| \`first-pending\` | Uses the first pending nonce | Replacing a stuck transaction |
+| \`pending\` | Uses the next pending nonce | Sending multiple TXs in rapid succession |
+
+## Node Configuration
+
 \`\`\`bash
-~/klever-sdk/koperator \\
-    --key-file="$HOME/klever-sdk/walletKey.pem" \\
-    sc create \\
-    --wasm="output/contract.wasm" \\
-    --upgradeable --readable --payable --payableBySC \\
-    --await --sign --result-only
-\`\`\`
+# Option 1: Environment variable
+export KLEVER_NODE="https://node.testnet.klever.org"
 
-### Contract Upgrade (sc upgrade)
-\`\`\`bash
-~/klever-sdk/koperator \\
-    --key-file="$HOME/klever-sdk/walletKey.pem" \\
-    sc upgrade CONTRACT_ADDRESS \\
-    --wasm="output/contract.wasm" \\
-    --await --sign --result-only
-\`\`\`
+# Option 2: --node parameter
+~/klever-sdk/koperator --node="https://node.testnet.klever.org" sc invoke ...
 
-### Contract Invocation (sc invoke)
-\`\`\`bash
-~/klever-sdk/koperator \\
-    --key-file="$HOME/klever-sdk/walletKey.pem" \\
-    sc invoke CONTRACT_ADDRESS FUNCTION_NAME \\
-    --args "type:value" \\
-    --values "KLV=amount" \\
-    --await --sign --result-only
-\`\`\`
-
-## Important Notes:
-- Always use --result-only for clean JSON output
-- CONTRACT_ADDRESS and FUNCTION_NAME are positional arguments
-- Each argument needs its own --args flag
-- Query endpoints use API, not koperator`,
+# Networks:
+# Mainnet: https://node.mainnet.klever.org
+# Testnet: https://node.testnet.klever.org
+# Devnet:  https://node.devnet.klever.org
+# Local:   http://localhost:8080
+\`\`\``,
     {
-      title: 'Koperator Tool - Overview and Basic Usage',
-      description: 'Comprehensive overview of the Klever Operator (koperator) command-line tool',
-      tags: ['koperator', 'cli', 'tool', 'smartcontract', 'deploy', 'upgrade', 'invoke'],
+      title: 'Koperator Tool - Complete Overview and Flags Reference',
+      description:
+        'Comprehensive overview: command hierarchy with aliases, sc create/invoke usage, all shared and global flags, nonce strategies',
+      tags: [
+        'koperator',
+        'cli',
+        'tool',
+        'smartcontract',
+        'smart-contract',
+        'deploy',
+        'upgrade',
+        'invoke',
+        'flags',
+        'reference',
+      ],
       language: 'bash',
       relevanceScore: 1.0,
       contractType: 'any',
@@ -161,168 +254,126 @@ export KLEVER_NODE="http://localhost:8080"  # Local node (default port 8080)
     }
   ),
 
-  // Koperator Argument Types
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 3 — Argument Types (complete, authoritative)
+  // ──────────────────────────────────────────────────────────────────────────
   createKnowledgeEntry(
     'documentation',
-    `# Klever Argument Types for Koperator
+    `# Koperator Argument Types — Complete Reference
 
-## IMPORTANT: Always use type prefixes for arguments
+Every \`--args\` value follows the pattern \`<type>:<value>\` where type is case-insensitive.
 
-When using koperator with sc invoke, ALL arguments must have type prefixes:
+## Supported Types & Aliases
 
-## Type Prefixes for --args
-Based on koperator's encode function, use these type prefixes:
+| Type tag(s) | Rust SDK type | Value format | Example |
+|-------------|---------------|--------------|---------|
+| \`u8\`, \`U8\` | u8 | Decimal integer | \`u8:255\` |
+| \`u16\`, \`U16\` | u16 | Decimal integer | \`u16:500\` |
+| \`u32\`, \`U32\`, \`usize\`, \`USIZE\` | u32 / usize | Decimal integer | \`u32:50000\` |
+| \`u64\`, \`U64\` | u64 | Decimal integer | \`u64:5000000000\` |
+| \`i8\`, \`I8\` | i8 | Decimal integer | \`i8:-5\` |
+| \`i16\`, \`I16\` | i16 | Decimal integer | \`i16:500\` |
+| \`i32\`, \`I32\`, \`isize\`, \`ISIZE\` | i32 / isize | Decimal integer | \`i32:50000\` |
+| \`i64\`, \`I64\` | i64 | Decimal integer | \`i64:5000000000\` |
+| \`BigInt\`, \`bigint\`, \`bi\`, \`BI\`, \`n\`, \`N\` | BigInt | Decimal (may be negative) | \`bi:1000000000000\` |
+| \`BigUint\`, \`biguint\` | BigUint | Decimal (positive) | \`BigUint:99999999\` |
+| \`BigFloat\`, \`bigfloat\`, \`bf\`, \`BF\`, \`f\`, \`F\` | BigFloat | Decimal float | \`bf:3.14\` |
+| \`Number\`, \`number\` | *(auto-detect)* | Decimal integer | \`number:500\` → u16, \`number:-5\` → i8 |
+| \`Address\`, \`address\`, \`a\`, \`A\` | ManagedAddress | \`klv1…\` bech32 string | \`address:klv1qqqq…\` |
+| \`String\`, \`string\`, \`ManagedBuffer\`, \`managedbuffer\`, \`TokenIdentifier\`, \`tokenidentifier\`, \`bytes\`, \`BoxedBytes\`, \`boxedbytes\`, \`Vec<u8>\`, \`vec<u8>\`, \`&str\`, \`&[u8]\` | ManagedBuffer / TokenIdentifier / String / Vec<u8> | UTF-8 string | \`string:hello\` |
+| \`bool\`, \`boolean\`, \`b\`, \`B\` | bool | true or false | \`bool:true\` |
+| \`empty\`, \`0\`, \`e\`, \`E\` | *(None / empty)* | *(ignored)* | \`empty:\` |
+| \`file\`, \`code\`, \`wasm\` | *(file contents)* | File path | \`file:./output/contract.wasm\` |
+| \`hex\` | *(raw pass-through)* | Hex string | \`hex:0a1b2c\` |
 
-### Wrapper Types
-- \`List:\` - List of values
-- \`Option:\` - Optional value (can also use \`option\` prefix)
-- \`tuple:\` - Tuple of values
-- \`variadic:\` - Variable number of arguments
+## Option Wrapper (Option<T>)
 
-### Integer Types
-- \`i8:\`, \`I8:\` - Signed 8-bit integer
-- \`i16:\`, \`I16:\` - Signed 16-bit integer
-- \`i32:\`, \`I32:\`, \`isize:\`, \`ISIZE:\` - Signed 32-bit integer
-- \`i64:\`, \`I64:\` - Signed 64-bit integer
-- \`u8:\`, \`U8:\` - Unsigned 8-bit integer
-- \`u16:\`, \`U16:\` - Unsigned 16-bit integer
-- \`u32:\`, \`U32:\`, \`usize:\`, \`USIZE:\` - Unsigned 32-bit integer
-- \`u64:\`, \`U64:\` - Unsigned 64-bit integer
-- \`bi:\`, \`BI:\`, \`BigInt:\`, \`bigint:\`, \`BigUint:\`, \`biguint:\` - Big integers
+To encode an optional value, prefix the type tag with \`option\` (**no colon, no separator**):
 
-### String and Buffer Types
-- \`str:\`, \`String:\`, \`string:\` - String value (REQUIRED for all text arguments)
-- \`bytes:\`, \`Bytes:\` - Byte array
-- \`TokenIdentifier:\` - Token identifier (REQUIRED for token ID arguments like "KLV", "KFI", "MYTOKEN-AB34")
-- \`KdaTokenIdentifier:\` - KDA token identifier
-
-### Address Types
-- \`Address:\`, \`address:\` - Klever address (REQUIRED for all address arguments, must start with "klv")
-
-### Boolean Types
-- \`bool:\`, \`b:\` - Boolean (true/false, 0/1)
-
-### Special Types
-- \`empty\` - No value (for Option::None)
-- \`CodeMetadata:\` - Contract metadata
-
-## 🔴 CRITICAL: Three Most Important Prefixes
-
-### 1. TokenIdentifier: - For ALL Token References
-Use \`TokenIdentifier:\` when passing a token ID as an argument:
-\`\`\`bash
---args "TokenIdentifier:KLV"              # Native KLV token
---args "TokenIdentifier:KFI"              # Native KFI token
---args "TokenIdentifier:USDT-A1B2"        # KDA token
---args "TokenIdentifier:MYNFT-XYZ1/3"     # NFT collection
+\`\`\`
+option<type>:<value>
 \`\`\`
 
-### 2. Address: - For ALL Klever Addresses
-Use \`Address:\` when passing any Klever address:
+Examples:
 \`\`\`bash
---args "Address:klv1recipient..."         # Recipient address
---args "Address:klv1owner..."             # Owner address
---args "Address:klv1qqqqqqqqqqqqqqqq..."  # Zero address
+--args "optionu32:100"       # Some(100u32)
+--args "optionu64:1"         # Some(1u64)
+--args "optionstring:abc"    # Some("abc")
+--args "optionbool:true"     # Some(true)
+--args "optionbool:false"    # Some(false)
+--args "empty:"              # None
 \`\`\`
 
-### 3. String: - For ALL Text/String Values
-Use \`String:\` when passing any text data:
+> ⚠️ WRONG: \`Option:u32:42\`, \`Option:String:hello\` — these do NOT work!
+
+## Rust SDK Type → Koperator Prefix Mapping
+
+| Rust SDK Type | Recommended prefix | Example |
+|---------------|-------------------|---------|
+| \`u8\` | \`u8:\` | \`--args "u8:1"\` |
+| \`u16\` | \`u16:\` | \`--args "u16:256"\` |
+| \`u32\` / \`usize\` | \`u32:\` | \`--args "u32:8"\` |
+| \`u64\` | \`u64:\` | \`--args "u64:1234567890"\` |
+| \`i8\` | \`i8:\` | \`--args "i8:-5"\` |
+| \`i16\` | \`i16:\` | \`--args "i16:-500"\` |
+| \`i32\` | \`i32:\` | \`--args "i32:50000"\` |
+| \`i64\` | \`i64:\` | \`--args "i64:5000000000"\` |
+| \`BigUint\` | \`bi:\` or \`BigUint:\` | \`--args "bi:5000000000"\` |
+| \`BigInt\` | \`bi:\` or \`BigInt:\` | \`--args "bi:-5000"\` |
+| \`BigFloat\` | \`bf:\` or \`BigFloat:\` | \`--args "bf:3.14"\` |
+| \`ManagedBuffer\` / \`String\` | \`string:\` | \`--args "string:MyToken"\` |
+| \`ManagedAddress\` | \`address:\` | \`--args "address:klv1…"\` |
+| \`TokenIdentifier\` | \`string:\` or \`TokenIdentifier:\` | \`--args "string:KLV"\` |
+| \`bool\` | \`bool:\` | \`--args "bool:true"\` |
+| \`Option<T>\` | \`option<prefix>:\` or \`empty:\` | \`--args "optionu64:100"\` |
+| \`ManagedVec<T>\` / \`List<T>\` | Separate \`--args\` per element | \`--args "u32:1" --args "u32:2"\` |
+| \`variadic<T>\` | Separate \`--args\` per element | \`--args "bi:100" --args "bi:200"\` |
+| Raw hex bytes | \`hex:\` | \`--args "hex:deadbeef"\` |
+
+## Composite Types (List, Tuple, Variadic)
+
+There is **NO single-arg syntax** for List, Tuple, or Variadic. Pass each element as a separate \`--args\`:
+
 \`\`\`bash
---args "String:hello world"               # Text message
---args "String:transfer"                  # Function name as string
---args "String:user_123"                  # User ID
+# List<u32> — 3 elements:
+--args "u32:10" --args "u32:20" --args "u32:30"
+
+# tuple<u32, String, Address> — each positional element:
+--args "u32:42" --args "string:hello" --args "address:klv1..."
+
+# variadic<BigUint> — as tail parameter, each value:
+--args "BigUint:100" --args "BigUint:200" --args "BigUint:300"
+
+# Mixed: endpoint(u32, variadic<BigUint>):
+--args "u32:1" --args "BigUint:100" --args "BigUint:200"
 \`\`\`
 
-## Usage Examples
+## Token Payments (--values, NOT --args)
 
-### Basic Types
+Payments use \`--values\` with \`=\` syntax:
 \`\`\`bash
-# Numbers
---args "u8:5"                    # 8-bit unsigned integer
---args "u32:1000"                # 32-bit unsigned integer
---args "bi:1000000"              # BigUint for large numbers
-
-# Strings (ALWAYS use String: prefix for text)
---args "String:hello world"      # String value
---args "bytes:0x48656c6c6f"      # Byte array (hex)
-
-# Addresses (ALWAYS use Address: prefix)
---args "Address:klv1abc..."      # Klever address
-
-# Token Identifiers (ALWAYS use TokenIdentifier: prefix)
---args "TokenIdentifier:KLV"     # For KLV token
---args "TokenIdentifier:KFI"     # For KFI token  
---args "TokenIdentifier:MYTOKEN-AB12" # For custom tokens
-
-# Booleans
---args "bool:true"               # Boolean true
---args "b:0"                     # Boolean false
+--values "KLV=1000000"                     # Single token (1 KLV, 6 decimals)
+--values "KLV=1000000,KFI=500000"          # Multiple tokens
+--values "NFT-XY01/01=1"                   # NFT with nonce
+--values "SFT-AB12/05=100"                 # SFT with nonce
 \`\`\`
 
-### Complex Types
-\`\`\`bash
-# Optional values
---args "Option:String:value"     # Some(value)
---args "empty"                   # None
-
-# Lists
---args "List:u32:1,u32:2,u32:3"  # List of numbers
-
-# Tuples
---args "tuple:u64:123,String:test,bool:true"  # Tuple of mixed types
-
-# Multiple arguments - use separate --args for each
-~/klever-sdk/koperator sc invoke CONTRACT transfer \\
-    --args "Address:klv1recipient..." \\
-    --args "bi:1000000" \\
-    --args "String:memo"
-\`\`\`
-
-### Token Payments (use --values, not --args!)
-\`\`\`bash
-# Single token payment
---values "KLV=1000000"           # 1 KLV (6 decimals)
-
-# Multiple token payments
---values "KLV=1000000,KFI=500000,USDT-A1B2=250000"
-
-# NFT/SFT with nonce
---values "NFT-XY01/01=1"         # NFT with nonce 01
-\`\`\`
-
-## Common Mistakes to Avoid
-
-### ❌ Wrong: Mixing up --args and --values
-\`\`\`bash
-# WRONG - KLV payment is not an argument
---args "KLV:1000000"
-
-# CORRECT - Use --values for payments
---values "KLV=1000000"
-\`\`\`
-
-### ❌ Wrong: Missing type prefix
-\`\`\`bash
-# WRONG - No type prefix
---args "123"
-
-# CORRECT - Include type prefix
---args "u32:123"
-\`\`\`
-
-### ❌ Wrong: Using flags for positional arguments
-\`\`\`bash
-# WRONG
---contract="klv1abc..." --function="transfer"
-
-# CORRECT - Positional arguments
-sc invoke klv1abc... transfer
-\`\`\``,
+❌ NEVER use \`--args\` for payments. ❌ NEVER use \`--value\` (singular).`,
     {
-      title: 'Klever Argument Types for Koperator',
+      title: 'Koperator Argument Types — Complete Reference',
       description:
-        'Complete reference for argument types and formatting when using Koperator CLI tool',
-      tags: ['koperator', 'arguments', 'types', 'documentation', 'cli', 'reference'],
+        'Complete and authoritative reference for all --args type prefixes, Rust SDK type mapping, Option syntax, composite types, and token payments',
+      tags: [
+        'koperator',
+        'arguments',
+        'types',
+        'encoding',
+        'reference',
+        'cli',
+        'rust-mapping',
+        'critical',
+        'smart-contract',
+      ],
       language: 'bash',
       relevanceScore: 1.0,
       contractType: 'any',
@@ -330,239 +381,196 @@ sc invoke klv1abc... transfer
     }
   ),
 
-  // Complete Koperator Argument Encoding Guide
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 4 — Encoding Rules & Composite Types
+  // ──────────────────────────────────────────────────────────────────────────
   createKnowledgeEntry(
     'best_practice',
-    `# 📚 Complete Koperator Argument Encoding Guide
+    `# Koperator Argument Encoding Rules
 
-## 🎯 Quick Reference - Most Common Patterns
+## Top-Level vs Nested Encoding
 
-\`\`\`bash
-# Basic Types
---args "u8:5"                    # Unsigned 8-bit integer (0-255)
---args "u32:1000"                # Unsigned 32-bit integer
---args "u64:1000000"             # Unsigned 64-bit integer
---args "bi:1000000"              # BigInt/BigUint (any size)
---args "String:hello world"      # String value
---args "Address:klv1abc..."      # Klever address
---args "bool:true"               # Boolean (true/false)
+Values encode **differently** depending on whether they appear at top-level (direct --args) or nested inside a composite type (Option, List, Tuple, Struct).
 
-# Token Payments (using --values, not --args!)
---values "KLV=1000000"           # 1 KLV (6 decimals)
---values "KFI=500000"            # 0.5 KFI (6 decimals)
---values "DVK-34ZH=100000"       # Custom KDA token
---values "KLV=1000000,KFI=500000" # Multiple tokens
+| Type category | Top-level encoding | Nested encoding |
+|---------------|-------------------|-----------------|
+| Unsigned ints (\`u8\`–\`u64\`) | Minimal even-length hex | Fixed to declared bit-width (zero-padded) |
+| Signed ints (\`i8\`–\`i64\`) | Minimal even-length hex (two's complement) | Fixed to declared bit-width |
+| \`bool\` | \`01\` (true) or empty (false) | \`01\` (true) or \`00\` (false) |
+| Dynamic types (\`String\`, \`BigUint\`, \`BigInt\`, \`BigFloat\`, \`bytes\`) | Raw hex (minimal) | 4-byte length prefix + raw hex |
+| \`Address\` | 64 hex chars (always fixed) | 64 hex chars (always fixed) |
 
-# NFT/SFT with nonce
---values "NFT-XY01/01=1"         # NFT with nonce 01
---values "SFT-AB12/05=100"       # 100 SFTs with nonce 05
+### Examples of the same value in different contexts:
 
-# Optional Values
---args "Option:String:hello"     # Some("hello")
---args "empty"                   # None
+\`\`\`
+Top-level:   u32:50000  →  c350          (minimal 2 bytes)
+Nested:      u32:50000  →  0000c350      (fixed 4 bytes)
 
-# Lists
---args "List:u32:1,u32:2,u32:3" # [1, 2, 3]
+Top-level:   bool:false →  (empty)
+Nested:      bool:false →  00
 
-# Tuples
---args "tuple:u64:123,String:test,bool:true" # (123, "test", true)
+Top-level:   string:hi  →  6869
+Nested:      string:hi  →  000000026869  (4-byte length prefix + data)
+
+Top-level:   BigUint:5000 →  1388
+Nested:      BigUint:5000 →  000000021388  (4-byte length prefix + data)
 \`\`\`
 
-## 📖 Complete Type Reference
+## Per-Type Encoding Details
 
-### Numeric Types (with examples)
+### Unsigned Integers (u8, u16, u32, u64)
+
+Top-level: minimum even-length hex, no leading zeros beyond even-length.
+Nested/Option: fixed-width to declared type (1/2/4/8 bytes), zero-padded.
+
+| Input | Top-level hex |
+|-------|---------------|
+| \`u8:5\` | \`05\` |
+| \`u16:500\` | \`01f4\` |
+| \`u32:50000\` | \`c350\` |
+| \`u64:5000000000\` | \`012a05f200\` |
+
+### Signed Integers (i8, i16, i32, i64)
+
+Top-level: minimum even-length hex. Negative values use two's complement. Hex auto-fits to smallest standard size.
+Nested/Option: exact bit-width (1/2/4/8 bytes), zero-padded.
+Odd-length hex padded with \`0\` (positive) or \`f\` (negative) on left.
+
+| Input | Top-level hex |
+|-------|---------------|
+| \`i8:5\` | \`05\` |
+| \`i32:50000\` | \`0000c350\` |
+| \`i8:-5\` | \`fb\` |
+| \`i16:-500\` | \`fe0c\` |
+
+> Key difference: \`u32:50000\` → \`c350\` (minimal), \`i32:50000\` → \`0000c350\` (full width).
+
+### BigInt / BigUint
+
+Decimal → minimal hex. Negative BigInt uses two's complement with minimum byte width.
+Nested/Option: 4-byte (8 hex digit) length prefix prepended.
+
+| Input | Top-level hex |
+|-------|---------------|
+| \`BigInt:5000\` | \`1388\` |
+| \`BigInt:-5000\` | \`ec78\` |
+| \`BigUint:500000\` | \`07a120\` |
+
+### BigFloat
+
+Decimal → Go big.Float (53-bit precision) → GobEncode → hex.
+Nested/Option: 4-byte length prefix added.
+
+### Number (auto-detect)
+
+Auto-selects the smallest fitting type: positive → u8/u16/u32/u64, negative → i8/i16/i32/i64.
+
+| Input | Auto type | Hex |
+|-------|-----------|-----|
+| \`number:5\` | u8 | \`05\` |
+| \`number:-5\` | i8 | \`fb\` |
+| \`number:500\` | u16 | \`01f4\` |
+| \`number:500000\` | u32 | \`07a120\` |
+
+### Address
+
+Bech32 \`klv1…\` decoded to 32-byte public key → 64 hex chars. Always fixed-width.
+
+### String / ManagedBuffer / TokenIdentifier / bytes
+
+UTF-8 bytes → hex-encoded (\`%02x\` per byte).
+Nested/Option: 4-byte length prefix prepended.
+
+| Input | Hex |
+|-------|-----|
+| \`string:hello\` | \`68656c6c6f\` |
+| \`string:KLV\` | \`4b4c56\` |
+
+### Boolean
+
+\`true\` → \`01\`. \`false\` → empty string (top-level) or \`00\` (nested/option).
+
+### Empty
+
+Always returns empty string. Used for None option values or placeholder separators.
+
+### File / WASM
+
+Reads file at path. If \`.kleversc.json\`: extracts the \`"code"\` field. Otherwise: hex-encodes raw bytes.
+
+### Hex (raw pass-through)
+
+Value used as-is with no transformation. Must provide valid hex.
+
+## Composite Type Encoding
+
+### List<T>
+
+- **No single-arg syntax.** Pass each element as a separate \`--args\`.
+- **Hex layout (decoded):** Elements back-to-back. Dynamic-length types get a 4-byte length prefix per element. Fixed-length types consumed by their native width. Decoding continues until hex stream is exhausted.
+- **Nested lists:** \`List<List<T>>\` is valid — inner list gets a 4-byte length prefix.
+
 \`\`\`bash
-# Unsigned integers
---args "u8:255"                  # 8-bit: 0 to 255
---args "u16:65535"               # 16-bit: 0 to 65,535
---args "u32:4294967295"          # 32-bit: 0 to 4,294,967,295
---args "u64:18446744073709551615" # 64-bit: 0 to 18,446,744,073,709,551,615
-
-# Signed integers
---args "i8:-128"                 # 8-bit: -128 to 127
---args "i16:-32768"              # 16-bit: -32,768 to 32,767
---args "i32:-2147483648"         # 32-bit: -2,147,483,648 to 2,147,483,647
---args "i64:-9223372036854775808" # 64-bit: very large range
-
-# Big integers (unlimited size)
---args "bi:999999999999999999999" # Any size number
---args "BigUint:1000000000000000" # Alternative syntax
+# Endpoint expecting List<u32>:
+--args "u32:10" --args "u32:20" --args "u32:30"
 \`\`\`
 
-### String and Buffer Types
+### Option<T>
+
+- Encoded via the \`option\` prefix: \`option<type>:<value>\`
+- Hex: \`01\` + nested-encoded value (Some), or empty (None via \`empty:\`)
+- **The option prefix switches the inner value to nested encoding** (fixed-width ints, length-prefixed dynamic types)
+
+| Argument | Hex | Breakdown |
+|----------|-----|-----------|
+| \`optionu32:100\` | \`0100000064\` | 01 (Some) + 00000064 (u32 nested: 4 bytes) |
+| \`optionu64:1\` | \`010000000000000001\` | 01 (Some) + 8-byte u64 |
+| \`optionstring:abc\` | \`010000000361626363\` | 01 + 00000003 (length) + 616263 |
+| \`optionbool:true\` | \`0101\` | 01 (Some) + 01 (true) |
+| \`optionbool:false\` | \`0100\` | 01 (Some) + 00 (false, nested) |
+| \`empty:\` | *(empty)* | None |
+
+### Tuple<T1, T2, ..., Tn>
+
+- **No single-arg syntax.** Pass each positional element as a separate \`--args\` in order.
+- **Hex layout:** Elements sequential. Dynamic-length types get a 4-byte length prefix. Nested angle brackets are parsed correctly.
+
 \`\`\`bash
-# Strings
---args "String:Hello World"      # Regular string
---args "str:Special chars: !@#"  # With special characters
---args 'String:With "quotes"'    # Quotes inside
-
-# Bytes (hex format)
---args "bytes:0x48656c6c6f"      # "Hello" in hex
---args "Bytes:0x00FF00FF"        # Binary data
-
-# Token identifiers
---args "TokenIdentifier:KLV"     # Token ID
---args "KdaTokenIdentifier:USDT-A1B2" # KDA token ID
+# Endpoint expecting tuple<u32, String, Address>:
+--args "u32:42" --args "string:hello" --args "address:klv1..."
 \`\`\`
 
-### Address Types
+### Variadic<T>
+
+- Typically the **last** parameter of an endpoint.
+- **No single-arg syntax.** Each element is a separate \`--args\`, and the contract's variadic parameter consumes all remaining \`@\`-delimited segments.
+
 \`\`\`bash
-# Klever addresses (must start with "klv")
---args "Address:klv1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqlllllh"
---args "address:klv1234567890abcdef..."
+# Endpoint expecting (u32, variadic<BigUint>):
+--args "u32:1" --args "BigUint:100" --args "BigUint:200" --args "BigUint:300"
 \`\`\`
 
-### Boolean Types
-\`\`\`bash
-# Boolean values
---args "bool:true"               # True
---args "bool:false"              # False
---args "b:1"                     # True (using 1)
---args "b:0"                     # False (using 0)
-\`\`\`
+### Custom Structs (decode-only)
 
-### Complex Types
-
-#### Optional Values
-\`\`\`bash
-# Some value
---args "Option:u32:42"           # Some(42)
---args "Option:String:hello"     # Some("hello")
---args "option:Address:klv1..."  # Some(address)
-
-# None value
---args "empty"                   # None
-\`\`\`
-
-#### Lists (arrays)
-\`\`\`bash
-# List of same type
---args "List:u32:1,u32:2,u32:3"  # [1, 2, 3]
---args "List:String:a,String:b"   # ["a", "b"]
---args "List:Address:klv1...,Address:klv2..." # [addr1, addr2]
-
-# Empty list
---args "List:"                   # []
-\`\`\`
-
-#### Tuples (mixed types)
-\`\`\`bash
-# Tuple with different types
---args "tuple:u64:123,String:test,bool:true" # (123, "test", true)
---args "tuple:Address:klv1...,bi:1000000"    # (address, 1000000)
-\`\`\`
-
-#### Variadic (variable number of args)
-\`\`\`bash
-# Variadic arguments (processed as separate values)
---args "variadic:u32:1,u32:2,u32:3" # Passes 1, 2, 3 as separate args
-\`\`\`
-
-## 💰 Token Payments with --values
-
-### CRITICAL: Use --values for payments, NOT --args!
-
-\`\`\`bash
-# ✅ CORRECT - Single token payment
-~/klever-sdk/koperator sc invoke CONTRACT stake \\
-    --values "KLV=1000000" \\        # 1 KLV
-    --await --sign --result-only
-
-# ✅ CORRECT - Multiple token payments
-~/klever-sdk/koperator sc invoke CONTRACT multiPay \\
-    --values "KLV=1000000,KFI=500000,USDT-A1B2=250000" \\
-    --await --sign --result-only
-
-# ❌ WRONG - Don't use --args for payments
---args "KLV:1000000"  # This won't work!
-\`\`\`
-
-### NFT/SFT Payments
-\`\`\`bash
-# NFT payment (nonce required)
---values "MYNFT-A1B2/01=1"       # 1 NFT with nonce 01
-
-# SFT payment (nonce required, amount can be > 1)
---values "MYSFT-C3D4/05=100"     # 100 SFTs with nonce 05
-
-# Multiple NFTs/SFTs
---values "NFT1-AB12/01=1,NFT2-CD34/02=1,SFT-EF56/03=50"
-\`\`\`
-
-## 🔧 Real-World Examples
-
-### Example 1: Token Transfer
-\`\`\`bash
-~/klever-sdk/koperator \\
-    --key-file="$HOME/klever-sdk/walletKey.pem" \\
-    sc invoke klv1contract... transfer \\
-    --args "Address:klv1recipient..." \\
-    --args "bi:1000000" \\
-    --await --sign --result-only
-\`\`\`
-
-### Example 2: Staking with Payment
-\`\`\`bash
-~/klever-sdk/koperator \\
-    --key-file="$HOME/klever-sdk/walletKey.pem" \\
-    sc invoke klv1staking... stake \\
-    --args "u32:30" \\              # 30 days lock period
-    --values "KLV=100000000" \\     # 100 KLV
-    --await --sign --result-only
-\`\`\`
-
-### Example 3: Complex Function Call
-\`\`\`bash
-~/klever-sdk/koperator \\
-    --key-file="$HOME/klever-sdk/walletKey.pem" \\
-    sc invoke klv1game... createGame \\
-    --args "String:MyGame" \\
-    --args "u32:10" \\
-    --args "List:Address:klv1p1...,Address:klv1p2..." \\
-    --args "Option:u64:3600" \\
-    --values "KLV=10000000" \\
-    --await --sign --result-only
-\`\`\`
-
-### Example 4: Using All Three Critical Prefixes
-\`\`\`bash
-# Function that accepts: token_id, recipient, description
-~/klever-sdk/koperator \\
-    --key-file="$HOME/klever-sdk/walletKey.pem" \\
-    sc invoke klv1dex... registerTransfer \\
-    --args "TokenIdentifier:USDT-A1B2" \\    # Token ID
-    --args "Address:klv1recipient..." \\        # Recipient address  
-    --args "String:Payment for services" \\     # Description text
-    --await --sign --result-only
-\`\`\`
-
-## ⚠️ Common Pitfalls and Solutions
-
-1. **Wrong Parameter Names**: CONTRACT_ADDRESS and FUNCTION are positional, not flags
-2. **Missing Type Prefix**: Always include type: prefix (u32:, String:, etc.)
-3. **Payment Confusion**: Use --values with = for payments, not --args with :
-4. **Multiple Arguments**: Each argument needs its own --args flag
-5. **Address Format**: Addresses must start with "klv" AND use Address: prefix
-6. **Token ID Format**: ALWAYS use TokenIdentifier: prefix for token IDs
-7. **String Format**: ALWAYS use String: prefix for text values
-8. **NFT Format**: TOKEN_ID/NONCE=AMOUNT for NFTs/SFTs in --values
-
-### ❌ Common Prefix Mistakes:
-\`\`\`bash
-# WRONG - Missing prefixes
---args "klv1abc..."              # ❌ Missing Address: prefix
---args "KLV"                     # ❌ Missing TokenIdentifier: prefix
---args "hello"                   # ❌ Missing String: prefix
-
-# CORRECT - With proper prefixes
---args "Address:klv1abc..."      # ✅ Address with prefix
---args "TokenIdentifier:KLV"     # ✅ Token ID with prefix
---args "String:hello"            # ✅ String with prefix
-\`\`\``,
+Custom struct types from the contract ABI \`types\` map are resolved by name. Fields are decoded sequentially (fixed-width for fixed types, 4-byte length prefix for dynamic types). This is **decode-only** — used when parsing output with \`sc parse-output --abi\`.`,
     {
-      title: 'Complete Koperator Argument Encoding Guide',
-      description: 'Comprehensive guide for encoding arguments and payments in koperator commands',
-      tags: ['koperator', 'arguments', 'encoding', 'payments', 'guide', 'reference', 'critical'],
+      title: 'Koperator Argument Encoding Rules & Composite Types',
+      description:
+        'Per-type encoding details, top-level vs nested differences, two\'s complement, length prefixes, and composite type handling (List, Option, Tuple, Variadic)',
+      tags: [
+        'koperator',
+        'encoding',
+        'hex',
+        'arguments',
+        'nested',
+        'composite',
+        'list',
+        'option',
+        'tuple',
+        'variadic',
+        'reference',
+        'smart-contract',
+      ],
       language: 'bash',
       relevanceScore: 1.0,
       contractType: 'any',
@@ -570,7 +578,9 @@ sc invoke klv1abc... transfer
     }
   ),
 
-  // API vs Koperator Usage
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 5 — API vs Koperator (KEPT from original)
+  // ──────────────────────────────────────────────────────────────────────────
   createKnowledgeEntry(
     'best_practice',
     `# Important: API vs Koperator for Smart Contract Interaction
@@ -597,8 +607,8 @@ POST https://api.{network}.klever.org/v1.0/sc/query
 **Example - Query a view endpoint:**
 \`\`\`bash
 # Query getTotalSupply (no arguments)
-curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \
-    -H 'Content-Type: application/json' \
+curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \\
+    -H 'Content-Type: application/json' \\
     --data-raw '{
         "ScAddress": "klv1contract_address_here",
         "FuncName": "getTotalSupply",
@@ -607,8 +617,8 @@ curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \
 
 # Query getBalance with address argument
 # Example: klv1qqq...qqpgm89z (zero address) = 32 zero bytes = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \
-    -H 'Content-Type: application/json' \
+curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \\
+    -H 'Content-Type: application/json' \\
     --data-raw '{
         "ScAddress": "klv1contract_address_here",
         "FuncName": "getBalance",
@@ -618,8 +628,8 @@ curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \
 # Query with multiple arguments (address + number)
 # Address: 32 bytes base64
 # Number 42: 0x000000000000002a (8 bytes big-endian) = "AAAAAAAAACo="
-curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \
-    -H 'Content-Type: application/json' \
+curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \\
+    -H 'Content-Type: application/json' \\
     --data-raw '{
         "ScAddress": "klv1contract_address_here",
         "FuncName": "getUserInfo",
@@ -649,8 +659,8 @@ KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address transfer \\
-    --args Address:klv1recipient --args bi:1000000 \\
-    --await --sign --result-only
+    --args "address:klv1recipient" --args "bi:1000000" \\
+    --sign --await --result-only
 \`\`\`
 
 ## Key Differences
@@ -673,7 +683,7 @@ The koperator query command exists but the API is the recommended approach for p
       title: 'API vs Koperator - When to Use Each',
       description:
         'Clear guidance on using the API for contract queries vs koperator for transactions',
-      tags: ['api', 'koperator', 'view', 'query', 'invoke', 'best-practice', 'contract'],
+      tags: ['api', 'koperator', 'view', 'query', 'invoke', 'best-practice', 'contract', 'smart-contract'],
       language: 'bash',
       relevanceScore: 1.0,
       contractType: 'any',
@@ -681,7 +691,9 @@ The koperator query command exists but the API is the recommended approach for p
     }
   ),
 
-  // Koperator Account Operations
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 6 — Account Utilities (KEPT from original)
+  // ──────────────────────────────────────────────────────────────────────────
   createKnowledgeEntry(
     'deployment_tool',
     `# Koperator Account Operations - Developer Utilities
@@ -742,65 +754,135 @@ KLEVER_NODE=https://node.testnet.klever.org \\
     }
   ),
 
-  // Koperator Examples
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 7 — SC Operations Examples (REWRITTEN)
+  // ──────────────────────────────────────────────────────────────────────────
   createKnowledgeEntry(
     'code_example',
     `# Koperator Smart Contract Operations Examples
 
-# 1. Deploy a new contract
+# 1. Deploy a new contract (no init args)
 KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc create \\
     --wasm="output/contract.wasm" \\
-    --upgradeable --readable --payable --payableBySC \\
-    --await --sign --result-only
+    --readable --payable --payableBySC \\
+    --sign --await --result-only
+# Note: --upgradeable defaults to true, so omitted here
 
-# 2. Invoke contract with BigUint argument
+# 2. Deploy with init arguments (constructor parameters)
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc create \\
+    --wasm="output/contract.wasm" \\
+    --args "BigUint:1000000" \\
+    --args "address:klv1owner_address_here" \\
+    --args "string:MyToken" \\
+    --readable --payable --payableBySC \\
+    --sign --await --result-only
+
+# 3. Invoke with BigUint argument
 KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address_here add \\
-    --args bi:100 \\
-    --await --sign --result-only
+    --args "bi:100" \\
+    --sign --await --result-only
 
-# 3. Invoke with multiple arguments - use separate --args for each argument
+# 4. Invoke with multiple arguments (separate --args per arg)
 KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address_here setUserInfo \\
-    --args Address:klv1user_address_here \\
-    --args u32:42 \\
-    --args String:"Active User" \\
-    --await --sign --result-only
+    --args "address:klv1user_address_here" \\
+    --args "u32:42" \\
+    --args "string:Active User" \\
+    --sign --await --result-only
 
-# 4. Send KLV payment with function call
+# 5. Send KLV payment with function call
 KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address_here deposit \\
     --values "KLV=10000000" \\
-    --await --sign --result-only
+    --sign --await --result-only
 
-# 5. Send multiple token payments
+# 6. Send multiple token payments
 KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address_here multiDeposit \\
-    --values "KLV=5000000,KFI=3000000,USDT-A1B2=1000000" \\
-    --await --sign --result-only
+    --values "KLV=5000000,KFI=3000000" \\
+    --sign --await --result-only
 
-# 6. Upgrade existing contract
+# 7. Invoke with optional arguments
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1contract_address_here setConfig \\
+    --args "optionu64:100" \\
+    --args "optionstring:newName" \\
+    --sign --await --result-only
+
+# 8. Invoke with None for optional argument
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1contract_address_here setConfig \\
+    --args "empty:" \\
+    --args "optionstring:newName" \\
+    --sign --await --result-only
+
+# 9. Invoke with variadic arguments (list of values)
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1contract_address_here addWhitelist \\
+    --args "address:klv1addr1..." \\
+    --args "address:klv1addr2..." \\
+    --args "address:klv1addr3..." \\
+    --sign --await --result-only
+
+# 10. Invoke with raw hex data
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1contract_address_here rawCall \\
+    --args "hex:deadbeef" \\
+    --sign --await --result-only
+
+# 11. Upgrade existing contract
 KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc upgrade klv1contract_address_here \\
     --wasm="output/contract-v2.wasm" \\
-    --await --sign --result-only`,
+    --upgradeable \\
+    --sign --await --result-only
+
+# 12. Create-only (offline TX generation, no broadcast)
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc invoke klv1contract_address_here withdraw \\
+    --create-only
+# Outputs unsigned TX JSON to stdout for later signing`,
     {
       title: 'Koperator Smart Contract Operations Examples',
-      description: 'Practical examples of using koperator for various smart contract operations',
-      tags: ['koperator', 'examples', 'deploy', 'invoke', 'query', 'upgrade'],
+      description:
+        'Practical examples: deploy, deploy with init args, invoke, optional args, variadic, payments, upgrade, create-only',
+      tags: [
+        'koperator',
+        'examples',
+        'deploy',
+        'invoke',
+        'upgrade',
+        'optional',
+        'variadic',
+        'create-only',
+        'smart-contract',
+      ],
       language: 'bash',
       relevanceScore: 0.95,
       contractType: 'any',
@@ -808,79 +890,60 @@ KLEVER_NODE=https://node.testnet.klever.org \\
     }
   ),
 
-  // Koperator Payment Flags
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 8 — Payment/Metadata Flags for Contract Creation (REWRITTEN)
+  // ──────────────────────────────────────────────────────────────────────────
   createKnowledgeEntry(
     'documentation',
-    `# Koperator Payment Flags for Smart Contract Creation
+    `# Koperator Contract Metadata Flags (sc create / sc upgrade)
 
-## Contract Properties During Deployment
+## Metadata Flags
 
-When creating a smart contract with \`sc create\`, you can set the following properties:
+These flags set the contract's code metadata during deployment or upgrade:
 
-### Payment-Related Flags
+### --upgradeable (default: TRUE)
+- **Purpose**: Makes the contract upgradeable by the owner
+- **Default**: true — contracts are upgradeable unless you explicitly omit this flag
+- To deploy an **immutable** contract, omit \`--upgradeable\` or set false
 
-#### --payable
-- **Purpose**: Allows the contract to receive KLV payments
+### --payable (default: false)
+- **Purpose**: Allows the contract to receive KLV/KDA payments
 - **Usage**: Required if your contract has \`#[payable("KLV")]\` endpoints
-- **Example**: Contract can receive KLV via payable endpoints
 
-#### --payableBySC
+### --payableBySC (default: false)
 - **Purpose**: Allows other smart contracts to send payments to this contract
 - **Usage**: Required for contract-to-contract payment interactions
-- **Example**: Another contract can call your payable endpoints with payments
 
-### Other Important Flags
-
-#### --upgradeable
-- **Purpose**: Makes the contract upgradeable by the owner
-- **Usage**: Recommended for development, optional for production
-- **Example**: Owner can upgrade contract code later
-
-#### --readable
+### --readable (default: false)
 - **Purpose**: Makes contract storage readable by external queries
 - **Usage**: Recommended for transparency
-- **Example**: Anyone can query contract storage values
-
-## Complete Deployment Example
-
-\`\`\`bash
-# Deploy with all common flags
-KLEVER_NODE=https://node.testnet.klever.org \\
-    ~/klever-sdk/koperator \\
-    --key-file="$HOME/klever-sdk/walletKey.pem" \\
-    sc create \\
-    --wasm="output/my_contract.wasm" \\
-    --upgradeable \\      # Can be upgraded later
-    --readable \\         # Storage is queryable
-    --payable \\          # Can receive KLV
-    --payableBySC \\      # Other contracts can pay it
-    --await \\            # Wait for confirmation
-    --sign \\             # Sign transaction
-    --result-only         # Clean JSON output
-\`\`\`
 
 ## Flag Combinations for Different Contract Types
 
 ### DeFi/Exchange Contract
 \`\`\`bash
---upgradeable --readable --payable --payableBySC
+# --upgradeable is true by default
+--readable --payable --payableBySC
 \`\`\`
 
 ### NFT Marketplace Contract
 \`\`\`bash
---upgradeable --readable --payable --payableBySC
+--readable --payable --payableBySC
 \`\`\`
 
-### Oracle/Data Provider Contract
+### Oracle/Data Provider Contract (no payments)
 \`\`\`bash
---upgradeable --readable
-# (No payment flags if it doesn't accept payments)
+--readable
 \`\`\`
 
 ### Immutable Production Contract
 \`\`\`bash
+# Explicitly omit --upgradeable to make immutable
 --readable --payable --payableBySC
-# (No --upgradeable for immutability)
+# Since --upgradeable defaults to true, consider using:
+# sc create ... (without --upgradeable won't help; the flag is true by default)
+# To make truly immutable, deploy without --upgradeable and it's still upgradeable!
+# Immutability requires NOT setting the upgradeable flag in code metadata.
 \`\`\`
 
 ## Common Mistakes
@@ -893,14 +956,24 @@ If your contract has payable endpoints but you deploy without --payable:
 ### ❌ Forgetting --payableBySC
 If other contracts need to pay yours but you deploy without --payableBySC:
 - Contract-to-contract payments will fail
-- Integration with other protocols won't work
 
 ### ✅ Best Practice
-Always include both --payable and --payableBySC if your contract handles any payments, even if you're not sure about contract-to-contract interactions yet.`,
+Always include both --payable and --payableBySC if your contract handles any payments.`,
     {
-      title: 'Koperator Payment Flags for Contract Creation',
-      description: 'Understanding --payable and --payableBySC flags when deploying smart contracts',
-      tags: ['koperator', 'deployment', 'payable', 'payableBySC', 'flags', 'contract-creation'],
+      title: 'Koperator Contract Metadata Flags',
+      description:
+        'Contract metadata flags: --upgradeable (defaults true!), --payable, --payableBySC, --readable',
+      tags: [
+        'koperator',
+        'deployment',
+        'payable',
+        'payableBySC',
+        'upgradeable',
+        'readable',
+        'flags',
+        'metadata',
+        'smart-contract',
+      ],
       language: 'bash',
       relevanceScore: 0.95,
       contractType: 'any',
@@ -908,7 +981,9 @@ Always include both --payable and --payableBySC if your contract handles any pay
     }
   ),
 
-  // Koperator for Unattended Scripts
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 9 — Automation Scripts (REWRITTEN — added nonce-check, create-only, verbose)
+  // ──────────────────────────────────────────────────────────────────────────
   createKnowledgeEntry(
     'best_practice',
     `# Using Koperator in Unattended/Automated Scripts
@@ -918,63 +993,96 @@ Always include both --payable and --payableBySC if your contract handles any pay
 When using koperator in unattended scripts (CI/CD, cron jobs, automated deployments), you MUST use these three flags together:
 
 ### Required Flags:
-1. \`--sign\` - Signs and broadcasts the transaction without user interaction
-2. \`--await\` - Waits for the transaction to be included in a block before returning
-3. \`--result-only\` - Outputs only the transaction result in clean JSON format
+1. \`--sign\` (-s) — Signs and broadcasts the transaction without user interaction
+2. \`--await\` — Waits for the transaction to be included in a block before returning
+3. \`--result-only\` — Outputs only the transaction result in clean JSON format (requires --await)
 
 ## Why These Flags Are Essential:
 
 ### Without --sign:
-- Script will hang waiting for user to confirm transaction
-- Terminal prompt: "Do you want to sign? (y/n)"
-- Script never continues
+- Script hangs waiting for user to confirm: "Do you want to sign? (y/n)"
 
 ### Without --await:
-- Script continues immediately after broadcasting
-- Transaction might fail but script won't know
-- No way to verify transaction success
+- Script continues immediately, transaction might fail without notice
 
 ### Without --result-only:
-- Output includes progress messages, ASCII art, logs
-- JSON result is mixed with text output
-- Cannot parse result programmatically
+- Output includes progress messages and logs mixed with JSON — unparseable
+
+## Additional Automation Flags:
+
+### --nonce-check (Nonce Strategy)
+Controls which nonce the operator uses for the transaction:
+- \`current\` (default): Uses the last confirmed nonce — safe for single-TX operations
+- \`first-pending\`: Uses the first pending nonce — useful for replacing a stuck TX
+- \`pending\`: Uses the next pending nonce — use for rapid sequential TXs
+
+\`\`\`bash
+# Send multiple TXs in rapid succession:
+~/klever-sdk/koperator sc invoke CONTRACT func1 \\
+    --nonce-check pending --sign --await --result-only
+
+~/klever-sdk/koperator sc invoke CONTRACT func2 \\
+    --nonce-check pending --sign --await --result-only
+\`\`\`
+
+### --create-only (-c) — Offline TX Generation
+Builds the TX JSON without broadcasting. Useful for:
+- Offline signing workflows
+- Multi-sig setups
+- TX review before broadcast
+
+\`\`\`bash
+~/klever-sdk/koperator sc invoke CONTRACT withdraw \\
+    --create-only > unsigned_tx.json
+# Sign and broadcast later
+\`\`\`
+
+### --verbose — Debug Logging
+Enables trace-level logging. Useful for debugging failed transactions:
+\`\`\`bash
+~/klever-sdk/koperator sc invoke CONTRACT func \\
+    --args "u32:42" \\
+    --verbose --sign --await --result-only
+\`\`\`
+
+### --kdaFee — Pay Gas with KDA Token
+Pay transaction fees with a specific KDA token instead of KLV:
+\`\`\`bash
+~/klever-sdk/koperator sc invoke CONTRACT func \\
+    --kdaFee "USDT-A1B2" \\
+    --sign --await --result-only
+\`\`\`
 
 ## Correct Usage in Scripts:
 
 ### ✅ CORRECT - Automated Deployment Script
 \`\`\`bash
 #!/bin/bash
-set -e  # Exit on error
+set -e
 
-# Deploy contract and capture result
 RESULT=$(KLEVER_NODE=https://node.testnet.klever.org \\
     ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc create \\
     --wasm="output/contract.wasm" \\
-    --upgradeable --readable --payable --payableBySC \\
-    --sign \\        # No user interaction
-    --await \\       # Wait for confirmation
-    --result-only)   # Clean JSON output
+    --readable --payable --payableBySC \\
+    --sign --await --result-only)
 
-# Parse contract address from result
 CONTRACT_ADDRESS=$(echo "$RESULT" | jq -r '.contractAddress')
 echo "Deployed to: $CONTRACT_ADDRESS"
 \`\`\`
 
 ### ✅ CORRECT - CI/CD Pipeline
 \`\`\`yaml
-# .github/workflows/deploy.yml
 - name: Deploy Smart Contract
   run: |
     ~/klever-sdk/koperator \\
       --key-file="\${KEY_FILE}" \\
       sc create \\
       --wasm="output/contract.wasm" \\
-      --upgradeable --readable --payable \\
+      --readable --payable \\
       --sign --await --result-only > deployment.json
-    
-    # Extract and save contract address
+
     CONTRACT_ADDR=$(jq -r '.contractAddress' deployment.json)
     echo "CONTRACT_ADDRESS=\${CONTRACT_ADDR}" >> $GITHUB_ENV
 \`\`\`
@@ -982,19 +1090,19 @@ echo "Deployed to: $CONTRACT_ADDRESS"
 ### ✅ CORRECT - Automated Testing Script
 \`\`\`bash
 #!/bin/bash
+set -e
 
-# Function to invoke contract and check result
 invoke_and_verify() {
     local function_name=$1
     local expected_status=$2
-    
+
     RESULT=$(~/klever-sdk/koperator \\
         --key-file="$HOME/klever-sdk/walletKey.pem" \\
         sc invoke "$CONTRACT_ADDRESS" "$function_name" \\
         --sign --await --result-only)
-    
+
     STATUS=$(echo "$RESULT" | jq -r '.status')
-    
+
     if [ "$STATUS" != "$expected_status" ]; then
         echo "Error: Expected $expected_status, got $STATUS"
         echo "Full result: $RESULT"
@@ -1002,7 +1110,6 @@ invoke_and_verify() {
     fi
 }
 
-# Run tests
 invoke_and_verify "initialize" "success"
 invoke_and_verify "deposit" "success"
 \`\`\`
@@ -1011,41 +1118,22 @@ invoke_and_verify "deposit" "success"
 \`\`\`bash
 # WRONG - Missing --sign, will wait for user input
 ~/klever-sdk/koperator sc invoke CONTRACT transfer \\
-    --args "Address:klv1..." \\
-    --await --result-only
+    --args "address:klv1..." --await --result-only
 
 # WRONG - Missing --await, won't know if transaction succeeded
 ~/klever-sdk/koperator sc invoke CONTRACT transfer \\
-    --args "Address:klv1..." \\
-    --sign --result-only
+    --args "address:klv1..." --sign --result-only
 
 # WRONG - Missing --result-only, output not parseable
 ~/klever-sdk/koperator sc invoke CONTRACT transfer \\
-    --args "Address:klv1..." \\
-    --sign --await
+    --args "address:klv1..." --sign --await
 \`\`\`
 
 ## Parsing the JSON Result:
 
-### With --result-only, you get clean JSON:
-\`\`\`json
-{
-  "txHash": "abc123...",
-  "status": "success",
-  "contractAddress": "klv1...",
-  "gasUsed": 5000000,
-  "returnData": ["0x01"],
-  "logs": []
-}
-\`\`\`
-
-### Parse with jq:
 \`\`\`bash
 # Get transaction hash
 TX_HASH=$(echo "$RESULT" | jq -r '.txHash')
-
-# Get status
-STATUS=$(echo "$RESULT" | jq -r '.status')
 
 # Check if successful
 if [ "$(echo "$RESULT" | jq -r '.status')" = "success" ]; then
@@ -1060,27 +1148,18 @@ fi
 
 \`\`\`bash
 #!/bin/bash
-
-# Set environment for script
 export KLEVER_NODE="https://node.testnet.klever.org"
 export KEY_FILE="$HOME/klever-sdk/walletKey.pem"
 
-# Now all koperator commands use these settings
 ~/klever-sdk/koperator \\
     --key-file="$KEY_FILE" \\
     sc invoke CONTRACT_ADDRESS function_name \\
     --sign --await --result-only
-\`\`\`
-
-## Summary:
-- **Always use**: \`--sign --await --result-only\` for scripts
-- **Never forget**: All three flags are required for automation
-- **Parse output**: Use jq or similar to extract data from JSON result
-- **Set -e**: Use \`set -e\` in bash scripts to exit on errors`,
+\`\`\``,
     {
       title: 'Using Koperator in Unattended/Automated Scripts',
       description:
-        'CRITICAL: How to use koperator in CI/CD, automated scripts, and unattended environments',
+        'CRITICAL: --sign --await --result-only for automation. Plus --nonce-check, --create-only, --verbose, --kdaFee',
       tags: [
         'koperator',
         'automation',
@@ -1090,6 +1169,8 @@ export KEY_FILE="$HOME/klever-sdk/walletKey.pem"
         'sign',
         'await',
         'result-only',
+        'nonce-check',
+        'create-only',
         'critical',
       ],
       language: 'bash',
@@ -1099,7 +1180,9 @@ export KEY_FILE="$HOME/klever-sdk/walletKey.pem"
     }
   ),
 
-  // Koperator Missing Detection and Installation
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 10 — Installation Guide (KEPT from original)
+  // ──────────────────────────────────────────────────────────────────────────
   createKnowledgeEntry(
     'error_pattern',
     `# Koperator Not Found - Detection and Installation Guide
@@ -1265,7 +1348,9 @@ done
     }
   ),
 
-  // Common Mistakes When Using Klever Tools
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 11 — Common Mistakes (KEPT from original)
+  // ──────────────────────────────────────────────────────────────────────────
   createKnowledgeEntry(
     'best_practice',
     `# Common Mistakes When Using Klever Tools
@@ -1286,8 +1371,8 @@ KLEVER_NODE=http://localhost:8080 \\
     --key-file="walletKey.pem" \\
     sc create \\
     --wasm="contract.wasm" \\
-    --upgradeable --readable --payable \\
-    --await --sign --result-only
+    --readable --payable \\
+    --sign --await --result-only
 \`\`\`
 
 ## Key Points to Remember:
@@ -1346,6 +1431,22 @@ mxpy contract build
 ~/klever-sdk/ksc all build
 \`\`\`
 
+### ❌ Wrong Argument Syntax
+\`\`\`bash
+# WRONG - Old/incorrect patterns
+--args "Option:String:hello"    # Wrong Option syntax
+--args "List:u32:1,u32:2"       # No single-arg List syntax
+--args "tuple:u64:123,String:x" # No single-arg tuple syntax
+\`\`\`
+
+### ✅ Correct Argument Syntax
+\`\`\`bash
+# CORRECT
+--args "optionstring:hello"     # option prefix (no colon separator)
+--args "u32:1" --args "u32:2"   # List: separate --args per element
+--args "u64:123" --args "string:x" # Tuple: separate --args per element
+\`\`\`
+
 ### ❌ Wrong Query Method
 \`\`\`bash
 # WRONG - koperator doesn't do queries
@@ -1360,15 +1461,19 @@ curl -s 'https://api.testnet.klever.org/v1.0/sc/query' \\
 \`\`\``,
     {
       title: 'Common Mistakes When Using Klever Tools',
-      description: 'Frequent mistakes developers make with Klever CLI tools and how to avoid them',
-      tags: ['mistakes', 'best-practice', 'koperator', 'cli', 'errors', 'debugging'],
+      description:
+        'Frequent mistakes with Klever CLI tools: wrong commands, wrong arg syntax (Option/List/Tuple), and corrections',
+      tags: ['mistakes', 'best-practice', 'koperator', 'cli', 'errors', 'debugging', 'smart-contract'],
       language: 'bash',
       relevanceScore: 0.9,
       contractType: 'any',
       author: 'klever-mcp',
     }
   ),
-  // KDA Token Creation with Koperator
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 12 — KDA Token Creation (KEPT from original)
+  // ──────────────────────────────────────────────────────────────────────────
   createKnowledgeEntry(
     'deployment_tool',
     `# Creating KDA Tokens with Koperator
@@ -1587,7 +1692,8 @@ echo "Created token: $TOKEN_ID"  # e.g., MYTK-A1B2
 - ❌ Not having enough KLV balance (need 20,000 KLV + gas fees)`,
     {
       title: 'Creating KDA Tokens with Koperator',
-      description: 'Complete guide to creating KDA tokens (fungible, NFT, SFT) using koperator kda create command',
+      description:
+        'Complete guide to creating KDA tokens (fungible, NFT, SFT) using koperator kda create command',
       tags: ['koperator', 'kda', 'token', 'create', 'nft', 'sft', 'fungible', 'deployment'],
       language: 'bash',
       relevanceScore: 1.0,
