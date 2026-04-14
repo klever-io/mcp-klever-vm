@@ -1734,6 +1734,178 @@ echo "Created token: $TOKEN_ID"  # e.g., MYTK-A1B2
       author: 'klever-mcp',
     }
   ),
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // ENTRY 13 — sc upgrade: Contract Upgrade Command (NEW)
+  // ──────────────────────────────────────────────────────────────────────────
+  createKnowledgeEntry(
+    'deployment_tool',
+    `# Koperator sc upgrade — Contract Upgrade Command
+
+## Overview
+
+\`sc upgrade\` replaces the bytecode and metadata of an **already-deployed** smart contract with a new WASM binary. The contract address remains unchanged. The caller must be the **contract owner** (the account that originally deployed it), and the contract must have been deployed with \`--upgradeable\` (which defaults to true).
+
+- **Transaction type**: SmartContract_SCInvoke (NOT SCDeploy)
+- **Target**: The existing contract address (first positional argument)
+- **Alias**: \`sc usc\`
+
+## Full Syntax
+
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file=<pem> \\
+    sc upgrade <CONTRACT_BECH32_ADDRESS> \\
+    --wasm=<path/to/contract.wasm> \\
+    [--args <type:value>]... \\
+    [--values 'KLV=amount,...'] \\
+    [--payable] [--upgradeable] [--payableBySC] [--readable] \\
+    --sign --await --result-only
+\`\`\`
+
+## Positional Arguments
+
+| Position | Required | Description |
+|----------|----------|-------------|
+| 0 | **Yes** | bech32 \`klv1…\` address of the contract to upgrade |
+| 1 | No | Optional raw hex appended verbatim to payload (rarely used) |
+
+## Command-Specific Flag
+
+| Flag | Type | Default | Required | Description |
+|------|------|---------|----------|-------------|
+| \`--wasm\` | string | \`""\` | **Yes** | Path to the new \`.wasm\` binary file |
+
+## ⚠️ CRITICAL: Metadata Is REPLACED, Not Merged
+
+The metadata flags (\`--payable\`, \`--upgradeable\`, \`--payableBySC\`, \`--readable\`) **replace the contract's existing metadata entirely**. They are NOT inherited from the original deployment.
+
+If you previously deployed with \`--payable\` but omit it on upgrade, **the contract will no longer be payable**.
+
+→ Always re-specify ALL desired metadata flags on every upgrade.
+
+## Differences from sc create and sc invoke
+
+| Aspect | sc create | sc upgrade | sc invoke |
+|--------|-----------|------------|-----------|
+| TX type | SCDeploy | SCInvoke | SCInvoke |
+| Target | Zero address (auto) | Existing contract | Existing contract |
+| Requires --wasm | Yes | Yes | No |
+| Data prefix | \`<bytecode>@<vmType>@<metadata>\` | \`upgradeContract@<bytecode>@<metadata>\` | \`<functionName>\` |
+| Metadata flags | Yes | Yes (replaces!) | No (ignored) |
+| vmType | Included | NOT included | N/A |
+
+## Examples
+
+### Basic upgrade (keep upgradeable)
+\`\`\`bash
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc upgrade klv1qqqqcontract_address_here \\
+    --wasm=./output/contract_v2.wasm \\
+    --upgradeable \\
+    --sign --await --result-only
+\`\`\`
+
+### Upgrade with full metadata re-specification
+\`\`\`bash
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc upgrade klv1qqqqcontract_address_here \\
+    --wasm=./output/contract_v2.wasm \\
+    --upgradeable --readable --payable --payableBySC \\
+    --sign --await --result-only
+\`\`\`
+
+### Upgrade with constructor arguments
+If the upgrade constructor requires initialization parameters:
+\`\`\`bash
+KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc upgrade klv1qqqqcontract_address_here \\
+    --wasm=./output/contract_v2.wasm \\
+    --args "u64:42" \\
+    --args "address:klv1abc..." \\
+    --args "string:hello" \\
+    --upgradeable --payable \\
+    --sign --await --result-only
+\`\`\`
+
+### Upgrade with token transfer
+\`\`\`bash
+~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc upgrade klv1qqqqcontract_address_here \\
+    --wasm=./output/contract_v2.wasm \\
+    --values 'KLV=1000000' \\
+    --upgradeable \\
+    --sign --await --result-only
+\`\`\`
+
+### Scripted upgrade (capture result)
+\`\`\`bash
+RESULT=$(KLEVER_NODE=https://node.testnet.klever.org \\
+    ~/klever-sdk/koperator \\
+    --key-file="$HOME/klever-sdk/walletKey.pem" \\
+    sc upgrade klv1qqqqcontract_address_here \\
+    --wasm=./output/contract_v2.wasm \\
+    --upgradeable --readable --payable --payableBySC \\
+    --sign --await --result-only)
+TX_HASH=$(echo "$RESULT" | jq -r '.hash')
+echo "Upgrade TX: $TX_HASH"
+\`\`\`
+
+## ⚠️ Storage Persistence on Upgrade
+
+Contract storage is **preserved** across upgrades — all existing data remains in place. This means:
+
+- ✅ Existing storage values, mappings, and sets survive the upgrade unchanged
+- ⚠️ You MUST keep the same storage key names and data layout for existing fields
+- ⚠️ Changing a storage mapper type (e.g. SingleValueMapper → MapMapper) or its value type (e.g. u64 → BigUint) **corrupts existing data** — the bytes in storage will be deserialized with the wrong codec
+- ✅ Adding NEW storage fields is safe — they start empty
+- ❌ Removing or renaming a storage field does NOT delete its data — the bytes remain in storage unused
+- ⚠️ Reordering struct fields that are stored as a single blob will break deserialization
+
+**Best practice**: Only add new storage fields. Never change the type or layout of existing ones. If a data migration is needed, add a new field with the new type and write a one-time migration endpoint that reads old data and writes it to the new field.
+
+## Error Reference
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| \`invalid receiver <addr>\` | Malformed bech32 address | Provide valid klv1… contract address |
+| \`invalid file path provided\` | --wasm is empty or missing | Supply the path to the new .wasm file |
+| \`failed to read file\` | WASM file not found or unreadable | Verify path exists; did you run build? |
+| Permission denied | Caller is not the contract owner | Use the owner wallet's key file |
+| Contract not upgradeable | Contract was deployed without --upgradeable | Cannot upgrade; must redeploy |
+
+## Common Mistakes
+- ❌ Omitting metadata flags assuming they carry over from deploy — they DON'T
+- ❌ Using a non-owner wallet — only the original deployer can upgrade
+- ❌ Forgetting --wasm flag — it's required for upgrade
+- ❌ Trying to upgrade a contract deployed without --upgradeable`,
+    {
+      title: 'Koperator sc upgrade — Contract Upgrade Command',
+      description:
+        'Complete reference for sc upgrade: syntax, metadata replacement, differences from sc create/invoke, examples, error reference',
+      tags: [
+        'koperator',
+        'upgrade',
+        'sc-upgrade',
+        'deployment',
+        'metadata',
+        'wasm',
+        'smart-contract',
+        'reference',
+      ],
+      language: 'bash',
+      relevanceScore: 1.0,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
 ];
 
 export default koperatorKnowledge;
