@@ -539,7 +539,7 @@ Value used as-is with no transformation. Must provide valid hex.
 |----------|-----|-----------|
 | \`optionu32:100\` | \`0100000064\` | 01 (Some) + 00000064 (u32 nested: 4 bytes) |
 | \`optionu64:1\` | \`010000000000000001\` | 01 (Some) + 8-byte u64 |
-| \`optionstring:abc\` | \`010000000361626363\` | 01 + 00000003 (length) + 616263 |
+| \`optionstring:abc\` | \`0100000003616263\` | 01 + 00000003 (length) + 616263 |
 | \`optionbool:true\` | \`0101\` | 01 (Some) + 01 (true) |
 | \`optionbool:false\` | \`0100\` | 01 (Some) + 00 (false, nested) |
 | \`empty:\` | *(empty)* | None |
@@ -880,8 +880,10 @@ KLEVER_NODE=https://node.testnet.klever.org \\
 ~/klever-sdk/koperator \\
     --key-file="$HOME/klever-sdk/walletKey.pem" \\
     sc invoke klv1contract_address_here withdraw \\
-    --create-only
-# Outputs unsigned TX JSON to stdout for later signing`,
+    --sign --create-only
+# Outputs signed TX JSON to stdout without broadcasting.
+# --create-only always signs the TX; --sign skips the interactive confirmation prompt.
+# For automation, always pair with --sign to avoid hanging on the prompt.`,
     {
       title: 'Koperator Smart Contract Operations Examples',
       description:
@@ -952,12 +954,11 @@ These flags set the contract's code metadata during deployment or upgrade:
 
 ### Immutable Production Contract
 \`\`\`bash
-# Explicitly omit --upgradeable to make immutable
---readable --payable --payableBySC
-# Since --upgradeable defaults to true, consider using:
-# sc create ... (without --upgradeable won't help; the flag is true by default)
-# To make truly immutable, deploy without --upgradeable and it's still upgradeable!
-# Immutability requires NOT setting the upgradeable flag in code metadata.
+# --upgradeable defaults to TRUE, so omitting it still leaves the contract upgradeable.
+# You must explicitly set --upgradeable=false to make the contract immutable:
+--readable --payable --payableBySC --upgradeable=false
+# WARNING: An immutable contract can NEVER be upgraded or patched.
+# Metadata hex will be 0006 (Payable + PayableBySC, no Upgradeable bit).
 \`\`\`
 
 ## Common Mistakes
@@ -1146,8 +1147,8 @@ invoke_and_verify "deposit" "success"
 ## Parsing the JSON Result:
 
 \`\`\`bash
-# Get transaction hash
-TX_HASH=$(echo "$RESULT" | jq -r '.txHash')
+# Get transaction hash (operator stdout uses "hash", not "txHash")
+TX_HASH=$(echo "$RESULT" | jq -r '.hash')
 
 # Check if successful
 if [ "$(echo "$RESULT" | jq -r '.status')" = "success" ]; then

@@ -255,7 +255,7 @@ export class KleverMCPServer {
       {
         name: 'search_documentation',
         description:
-          'Search Klever VM documentation and knowledge base. Returns human-readable markdown with titles, descriptions, and code snippets. Covers koperator CLI syntax (sc invoke, sc create, sc deploy, sc upgrade), --args type prefixes, --values payment flags, contract metadata flags, ABI decoding, and all smart contract development topics. ALWAYS use this tool first when you need to know the correct flags or argument syntax for koperator commands. Use this instead of query_context when you need formatted developer documentation.',
+          'Search Klever VM documentation and knowledge base. Returns human-readable markdown with titles, descriptions, and code snippets. Covers koperator CLI syntax (sc invoke, sc create, sc upgrade), --args type prefixes, --values payment flags, contract metadata flags, ABI decoding, and all smart contract development topics. ALWAYS use this tool first when you need to know the correct flags or argument syntax for koperator commands. Use this instead of query_context when you need formatted developer documentation.',
         inputSchema: {
           type: 'object' as const,
           properties: {

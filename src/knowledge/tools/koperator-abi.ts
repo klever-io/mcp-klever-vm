@@ -494,12 +494,20 @@ Nested string "hello":  [00000005][68656c6c6f]
     --abi ./contract.abi.json \\
     --raw-output "01000000021388"
 # Output: 5000
+\`\`\`
 
-# None (empty string):
-~/klever-sdk/koperator sc parse-output hex getReward \\
-    --abi ./contract.abi.json \\
-    --raw-output ""
-# Output: <nil>
+**Option None:** At the encoding level, Option None is an empty byte sequence.
+However, \`--raw-output ""\` triggers the CLI error \`"empty smart contract output not allowed"\`.
+Detect None **before** calling parse-output by checking if the VM query \`returnData\` array
+is empty or the element is an empty string:
+\`\`\`bash
+RAW=$(curl -s ... | jq -r '.data.returnData[0] // empty')
+if [ -z "$RAW" ]; then
+  echo "None"  # Option is None — nothing to decode
+else
+  ~/klever-sdk/koperator sc parse-output query getReward \\
+      --abi ./contract.abi.json --raw-output "$RAW"
+fi
 \`\`\`
 
 ### Option<u32>
@@ -519,7 +527,7 @@ Nested string "hello":  [00000005][68656c6c6f]
 # frozen = false: 00
 ~/klever-sdk/koperator sc parse-output hex getInfo \\
     --abi ./contract.abi.json \\
-    --raw-output "000000034b4c5600000003 0f424000"
+    --raw-output "000000034b4c56000000030f424000"
 # Output: { "id": "KLV", "amount": 1000000, "frozen": false }
 \`\`\`
 
@@ -565,7 +573,7 @@ Is the data from /vm/query?
 | Error | Cause | Fix |
 |-------|-------|-----|
 | \`invalid file path provided\` | --abi empty or missing | Supply valid path |
-| \`empty smart contract output not allowed\` | --raw-output empty | Provide hex or base64 data |
+| \`empty smart contract output not allowed\` | --raw-output empty | Provide hex or base64 data. For Option None, detect empty data before calling parse-output (see Option examples above) |
 | \`invalid parse option\` | Mode is not \`hex\` or \`query\` | Use \`hex\` or \`query\` |
 | \`endpoint <name> not found\` | Name doesn't match ABI | Check exact case-sensitive name |
 | \`invalid base64 string\` | Bad base64 in query mode | Verify base64 encoding |

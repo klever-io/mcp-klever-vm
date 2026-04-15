@@ -133,6 +133,7 @@ export class RedisStorage implements StorageBackend {
 
     if (params.query) {
       const queryTokens = params.query.toLowerCase().split(/\s+/).filter(Boolean);
+      if (queryTokens.length === 0) return results.slice(params.offset || 0, (params.offset || 0) + (params.limit || 10));
       const threshold = Math.max(1, Math.ceil(queryTokens.length * 0.4));
       const scored = results.map(ctx => {
         const searchable = [
@@ -149,11 +150,11 @@ export class RedisStorage implements StorageBackend {
       });
       results = scored
         .filter(s => s.matchRatio >= threshold / queryTokens.length)
-        .sort((a, b) => b.matchRatio - a.matchRatio)
+        .sort((a, b) => b.matchRatio - a.matchRatio || (b.ctx.metadata.relevanceScore || 0) - (a.ctx.metadata.relevanceScore || 0))
         .map(s => s.ctx);
     }
 
-    // Sort by relevance score — secondary to query match ratio
+    // When no query, sort by relevance score alone (with query, tie-breaking is handled above)
     if (!params.query) {
       results.sort((a, b) => (b.metadata.relevanceScore || 0) - (a.metadata.relevanceScore || 0));
     }
