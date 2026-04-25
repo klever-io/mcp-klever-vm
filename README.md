@@ -15,6 +15,10 @@ A Model Context Protocol (MCP) server tailored for Klever blockchain smart contr
 - 🔧 **Contract Validation**: Automatic detection of common issues and anti-patterns
 - 🚀 **Deployment Scripts**: Ready-to-use scripts for contract deployment, upgrade, and querying
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/klever-io-mcp-klever-vm).
+
 ## Quick Start
 
 Install and run instantly via npx — no cloning required:
