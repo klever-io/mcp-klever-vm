@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/klever-io-mcp-klever-vm-badge.png)](https://mseep.ai/app/klever-io-mcp-klever-vm)
+
 # Klever MCP Server
 
 A Model Context Protocol (MCP) server tailored for Klever blockchain smart contract development. This server maintains and serves contextual knowledge including code patterns, best practices, and runtime behavior for developers working with the Klever VM SDK.
