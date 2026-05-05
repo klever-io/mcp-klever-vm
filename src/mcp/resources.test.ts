@@ -114,8 +114,8 @@ describe('MCP Resources', () => {
   });
 
   describe('KNOWLEDGE_CATEGORIES', () => {
-    it('contains all 11 categories', () => {
-      expect(KNOWLEDGE_CATEGORIES).toHaveLength(11);
+    it('contains all 12 categories', () => {
+      expect(KNOWLEDGE_CATEGORIES).toHaveLength(12);
       expect(KNOWLEDGE_CATEGORIES).toContain('core');
       expect(KNOWLEDGE_CATEGORIES).toContain('storage');
       expect(KNOWLEDGE_CATEGORIES).toContain('events');
@@ -127,6 +127,7 @@ describe('MCP Resources', () => {
       expect(KNOWLEDGE_CATEGORIES).toContain('errors');
       expect(KNOWLEDGE_CATEGORIES).toContain('best-practices');
       expect(KNOWLEDGE_CATEGORIES).toContain('documentation');
+      expect(KNOWLEDGE_CATEGORIES).toContain('testing');
     });
   });
 });
