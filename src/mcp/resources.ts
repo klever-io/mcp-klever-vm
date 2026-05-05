@@ -17,6 +17,7 @@ export const KNOWLEDGE_CATEGORIES = [
   'errors',
   'best-practices',
   'documentation',
+  'testing',
 ] as const;
 
 export type KnowledgeCategory = (typeof KNOWLEDGE_CATEGORIES)[number];
@@ -37,6 +38,7 @@ export const CATEGORY_TAG_MAP: Record<KnowledgeCategory, string[]> = {
   errors: ['errors', 'error', 'common-mistakes', 'pitfalls'],
   'best-practices': ['best-practices', 'best_practice', 'security', 'optimization'],
   documentation: ['documentation', 'docs', 'guide', 'reference'],
+  testing: ['testing', 'unit-test', 'whitebox', 'blackbox', 'scenario', 'ScenarioWorld', 'BlockchainStateWrapper', 'SingleTxApi', 'scen.json'],
 };
 
 /**
@@ -147,6 +149,7 @@ async function buildKnowledgeIndex(contextService: ContextService): Promise<stri
     errors: 'Common mistakes, error patterns, and troubleshooting',
     'best-practices': 'Security tips, optimization strategies, and recommended patterns',
     documentation: 'SDK reference, API docs, and developer guides',
+    testing: 'Unit, whitebox, blackbox, and scenario JSON testing patterns',
   };
 
   for (const category of KNOWLEDGE_CATEGORIES) {
