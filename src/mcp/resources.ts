@@ -38,7 +38,17 @@ export const CATEGORY_TAG_MAP: Record<KnowledgeCategory, string[]> = {
   errors: ['errors', 'error', 'common-mistakes', 'pitfalls'],
   'best-practices': ['best-practices', 'best_practice', 'security', 'optimization'],
   documentation: ['documentation', 'docs', 'guide', 'reference'],
-  testing: ['testing', 'unit-test', 'whitebox', 'blackbox', 'scenario', 'ScenarioWorld', 'BlockchainStateWrapper', 'SingleTxApi', 'scen.json'],
+  testing: [
+    'testing',
+    'unit-test',
+    'whitebox',
+    'blackbox',
+    'scenario',
+    'ScenarioWorld',
+    'BlockchainStateWrapper',
+    'SingleTxApi',
+    'scen.json',
+  ],
 };
 
 /**

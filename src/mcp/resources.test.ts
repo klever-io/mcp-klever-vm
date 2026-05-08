@@ -44,6 +44,21 @@ describe('MCP Resources', () => {
       },
       relatedContextIds: [],
     });
+
+    await contextService.ingest({
+      type: 'code_example',
+      content: 'use klever_sc_scenario::imports::*;',
+      metadata: {
+        title: 'Blackbox Testing Example',
+        description: 'Example blackbox test using ScenarioWorld',
+        tags: ['testing', 'blackbox', 'ScenarioWorld'],
+        language: 'rust',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        relevanceScore: 0.95,
+      },
+      relatedContextIds: [],
+    });
   });
 
   describe('getResourceTemplates', () => {
@@ -98,6 +113,14 @@ describe('MCP Resources', () => {
       const result = await readResource('klever://knowledge/best-practices', contextService);
       expect(result.text).toContain('# Klever Knowledge: best-practices');
       expect(result.text).toContain('Event Best Practice');
+    });
+
+    it('returns entries for testing category', async () => {
+      const result = await readResource('klever://knowledge/testing', contextService);
+      expect(result.uri).toBe('klever://knowledge/testing');
+      expect(result.mimeType).toBe('text/markdown');
+      expect(result.text).toContain('# Klever Knowledge: testing');
+      expect(result.text).toContain('Blackbox Testing Example');
     });
 
     it('throws error for invalid URI format', async () => {

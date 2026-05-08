@@ -20,8 +20,11 @@ use klever_sc_scenario::imports::*;
 use my_contract::*;  // imports your contract + proxy
 
 const OWNER_ADDRESS: TestAddress = TestAddress::new("owner");
+const OTHER_ADDRESS: TestAddress = TestAddress::new("other");
+const USER_ADDRESS: TestAddress = TestAddress::new("user");
 const SC_ADDRESS: TestSCAddress = TestSCAddress::new("my-contract");
 const CODE_PATH: KleverscPath = KleverscPath::new("output/my-contract.kleversc.json");
+const TOKEN_ID: TestTokenIdentifier = TestTokenIdentifier::new("TOKEN-abc123");
 
 fn world() -> ScenarioWorld {
     let mut blockchain = ScenarioWorld::new();
@@ -134,7 +137,7 @@ let value = world
     .multi_return(1u32)
     .returns(ReturnsResultUnmanaged)
     .run();
-assert_eq!(value, MultiValue2((RustBigUint::from(1u32), RustBigUint::from(2u32))));
+assert_eq!(value, MultiValue2((1u32, 2u32)));
 \`\`\`
 
 ## Testing Upgrade
@@ -193,7 +196,7 @@ fn full_lifecycle_test() {
     world
         .tx()
         .from(OWNER_ADDRESS)
-        .typed(my_proxy::MyProxy)
+        .typed(my_contract_proxy::MyContractProxy)
         .init(5u32)
         .code(CODE_PATH)
         .new_address(SC_ADDRESS)
@@ -203,7 +206,7 @@ fn full_lifecycle_test() {
     world
         .query()
         .to(SC_ADDRESS)
-        .typed(my_proxy::MyProxy)
+        .typed(my_contract_proxy::MyContractProxy)
         .sum()
         .returns(ExpectValue(5u32))
         .run();
@@ -213,7 +216,7 @@ fn full_lifecycle_test() {
         .tx()
         .from(OWNER_ADDRESS)
         .to(SC_ADDRESS)
-        .typed(my_proxy::MyProxy)
+        .typed(my_contract_proxy::MyContractProxy)
         .add(1u32)
         .run();
 
@@ -364,7 +367,10 @@ world.sc_call(
 ## Deploy and Capture Address
 
 \`\`\`rust
+use klever_sc_scenario::api::StaticApi;
+
 let owner_address = "address:owner";
+let code = world.code_expression(SC_PATH);
 let mut contract = ContractInfo::<my_contract::Proxy<StaticApi>>::new("sc:my-contract");
 
 world

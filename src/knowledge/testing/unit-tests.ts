@@ -17,7 +17,7 @@ Unit tests are the fastest test type — no blockchain simulation, no state setu
 Add to \`Cargo.toml\`:
 \`\`\`toml
 [dev-dependencies]
-klever-sc-scenario = { version = "0.x" }
+klever-sc-scenario = { version = "0.*" }
 \`\`\`
 
 ## Basic Unit Test

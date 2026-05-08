@@ -16,6 +16,7 @@ Whitebox tests give you access to contract internals while simulating a full blo
 ## Setup
 
 \`\`\`rust
+use klever_sc::codec::Empty;
 use klever_sc_scenario::{
     testing_framework::*, rust_biguint, managed_biguint, managed_token_id, managed_address,
 };
@@ -56,7 +57,7 @@ fn execute_tx_test() {
     // Simulate deploy by calling init
     wrapper
         .execute_tx(&user, &sc, &rust_biguint!(0), |sc| {
-            sc.init();
+            sc.init(managed_biguint!(1));
         })
         .assert_ok();
 
@@ -146,6 +147,7 @@ fn test_nft() {
     let sc = wrapper.create_sc_account(&rust_biguint!(0), None, my_contract::contract_obj, WASM_PATH);
     let token_id = b"NFT-abc123";
     let nonce = 2u64;
+    let nft_attrs = Empty;
 
     wrapper.set_nft_balance(sc.address_ref(), token_id, nonce, &rust_biguint!(1_000), &nft_attrs);
     wrapper.check_nft_balance(sc.address_ref(), token_id, nonce, &rust_biguint!(1_000), Some(&nft_attrs));
@@ -220,7 +222,7 @@ fn storage_revert_on_error_test() {
     let user = wrapper.create_user_account(&rust_biguint!(0));
     let sc = wrapper.create_sc_account(&rust_biguint!(0), None, my_contract::contract_obj, WASM_PATH);
 
-    wrapper.execute_tx(&user, &sc, &rust_biguint!(0), |sc| { sc.init(); }).assert_ok();
+    wrapper.execute_tx(&user, &sc, &rust_biguint!(0), |sc| { sc.init(managed_biguint!(1)); }).assert_ok();
 
     // This tx panics — ALL storage changes inside must be reverted
     wrapper
@@ -264,6 +266,12 @@ fn blockchain_state_test() {
 ## Whitebox Style (WhiteboxContract)
 
 \`\`\`rust
+fn world() -> ScenarioWorld {
+    let mut blockchain = ScenarioWorld::new();
+    blockchain.register_contract("kleversc:output/my-contract.kleversc.json", my_contract::ContractBuilder);
+    blockchain
+}
+
 #[test]
 fn st_whitebox() {
     let mut world = world();
