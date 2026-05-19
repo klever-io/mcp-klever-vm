@@ -212,7 +212,7 @@ fn interactor_trace_rs() {
         'trace',
         'interactor',
       ],
-      language: 'markdown',
+      language: 'rust',
       relevanceScore: 0.91,
       contractType: 'any',
       author: 'klever-mcp',

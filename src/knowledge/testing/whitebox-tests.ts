@@ -3,9 +3,9 @@ import { createKnowledgeEntry, KnowledgeEntry } from '../types.js';
 export const whiteboxTestsKnowledge: KnowledgeEntry[] = [
   createKnowledgeEntry(
     'code_example',
-    `# Whitebox Testing with BlockchainStateWrapper (Legacy)
+    `# Whitebox Testing with BlockchainStateWrapper
 
-Whitebox tests give you access to contract internals while simulating a full blockchain environment. The \`BlockchainStateWrapper\` API is the older style — still fully supported.
+Whitebox tests give you access to contract internals while simulating a full blockchain environment. The \`BlockchainStateWrapper\` API is the original whitebox style and is fully supported. For new contracts, also consider the \`ScenarioWorld\`-based whitebox API (see "Whitebox Style (WhiteboxContract)" below).
 
 ## When to Use
 - Need to inspect/modify storage directly during a test

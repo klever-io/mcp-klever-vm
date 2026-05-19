@@ -76,6 +76,7 @@ world
     .run();
 
 // Or capture the return value
+// (RustBigUint is re-exported by klever_sc_scenario::imports::*)
 let value = world
     .query()
     .to(SC_ADDRESS)

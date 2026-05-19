@@ -1,5 +1,6 @@
 import { ContextService } from '../context/service.js';
 import { InMemoryStorage } from '../storage/memory.js';
+import { testingKnowledge } from '../knowledge/index.js';
 import {
   getResourceTemplates,
   getStaticResources,
@@ -133,6 +134,18 @@ describe('MCP Resources', () => {
       await expect(
         readResource('klever://knowledge/nonexistent', contextService)
       ).rejects.toThrow('Unknown knowledge category');
+    });
+  });
+
+  describe('testingKnowledge module', () => {
+    it('exports at least one entry per testing subcategory', () => {
+      expect(testingKnowledge.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('tags every entry with "testing" so the category resource picks them up', () => {
+      for (const entry of testingKnowledge) {
+        expect(entry.metadata.tags).toContain('testing');
+      }
     });
   });
 
