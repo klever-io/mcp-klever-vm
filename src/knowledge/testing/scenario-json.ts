@@ -1,0 +1,223 @@
+import { createKnowledgeEntry, KnowledgeEntry } from '../types.js';
+
+export const scenarioJsonKnowledge: KnowledgeEntry[] = [
+  createKnowledgeEntry(
+    'code_example',
+    `# Scenario JSON Files (.scen.json)
+
+Scenario files are JSON-based integration tests that run on both the Rust VM and the Go VM. They are the most portable test format and can be generated automatically from Rust blackbox tests.
+
+## Running Scenario Files from Rust
+
+\`\`\`rust
+// tests/my_contract_scenario_rs_test.rs
+use klever_sc_scenario::*;
+
+fn world() -> ScenarioWorld {
+    let mut blockchain = ScenarioWorld::new();
+    blockchain.register_contract(
+        "kleversc:output/my-contract.kleversc.json",
+        my_contract::ContractBuilder,
+    );
+    blockchain
+}
+
+#[test]
+fn my_scenario_rs() {
+    world().run("scenarios/my-scenario.scen.json");
+}
+\`\`\`
+
+## Scenario File Structure
+
+\`\`\`json
+{
+    "name": "my contract test",
+    "comment": "deploys, calls, and checks state",
+    "gasSchedule": "dummy",
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "1",
+                    "balance": "0"
+                }
+            },
+            "newAddresses": [
+                {
+                    "creatorAddress": "address:owner",
+                    "creatorNonce": "2",
+                    "newAddress": "sc:my-contract"
+                }
+            ]
+        },
+        {
+            "step": "scDeploy",
+            "id": "deploy",
+            "tx": {
+                "from": "address:owner",
+                "contractCode": "kleversc:output/my-contract.kleversc.json",
+                "arguments": ["5"],
+                "gasLimit": "5,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "",
+                "logs": "*",
+                "gas": "*",
+                "refund": "*"
+            }
+        },
+        {
+            "step": "scQuery",
+            "id": "query-initial",
+            "tx": {
+                "to": "sc:my-contract",
+                "function": "getSum",
+                "arguments": []
+            },
+            "expect": {
+                "out": ["5"],
+                "status": "",
+                "logs": []
+            }
+        },
+        {
+            "step": "scCall",
+            "id": "call-add",
+            "tx": {
+                "from": "address:owner",
+                "to": "sc:my-contract",
+                "function": "add",
+                "arguments": ["3"],
+                "gasLimit": "5,000,000",
+                "gasPrice": "0"
+            },
+            "expect": {
+                "out": [],
+                "status": "",
+                "logs": "*",
+                "gas": "*",
+                "refund": "*"
+            }
+        },
+        {
+            "step": "checkState",
+            "accounts": {
+                "address:owner": {
+                    "nonce": "*",
+                    "balance": "0",
+                    "storage": {},
+                    "code": ""
+                },
+                "sc:my-contract": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "storage": {
+                        "str:sum": "8"
+                    },
+                    "code": "kleversc:output/my-contract.kleversc.json"
+                }
+            }
+        }
+    ]
+}
+\`\`\`
+
+## Step Types
+
+| Step | Purpose |
+|------|---------|
+| \`setState\` | Set up accounts, balances, storage, and address mappings |
+| \`scDeploy\` | Deploy a contract |
+| \`scCall\` | Call a contract endpoint |
+| \`scQuery\` | Read-only query to a contract |
+| \`checkState\` | Assert on account state (balances, storage, nonce) |
+| \`transfer\` | Transfer KLV/KDA between accounts |
+
+## Value Encoding in JSON
+
+| Value | Example |
+|-------|---------|
+| Decimal number | \`"100"\` |
+| Hex | \`"0x0502"\` |
+| String | \`"str:my-key"\` |
+| Nested encoded | \`"nested:str:TOKEN|u64:0|biguint:100"\` |
+| Wildcard (any) | \`"*"\` |
+| Empty/zero | \`""\` or \`"0"\` |
+
+## Generating Scenario Files from Rust Tests
+
+Rust tests can write \`.scen.json\` trace files automatically:
+
+\`\`\`rust
+#[test]
+fn generate_trace() {
+    let mut world = world();
+
+    world.start_trace();   // start recording
+
+    world.account(OWNER_ADDRESS).nonce(1).commit();
+
+    world
+        .tx()
+        .from(OWNER_ADDRESS)
+        .typed(my_proxy::MyProxy)
+        .init(5u32)
+        .code(CODE_PATH)
+        .new_address(SC_ADDRESS)
+        .run();
+
+    // ... more steps ...
+
+    world.write_scenario_trace("scenarios/generated-trace.scen.json");
+}
+\`\`\`
+
+The output file can then be replayed:
+
+\`\`\`rust
+#[test]
+fn replay_trace_rs() {
+    world().run("scenarios/generated-trace.scen.json");
+}
+\`\`\`
+
+## Interactor Traces
+
+Interactor traces are scenario files generated by on-chain interactors (scripts). They capture real blockchain interactions and can be replayed in tests:
+
+\`\`\`rust
+#[test]
+fn interactor_trace_rs() {
+    world().run("scenarios/interactor_trace.scen.json");
+}
+\`\`\``,
+    {
+      title: 'Scenario JSON Files (.scen.json)',
+      description:
+        'How to write, structure, and replay .scen.json scenario files for portable VM-independent contract testing, including trace generation from Rust tests',
+      tags: [
+        'testing',
+        'scenario',
+        'scen.json',
+        'json',
+        'setState',
+        'scDeploy',
+        'scCall',
+        'scQuery',
+        'checkState',
+        'trace',
+        'interactor',
+      ],
+      language: 'rust',
+      relevanceScore: 0.91,
+      contractType: 'any',
+      author: 'klever-mcp',
+    }
+  ),
+];
+
+export default scenarioJsonKnowledge;

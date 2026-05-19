@@ -17,6 +17,7 @@ import toolsKnowledge from './tools/index.js';
 import errorsKnowledge from './errors/index.js';
 import examplesKnowledge from './examples/index.js';
 import bestPracticesKnowledge from './best-practices/index.js';
+import testingKnowledge from './testing/index.js';
 
 /**
  * Complete Klever knowledge base
@@ -34,6 +35,7 @@ export const kleverKnowledge: KnowledgeEntry[] = [
   ...errorsKnowledge,
   ...examplesKnowledge,
   ...bestPracticesKnowledge,
+  ...testingKnowledge,
 ];
 
 // Also export individual categories for targeted access
@@ -49,6 +51,7 @@ export {
   errorsKnowledge,
   examplesKnowledge,
   bestPracticesKnowledge,
+  testingKnowledge,
 };
 
 // Export types for external use

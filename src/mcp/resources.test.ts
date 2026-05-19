@@ -1,5 +1,6 @@
 import { ContextService } from '../context/service.js';
 import { InMemoryStorage } from '../storage/memory.js';
+import { testingKnowledge } from '../knowledge/index.js';
 import {
   getResourceTemplates,
   getStaticResources,
@@ -41,6 +42,21 @@ describe('MCP Resources', () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         relevanceScore: 0.8,
+      },
+      relatedContextIds: [],
+    });
+
+    await contextService.ingest({
+      type: 'code_example',
+      content: 'use klever_sc_scenario::imports::*;',
+      metadata: {
+        title: 'Blackbox Testing Example',
+        description: 'Example blackbox test using ScenarioWorld',
+        tags: ['testing', 'blackbox', 'ScenarioWorld'],
+        language: 'rust',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        relevanceScore: 0.95,
       },
       relatedContextIds: [],
     });
@@ -100,6 +116,14 @@ describe('MCP Resources', () => {
       expect(result.text).toContain('Event Best Practice');
     });
 
+    it('returns entries for testing category', async () => {
+      const result = await readResource('klever://knowledge/testing', contextService);
+      expect(result.uri).toBe('klever://knowledge/testing');
+      expect(result.mimeType).toBe('text/markdown');
+      expect(result.text).toContain('# Klever Knowledge: testing');
+      expect(result.text).toContain('Blackbox Testing Example');
+    });
+
     it('throws error for invalid URI format', async () => {
       await expect(readResource('invalid://uri', contextService)).rejects.toThrow(
         'Invalid resource URI'
@@ -113,9 +137,21 @@ describe('MCP Resources', () => {
     });
   });
 
+  describe('testingKnowledge module', () => {
+    it('exports at least one entry per testing subcategory', () => {
+      expect(testingKnowledge.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('tags every entry with "testing" so the category resource picks them up', () => {
+      for (const entry of testingKnowledge) {
+        expect(entry.metadata.tags).toContain('testing');
+      }
+    });
+  });
+
   describe('KNOWLEDGE_CATEGORIES', () => {
-    it('contains all 11 categories', () => {
-      expect(KNOWLEDGE_CATEGORIES).toHaveLength(11);
+    it('contains all 12 categories', () => {
+      expect(KNOWLEDGE_CATEGORIES).toHaveLength(12);
       expect(KNOWLEDGE_CATEGORIES).toContain('core');
       expect(KNOWLEDGE_CATEGORIES).toContain('storage');
       expect(KNOWLEDGE_CATEGORIES).toContain('events');
@@ -127,6 +163,7 @@ describe('MCP Resources', () => {
       expect(KNOWLEDGE_CATEGORIES).toContain('errors');
       expect(KNOWLEDGE_CATEGORIES).toContain('best-practices');
       expect(KNOWLEDGE_CATEGORIES).toContain('documentation');
+      expect(KNOWLEDGE_CATEGORIES).toContain('testing');
     });
   });
 });
